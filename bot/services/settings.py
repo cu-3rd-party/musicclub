@@ -10,6 +10,7 @@ class Settings(BaseSettings):
 
     BOT_TOKEN: str
     ADMIN_IDS: Set[int]
+    CHAT_LINK: str
 
     REDIS_HOST: str
     REDIS_PORT: int
