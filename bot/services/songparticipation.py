@@ -1,4 +1,5 @@
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from bot.models import SongParticipation, Person, Song
 from bot.schemas import SongParticipationOut
@@ -24,6 +25,7 @@ async def song_participation_list_out(
             person_id=part.person_id,
             song_id=part.song_id,
             who=persons[part.person_id].name,
+            where=part.song.title,
             role=part.role,
         )
         for part in arr

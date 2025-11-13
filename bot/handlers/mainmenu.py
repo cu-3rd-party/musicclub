@@ -14,6 +14,7 @@ from bot.services.settings import settings
 from bot.states.addsong import AddSong
 from bot.states.editsong import EditSong
 from bot.states.mainmenu import MainMenu
+from bot.states.participations import MyParticipations
 
 router = Router()
 
@@ -68,10 +69,6 @@ async def prev_page(c: CallbackQuery, b: Button, m: DialogManager):
     await m.show()
 
 
-async def add_song(c: CallbackQuery, b: Button, m: DialogManager):
-    await c.answer("TODO: add song dialog coming soon 🎶")
-
-
 # ----- Dialog Definition -----
 router.include_router(
     Dialog(
@@ -83,6 +80,11 @@ router.include_router(
                 Const("Песни"),
                 id="songs",
                 on_click=lambda c, b, m: m.switch_to(MainMenu.songs),
+            ),
+            Button(
+                Const("Мои участия"),
+                id="participations",
+                on_click=lambda c, b, m: m.start(MyParticipations.menu),
             ),
             Button(
                 Const("Ближайшие мероприятия"),

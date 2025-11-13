@@ -6,4 +6,5 @@ class SongParticipationOut(BaseModel):
     person_id: int
     song_id: int
     who: str
+    where: str
     role: str

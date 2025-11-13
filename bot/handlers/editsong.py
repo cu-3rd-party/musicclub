@@ -9,6 +9,7 @@ from aiogram_dialog.widgets.text import Const, Format
 from aiogram_dialog.widgets.kbd import Button, Row, Column, Cancel, Url
 from aiogram_dialog.widgets.kbd import ScrollingGroup, Select
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from bot.models import Song, SongParticipation, Person
 from bot.services.database import get_db_session
@@ -43,9 +44,13 @@ async def roles_info_getter(dialog_manager: DialogManager, **kwargs) -> dict:
 
     async with get_db_session() as session:
         result = await session.execute(
-            select(SongParticipation).where(
+            select(SongParticipation)
+            .where(
                 SongParticipation.song_id
                 == int(dialog_manager.start_data["song_id"])
+            )
+            .options(
+                selectinload(SongParticipation.song),
             )
         )
         participations: list[SongParticipation] = result.scalars().all()
@@ -154,7 +159,8 @@ router.include_router(
                     item_id_getter=lambda participation: f"{participation.participation_id}",
                     items="participations",
                     on_click=lambda c, b, m, i: m.start(
-                        EditRole.menu, data={"participation_id": i}
+                        EditRole.menu,
+                        data={"participation_id": i, "notify": True},
                     ),
                 ),
             ),

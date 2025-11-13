@@ -68,50 +68,52 @@ async def on_role_input(
         )
         await session.commit()
 
-        participation: SongParticipation = (
-            await session.execute(
-                select(SongParticipation)
-                .where(SongParticipation.id == participation_id)
-                .options(selectinload(SongParticipation.song))
+        if dialog_manager.start_data["notify"]:
+            participation: SongParticipation = (
+                await session.execute(
+                    select(SongParticipation)
+                    .where(SongParticipation.id == participation_id)
+                    .options(selectinload(SongParticipation.song))
+                )
+            ).scalar_one_or_none()
+            await message.bot.send_message(
+                chat_id=participation.person_id,
+                text=f"{message.from_user.mention_html()} изменил ваше участие в песне <b>{participation.song.title}</b> на <b>{new_role}</b>",
             )
-        ).scalar_one_or_none()
-        await message.bot.send_message(
-            chat_id=participation.person_id,
-            text=f"{message.from_user.mention_html()} изменил ваше участие в песне <b>{participation.song.title}</b> на <b>{new_role}</b>",
-        )
 
     await dialog_manager.switch_to(EditRole.menu)
 
+
 async def on_remove_confirm(
-        callback: CallbackQuery, button: Button, manager: DialogManager
+    callback: CallbackQuery, button: Button, manager: DialogManager
 ):
     participation_id = int(manager.start_data["participation_id"])
 
     async with get_db_session() as session:
-        participation: SongParticipation = (
-            await session.execute(
-                select(SongParticipation)
-                .where(SongParticipation.id == participation_id)
-                .options(
-                    selectinload(SongParticipation.song),
-                    selectinload(SongParticipation.person),
+        if manager.start_data["notify"]:
+            participation: SongParticipation = (
+                await session.execute(
+                    select(SongParticipation)
+                    .where(SongParticipation.id == participation_id)
+                    .options(
+                        selectinload(SongParticipation.song),
+                        selectinload(SongParticipation.person),
+                    )
                 )
+            ).scalar_one_or_none()
+            await callback.bot.send_message(
+                chat_id=participation.person_id,
+                text=f"{callback.from_user.mention_html()} удалил вас из песни <b>{participation.song.title}</b> с позиции <b>{participation.role}</b>",
             )
-        ).scalar_one_or_none()
-        await callback.bot.send_message(
-            chat_id=participation.person_id,
-            text=f"{callback.from_user.mention_html()} удалил вас из песни <b>{participation.song.title}</b> с позиции <b>{participation.role}</b>",
-        )
         await session.execute(
-            delete(SongParticipation)
-            .where(SongParticipation.id == participation_id)
+            delete(SongParticipation).where(
+                SongParticipation.id == participation_id
+            )
         )
         await session.commit()
 
     await callback.answer("Успешно удалено")
     await manager.done()
-
-
 
 
 router.include_router(
@@ -149,7 +151,11 @@ router.include_router(
         ),
         Window(
             Const("Точно хочешь удалить?"),
-            Button(Const("Да, уверен"), id="confirm_remove", on_click=on_remove_confirm),
+            Button(
+                Const("Да, уверен"),
+                id="confirm_remove",
+                on_click=on_remove_confirm,
+            ),
             Button(
                 Const("Назад"),
                 id="back",
