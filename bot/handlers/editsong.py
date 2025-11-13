@@ -139,7 +139,7 @@ router.include_router(
             state=EditSong.menu,
         ),
         Window(
-            Format("ID: {song_id}\nНазвание: {song_title}"),
+            Format("ID: {song_id}\nНазвание: <a href=\"{song_link}\">{song_title}</a>"),
             Column(
                 Select(
                     Format("{item.who} - {item.role}"),
