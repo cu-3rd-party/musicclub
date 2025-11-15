@@ -127,7 +127,9 @@ async def on_join(
 router.include_router(
     Dialog(
         Window(
-            Format("ID: {song_id}\nНазвание: <a href=\"{song_link}\">{song_title}</a>"),
+            Format(
+                'ID: {song_id}\nНазвание: <a href="{song_link}">{song_title}</a>'
+            ),
             Url(Const("Ссылка"), url=Format("{song_link}"), id="song_link"),
             Button(
                 Const("Роли и присоединиться"),
@@ -139,7 +141,9 @@ router.include_router(
             state=EditSong.menu,
         ),
         Window(
-            Format("ID: {song_id}\nНазвание: <a href=\"{song_link}\">{song_title}</a>"),
+            Format(
+                'ID: {song_id}\nНазвание: <a href="{song_link}">{song_title}</a>'
+            ),
             Column(
                 Select(
                     Format("{item.who} - {item.role}"),

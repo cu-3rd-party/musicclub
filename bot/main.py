@@ -15,6 +15,7 @@ from aiogram_dialog import setup_dialogs
 
 from bot.models import Base
 from bot.services.database import init_db, close_db, get_db_session, engine
+from bot.services.invite_link import ChatInviteLinkManager
 from .services.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -50,10 +51,12 @@ def register_all_handlers(dp: Dispatcher) -> None:
         logger.warning("Не найдено ни одного роутера для регистрации")
 
 
-async def on_startup(bot: Bot) -> None: ...
+async def on_startup(bot: Bot) -> None:
+    await ChatInviteLinkManager(bot, settings.CHAT_ID).startup()
 
 
-async def on_shutdown(bot: Bot) -> None: ...
+async def on_shutdown(bot: Bot) -> None:
+    await ChatInviteLinkManager(bot, settings.CHAT_ID).shutdown()
 
 
 async def run_bot() -> None:

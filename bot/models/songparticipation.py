@@ -1,4 +1,11 @@
-from sqlalchemy import Column, Integer, ForeignKey, BigInteger, String, UniqueConstraint
+from sqlalchemy import (
+    Column,
+    Integer,
+    ForeignKey,
+    BigInteger,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 
 from bot.models import Base

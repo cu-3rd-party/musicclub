@@ -24,7 +24,9 @@ from bot.states.concert import ConcertInfo
 router = Router()
 
 
-async def concert_getter(dialog_manager: DialogManager, event_from_user: User, **kwargs) -> dict:
+async def concert_getter(
+    dialog_manager: DialogManager, event_from_user: User, **kwargs
+) -> dict:
     concert_id = int(dialog_manager.start_data["concert_id"])
     async with get_db_session() as session:
         concert: Concert = (
@@ -44,13 +46,13 @@ async def concert_getter(dialog_manager: DialogManager, event_from_user: User, *
         "date": concert.date.isoformat(),
     }
 
-async def delete_concert(callback: CallbackQuery, button: Button, manager: DialogManager):
+
+async def delete_concert(
+    callback: CallbackQuery, button: Button, manager: DialogManager
+):
     concert_id = int(manager.start_data["concert_id"])
     async with get_db_session() as session:
-        await session.execute(
-            delete(Concert)
-            .where(Concert.id == concert_id)
-        )
+        await session.execute(delete(Concert).where(Concert.id == concert_id))
         await session.commit()
     await callback.answer("Успешно удалил концерт")
     await manager.done()
@@ -62,7 +64,12 @@ router.include_router(
             Format("Название: <b>{name}</b>"),
             Format("Дата: <b>{date}</b>"),
             Format("\n{verbose_tracklist}"),
-            Button(Const("Удалить концерт"), on_click=delete_concert, when="is_admin", id="delete_concert"),
+            Button(
+                Const("Удалить концерт"),
+                on_click=delete_concert,
+                when="is_admin",
+                id="delete_concert",
+            ),
             Cancel(Const("Назад")),
             getter=concert_getter,
             state=ConcertInfo.menu,
