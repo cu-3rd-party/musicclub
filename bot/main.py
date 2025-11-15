@@ -13,6 +13,7 @@ from aiogram.fsm.storage.base import DefaultKeyBuilder
 from aiogram.fsm.storage.redis import RedisStorage
 from aiogram_dialog import setup_dialogs
 
+from bot.middlewares.pm import PrivateChatOnlyMiddleware
 from bot.models import Base
 from bot.services.database import init_db, close_db, get_db_session, engine
 from bot.services.invite_link import ChatInviteLinkManager
@@ -24,7 +25,9 @@ HANDLERS_PACKAGE = "bot.handlers"
 HANDLERS_PATH = Path(__file__).parent / "handlers"
 
 
-def register_all_middlewares(dp: Dispatcher) -> None: ...
+def register_all_middlewares(dp: Dispatcher) -> None:
+    dp.message.middleware(PrivateChatOnlyMiddleware())
+    dp.callback_query.middleware(PrivateChatOnlyMiddleware())
 
 
 def _iter_handler_modules() -> Iterable[ModuleType]:
