@@ -25,6 +25,8 @@
     build:
       context: .
       dockerfile: Dockerfile
+    ports:
+      - "8443:8443"
     restart: unless-stopped
     env_file:
       - .env
