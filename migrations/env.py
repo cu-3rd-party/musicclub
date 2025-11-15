@@ -1,4 +1,5 @@
 import asyncio
+import os
 from logging.config import fileConfig
 
 from sqlalchemy import pool
@@ -8,7 +9,6 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 
 from bot.models import *
-from bot.services.settings import settings
 
 config = context.config
 
@@ -19,7 +19,7 @@ target_metadata = Base.metadata
 
 
 def get_url():
-    return settings.POSTGRES_URL
+    return os.getenv("POSTGRES_URL")
 
 
 def run_migrations_offline() -> None:
