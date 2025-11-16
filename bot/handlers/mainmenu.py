@@ -81,7 +81,7 @@ async def vacant_positions_getter(
                 await session.execute(
                     select(PendingRole)
                     .options(selectinload(PendingRole.song))
-                    .order_by(PendingRole.id)
+                    .order_by(PendingRole.created_at.desc())
                 )
             )
             .scalars()
