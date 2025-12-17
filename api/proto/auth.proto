@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package api.auth;
+package auth;
 
-service Auth { rpc LoginTg(TgLogin) returns (LoginResponse); }
+service AuthService { rpc LoginTg(TgLogin) returns (LoginResponse); }
 
 message TgLogin { uint64 tg_id = 1; }
 

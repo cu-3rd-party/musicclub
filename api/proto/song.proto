@@ -1,43 +1,20 @@
 syntax = "proto3";
 
-package api.music;
+package song;
 
-import "google/api/annotations.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/field_mask.proto";
 
 service SongService {
-  rpc ListSongs(ListSongsRequest) returns (ListSongsResponse) {
-    option (google.api.http) = {
-      get : "/v1/songs"
-    };
-  }
+  rpc ListSongs(ListSongsRequest) returns (ListSongsResponse);
 
-  rpc GetSong(GetSongRequest) returns (Song) {
-    option (google.api.http) = {
-      get : "/v1/{name=songs/*}"
-    };
-  }
+  rpc GetSong(GetSongRequest) returns (Song);
 
-  rpc CreateSong(CreateSongRequest) returns (Song) {
-    option (google.api.http) = {
-      post : "/v1/songs"
-      body : "song"
-    };
-  }
+  rpc CreateSong(CreateSongRequest) returns (Song);
 
-  rpc UpdateSong(UpdateSongRequest) returns (Song) {
-    option (google.api.http) = {
-      patch : "/v1/{song.name=songs/*}"
-      body : "song"
-    };
-  }
+  rpc UpdateSong(UpdateSongRequest) returns (Song);
 
-  rpc DeleteSong(DeleteSongRequest) returns (google.protobuf.Empty) {
-    option (google.api.http) = {
-      delete : "/v1/{name=songs/*}"
-    };
-  }
+  rpc DeleteSong(DeleteSongRequest) returns (google.protobuf.Empty);
 }
 
 message Song {

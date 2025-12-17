@@ -1,35 +1,29 @@
-use api::pb::{
-    LoginResponse, TgLogin,
-    auth_server::{self, Auth},
-};
+mod grpc;
+
+use api::pb::{auth_service_server, concert_service_server, song_service_server};
 use env_logger::Env;
-use tonic::{Request, Response, Result, Status, transport::Server};
+use tonic::{Result, transport::Server};
 
-#[derive(Debug, Default)]
-struct AuthServer;
-
-#[tonic::async_trait]
-impl Auth for AuthServer {
-    async fn login_tg(
-        &self,
-        _request: Request<TgLogin>,
-    ) -> Result<Response<LoginResponse>, Status> {
-        todo!()
-    }
-}
+use crate::grpc::{auth::AuthServer, concert::ConcertServer, song::SongServer};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
     let addr = "[::1]:6969".parse()?;
-    let server = AuthServer::default();
 
     log::info!("Server is running at {addr}");
     Server::builder()
-        .add_service(auth_server::AuthServer::new(server))
+        .add_service(auth_service_server::AuthServiceServer::new(
+            AuthServer::default(),
+        ))
+        .add_service(song_service_server::SongServiceServer::new(
+            SongServer::default(),
+        ))
+        .add_service(concert_service_server::ConcertServiceServer::new(
+            ConcertServer::default(),
+        ))
         .serve(addr)
-        .await
-        .unwrap();
+        .await?;
 
     Ok(())
 }
