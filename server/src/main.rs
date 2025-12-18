@@ -104,6 +104,7 @@ fn database_url_from_env() -> Result<String, Box<dyn std::error::Error>> {
 fn load_admin_ids() -> Result<std::collections::HashSet<u64>, Box<dyn std::error::Error>> {
     let raw = std::env::var("ADMIN_IDS")?;
     let ids: Vec<u64> = serde_json::from_str(&raw)?;
+    log::info!("Loaded admin ids: {:?}", ids);
     Ok(ids.into_iter().collect())
 }
 

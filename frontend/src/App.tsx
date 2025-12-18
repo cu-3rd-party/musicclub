@@ -124,17 +124,17 @@ export default function App() {
               <div className="pill">
                 <span className="status-dot" /> Live club board
               </div>
-              <h1 style={{ margin: "10px 0 8px" }}>Music Club Control</h1>
-              <p className="subtle">
+              <h1 style={{ margin: "10px 0 8px" }}>CU Music Club</h1>
+              {/* <p className="subtle">
                 Manage songs, concerts, and member slots. Optimized for Telegram
                 Mini App embedding.
-              </p>
+              </p> */}
             </div>
-            <div className="tags">
+            {/* <div className="tags">
               <span className="pill">gRPC</span>
               <span className="pill">Realtime feel</span>
               <span className="pill">60fps UI</span>
-            </div>
+            </div> */}
           </div>
           <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
             {!token ? (
