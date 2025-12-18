@@ -24,12 +24,24 @@
   bot:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: bot.Dockerfile
     restart: unless-stopped
     env_file:
       - .env
     depends_on:
       - redis
+      - db
+  
+  backend:
+    build:
+      context: .
+      dockerfile: backend.Dockerfile
+    ports:
+      - "51001:6969"
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
       - db
 
 volumes:
