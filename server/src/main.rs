@@ -20,7 +20,10 @@ use crate::grpc::{
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
     dotenvy::dotenv().ok();
-    let addr = "[::1]:6969".parse()?;
+    let addr = std::env::var("PORT")
+        .unwrap_or_else(|_| "[::1]:6969".to_string())
+        .parse()
+        .unwrap();
     let database_url = database_url_from_env()?;
     let pool = PgPoolOptions::new()
         .max_connections(8)
