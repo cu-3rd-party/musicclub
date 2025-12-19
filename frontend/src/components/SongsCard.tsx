@@ -80,9 +80,7 @@ export function SongsCard({ songs, isFetching, onSave, onDelete, saving, deletin
 						</div>
 						<div>
 							<div>{song.description}</div>
-							<a className="subtle" href={song.link} target="_blank" rel="noreferrer">
-								{song.link}
-							</a>
+							<a className="subtle" href={song.link} target="_blank" rel="noreferrer">link</a>
 						</div>
 						<div style={{ display: "flex", gap: 8 }}>
 							<button

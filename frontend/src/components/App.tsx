@@ -27,6 +27,7 @@ export default function App() {
 
   const [tgIdInput, setTgIdInput] = useState("");
   const [loginStatus, setLoginStatus] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const songsQuery = useQuery({
     queryKey: ["songs"],
@@ -62,6 +63,7 @@ export default function App() {
     },
     onSuccess: (data, variables) => {
       setToken(data.token);
+      setIsAdmin(data.isAdmin);
       setLoginStatus(`Token issued, admin: ${data.isAdmin ? "yes" : "no"}`);
       setTgIdInput(variables);
     },
@@ -219,6 +221,7 @@ export default function App() {
           onDelete={(concert) => deleteConcertMutation.mutate(concert)}
           saving={concertMutation.isPending}
           deleting={deleteConcertMutation.isPending}
+          isAdmin={isAdmin}
         />
       </div>
 
