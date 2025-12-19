@@ -6,9 +6,13 @@ service AuthService { rpc LoginTg(TgLogin) returns (LoginResponse); }
 
 message TgLogin { uint64 tg_id = 1; }
 
-// Contains JWT token
-message LoginResponse { string token = 1; }
-
-service User { rpc IsAdmin(TgLogin) returns (IsAdminResponse); }
-
-message IsAdminResponse { bool is_admin = 1; }
+message LoginResponse {
+	// JWT token
+	string token = 1;
+	// Is specified user an admin
+	bool is_admin = 2;
+	// Time of creation of the token
+	uint64 iat = 3;
+	// Time of expiration of the token
+	uint64 exp = 4;
+}

@@ -11,7 +11,7 @@ use tonic::{Request, Response, Result, Status};
 use tonic_middleware::RequestInterceptor;
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Claims {
+pub struct Claims {
     sub: u64,
     exp: usize,
     iat: usize,
@@ -56,15 +56,18 @@ impl AuthServer {
             .as_secs() as usize
     }
 
-    pub fn sign(&self, payload: u64) -> String {
+    fn generate_claims(&self, payload: u64) -> Claims {
         let now = Self::now_ts();
-        let claims = Claims {
+        Claims {
             sub: payload,
             iat: now,
             exp: now + self.ttl.as_secs() as usize,
             is_admin: self.admin_ids.contains(&payload),
-        };
-        encode(&Header::default(), &claims, &self.keys.encoding).expect("jwt encode failed")
+        }
+    }
+
+    pub fn sign(&self, claims: &Claims) -> String {
+        encode(&Header::default(), claims, &self.keys.encoding).expect("jwt encode failed")
     }
 }
 
@@ -75,9 +78,15 @@ impl AuthService for AuthServer {
         if tg_id == 0 {
             return Err(Status::invalid_argument("tg_id must be non-zero"));
         }
-        let token = self.sign(tg_id);
+        let claims = self.generate_claims(tg_id);
+        let token = self.sign(&claims);
         log::debug!("Handled login request for {tg_id} and returned token {token:.20}");
-        Ok(Response::new(LoginResponse { token }))
+        Ok(Response::new(LoginResponse {
+            token: token,
+            is_admin: claims.is_admin,
+            iat: claims.iat as u64,
+            exp: claims.exp as u64,
+        }))
     }
 }
 
