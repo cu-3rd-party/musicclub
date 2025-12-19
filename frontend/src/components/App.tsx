@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@connectrpc/connect";
 import { SongService, type Song } from "../gen/song_pb.js";
@@ -8,7 +8,6 @@ import { AuthService } from "../gen/auth_pb.js";
 import { transport, setToken } from "../services/config.js";
 import { makeTimestamp } from "./makeTimestamp.js";
 import { safeId } from "./safeId.js";
-import { Legend } from "./Legend.js";
 import { LoginCard } from "./LoginCard.js";
 import { StatusPills } from "./StatusPills.js";
 import { SongsCard } from "./SongsCard.js";
@@ -16,7 +15,28 @@ import { ConcertsCard } from "./ConcertsCard.js";
 import { JoinCard } from "./JoinCard.js";
 import { MyParticipationsCard } from "./MyParticipationsCard.js";
 
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp?: {
+        initDataUnsafe?: unknown;
+      };
+    };
+  }
+}
+
 const CLUB_PARENT = "clubs/main";
+
+function validateInitDataUnsafe(_initDataUnsafe: unknown): boolean {
+  // TODO: add server-side validation of initData once available.
+  return true;
+}
+
+function extractTelegramUserId(initDataUnsafe: any): string | null {
+  const userId = initDataUnsafe?.user?.id ?? initDataUnsafe?.user?.ID;
+  if (userId == null) return null;
+  return String(userId);
+}
 
 export default function App() {
   const queryClient = useQueryClient();
@@ -28,6 +48,12 @@ export default function App() {
   const [tgIdInput, setTgIdInput] = useState("");
   const [loginStatus, setLoginStatus] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const autoLoginAttempted = useRef(false);
+  const [loginDebug, setLoginDebug] = useState<string[]>([]);
+
+  const appendLoginDebug = useCallback((msg: string) => {
+    setLoginDebug((prev) => [...prev, msg]);
+  }, []);
 
   const songsQuery = useQuery({
     queryKey: ["songs"],
@@ -59,6 +85,7 @@ export default function App() {
 
   const loginMutation = useMutation({
     mutationFn: async (tg: string) => {
+      appendLoginDebug(`loginTg requested for id ${tg}`);
       return authClient.loginTg({ tgId: BigInt(tg) });
     },
     onSuccess: (data, variables) => {
@@ -66,9 +93,11 @@ export default function App() {
       setIsAdmin(data.isAdmin);
       setLoginStatus(`Token issued, admin: ${data.isAdmin ? "yes" : "no"}`);
       setTgIdInput(variables);
+      appendLoginDebug(`Login success for ${variables}; admin=${data.isAdmin}`);
     },
     onError: (err: unknown) => {
       setLoginStatus(`Login failed: ${String(err)}`);
+      appendLoginDebug(`Login failed: ${String(err)}`);
     },
   });
 
@@ -167,6 +196,30 @@ export default function App() {
     },
   });
 
+  useEffect(() => {
+    const webApp = window?.Telegram?.WebApp;
+    appendLoginDebug(`Telegram WebApp detected: ${Boolean(webApp)}`);
+    const initDataUnsafe = webApp?.initDataUnsafe;
+    if (!initDataUnsafe || autoLoginAttempted.current) {
+      appendLoginDebug("initDataUnsafe missing or auto-login already attempted");
+      return;
+    }
+    if (!validateInitDataUnsafe(initDataUnsafe)) {
+      appendLoginDebug("initDataUnsafe validation failed");
+      return;
+    }
+    const extractedId = extractTelegramUserId(initDataUnsafe);
+    if (!extractedId) {
+      appendLoginDebug("No user id found in initDataUnsafe");
+      return;
+    }
+    autoLoginAttempted.current = true;
+    appendLoginDebug(`initDataUnsafe found; user id=${extractedId}`);
+    setTgIdInput(extractedId);
+    setLoginStatus("Logging in via Telegram...");
+    loginMutation.mutate(extractedId);
+  }, [appendLoginDebug, loginMutation]);
+
   const songMap = useMemo(() => {
     const map = new Map<string, Song>();
     const items = songsQuery.data ?? [];
@@ -195,6 +248,7 @@ export default function App() {
           loginStatus={loginStatus}
           onLogin={(tg) => loginMutation.mutate(tg)}
           loading={loginMutation.isPending}
+          debugLines={loginDebug}
         />
         <StatusPills
           songsCount={songsQuery.data?.length ?? 0}

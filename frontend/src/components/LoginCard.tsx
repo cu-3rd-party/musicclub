@@ -1,4 +1,4 @@
-export function LoginCard({ tgIdInput, setTgIdInput, loginStatus, onLogin, loading }: LoginCardProps) {
+export function LoginCard({ tgIdInput, setTgIdInput, loginStatus, onLogin, loading, debugLines = [] }: LoginCardProps) {
 	return (
 		<div className="card">
 			<div className="section-header">
@@ -29,6 +29,18 @@ export function LoginCard({ tgIdInput, setTgIdInput, loginStatus, onLogin, loadi
 					{loginStatus ? <span className="subtle">{loginStatus}</span> : null}
 				</div>
 			</form>
+			{debugLines.length ? (
+				<div className="subtle" style={{ marginTop: 8, fontSize: 12, lineHeight: 1.5 }}>
+					<div style={{ fontWeight: 600 }}>Debug</div>
+					<div className="scroll-y" style={{ maxHeight: 100 }}>
+						<ul style={{ paddingLeft: 16, margin: "4px 0 0" }}>
+							{debugLines.map((line, idx) => (
+								<li key={idx}>{line}</li>
+							))}
+						</ul>
+					</div>
+				</div>
+			) : null}
 		</div>
 	);
 } export type LoginCardProps = {
@@ -37,5 +49,5 @@ export function LoginCard({ tgIdInput, setTgIdInput, loginStatus, onLogin, loadi
 	loginStatus: string | null;
 	onLogin: (tg: string) => void;
 	loading: boolean;
+	debugLines?: string[];
 };
-
