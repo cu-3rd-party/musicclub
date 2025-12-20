@@ -1,14 +1,14 @@
 :root {
-  --bg: linear-gradient(135deg, #0c1020, #11182e);
-  --card: rgba(255, 255, 255, 0.04);
-  --card-strong: rgba(255, 255, 255, 0.08);
-  --text: #eef3ff;
-  --muted: #92a2c6;
-  --accent: #73f0c1;
-  --accent-2: #5aa0ff;
-  --danger: #ff7b8a;
-  --border: rgba(255, 255, 255, 0.08);
-  --shadow: 0 15px 40px rgba(0, 0, 0, 0.35);
+  --bg: linear-gradient(135deg, #000000, #0a0a0a);
+  --card: rgba(255, 255, 255, 0.05);
+  --card-strong: rgba(255, 255, 255, 0.1);
+  --text: #ffffff;
+  --muted: #aaaaaa;
+  --accent: #ff6600;
+  --accent-2: #9d4edd;
+  --danger: #ff3333;
+  --border: rgba(255, 255, 255, 0.1);
+  --shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
   font-family: "Manrope", system-ui, -apple-system, sans-serif;
   color: var(--text);
   background: var(--bg);
@@ -77,11 +77,11 @@ a {
   border-radius: 12px;
   padding: 10px 14px;
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: #041021;
+  color: #ffffff;
   font-weight: 700;
   cursor: pointer;
   transition: transform 120ms ease, box-shadow 120ms ease;
-  box-shadow: 0 10px 22px rgba(88, 212, 255, 0.4);
+  box-shadow: 0 10px 22px rgba(255, 102, 0, 0.3);
 }
 
 .button.secondary {
@@ -91,8 +91,8 @@ a {
 }
 
 .button.danger {
-  background: linear-gradient(135deg, #ff9aa5, #ff6b7e);
-  color: #230308;
+  background: linear-gradient(135deg, #ff3333, #cc0000);
+  color: #ffffff;
 }
 
 .button:active {
@@ -140,7 +140,7 @@ a {
   border-bottom: none;
 }
 
-.hero {
+.legend {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 14px;
@@ -148,11 +148,11 @@ a {
   margin-bottom: 22px;
 }
 
-.hero-visual {
+.legend-visual {
   height: 220px;
   border-radius: 20px;
-  background: radial-gradient(circle at 20% 20%, #5aa0ff33, transparent 40%),
-    radial-gradient(circle at 70% 60%, #73f0c133, transparent 45%),
+  background: radial-gradient(circle at 20% 20%, #9d4edd33, transparent 40%),
+    radial-gradient(circle at 70% 60%, #ff660033, transparent 45%),
     linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
@@ -165,7 +165,7 @@ a {
   width: 140px;
   height: 140px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(115, 240, 193, 0.35), transparent 60%);
+  background: radial-gradient(circle, rgba(255, 102, 0, 0.35), transparent 60%);
   filter: blur(16px);
   animation: float 6s ease-in-out infinite alternate;
 }
@@ -173,7 +173,7 @@ a {
 .pulse.secondary {
   top: 40%;
   left: 60%;
-  background: radial-gradient(circle, rgba(90, 160, 255, 0.35), transparent 60%);
+  background: radial-gradient(circle, rgba(157, 78, 221, 0.35), transparent 60%);
   animation-duration: 7s;
 }
 
@@ -181,6 +181,7 @@ a {
   from {
     transform: translateY(-6px) translateX(-4px);
   }
+
   to {
     transform: translateY(6px) translateX(6px);
   }
