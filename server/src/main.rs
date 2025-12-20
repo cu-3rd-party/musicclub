@@ -1,4 +1,6 @@
-mod grpc;
+mod handlers;
+mod middleware;
+mod services;
 
 use api::pb::{
     auth_service_server, concert_service_server, participation_service_server, song_service_server,
@@ -11,18 +13,14 @@ use tonic_middleware::{MiddlewareLayer, RequestInterceptorLayer};
 use tonic_web::GrpcWebLayer;
 use tower_http::cors::{Any, CorsLayer};
 
-use crate::grpc::{
-    auth::{AuthInterceptor, AuthServer},
-    concert::ConcertServer,
-    middleware::{AdminOnlyMiddleware, LoggingMiddleware},
-    participation::ParticipationServer,
-    song::SongServer,
-};
+use crate::handlers::{AuthServer, ConcertServer, ParticipationServer, SongServer};
+use crate::middleware::{AdminOnlyMiddleware, AuthInterceptor, ConsoleLoggingMiddleware};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
     dotenvy::dotenv().ok();
+
     let addr = std::env::var("PORT")
         .unwrap_or_else(|_| "0.0.0.0:6969".to_string())
         .parse()
@@ -54,7 +52,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .accept_http1(true)
         .layer(cors)
         .layer(GrpcWebLayer::new())
-        .layer(MiddlewareLayer::new(LoggingMiddleware::default()))
+        .layer(MiddlewareLayer::new(ConsoleLoggingMiddleware::default()))
         .layer(RequestInterceptorLayer::new(auth_interceptor))
         .layer(MiddlewareLayer::new(admin_middleware))
         .add_service(auth_service_server::AuthServiceServer::new(

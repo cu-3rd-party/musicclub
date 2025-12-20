@@ -11,6 +11,12 @@ npm install
 npm run dev
 ```
 
+## Generating proto
+
+```bash
+npx buf generate
+```
+
 ## Notes
 
 - Auth uses `auth.AuthService/LoginTg` with a Telegram ID and stores the JWT in `localStorage`, attaching it to gRPC calls as a bearer token.

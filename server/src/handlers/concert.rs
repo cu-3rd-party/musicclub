@@ -367,8 +367,8 @@ mod tests {
     use tonic::{Request, transport::Server};
     use tonic_middleware::{MiddlewareLayer, RequestInterceptorLayer};
 
-    use crate::grpc::auth::{AuthInterceptor, AuthServer};
-    use crate::grpc::middleware::AdminOnlyMiddleware;
+    use crate::handlers::auth::AuthServer;
+    use crate::middleware::{AdminOnlyMiddleware, AuthInterceptor};
 
     #[test]
     fn date_roundtrip_works() {
