@@ -19,7 +19,7 @@ func main() {
 	defer stop()
 
 	cfg := config.Load()
-	logger.SetDefaultFormat("%{time} %{lvl} %{file}:%{line} %{message}")
+	logger.SetDefaultFormat("%{time} %{lvl} %{message}")
 	log, _ := logger.New("", 1, os.Stdout)
 	ctx = context.WithValue(ctx, "log", log)
 	ctx = context.WithValue(ctx, "cfg", cfg)

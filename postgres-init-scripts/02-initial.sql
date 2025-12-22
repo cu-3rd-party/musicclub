@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS tg_auth_user (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
     tg_user_id BIGINT NOT NULL,
-    success BOOLEAN NOT NULL DEFAULT FALSE,
+    success BOOLEAN NOT NULL DEFAULT FALSE
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_tg_auth_user_tg_user ON tg_auth_user (tg_user_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_tg_auth_session_user ON tg_auth_session (tg_user_id);

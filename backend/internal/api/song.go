@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	songpb "musicclubbot/backend/proto"
+
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -44,7 +45,7 @@ func (s *SongService) ListSongs(ctx context.Context, req *songpb.ListSongsReques
 	}
 
 	query := `
-		SELECT id, title, artist, description, link_kind, link_url, COALESCE(created_by, '')
+		SELECT id, title, artist, description, link_kind, link_url, COALESCE(created_by, NULL)
 		FROM song
 	` + where + `
 		ORDER BY created_at DESC
@@ -63,7 +64,8 @@ func (s *SongService) ListSongs(ctx context.Context, req *songpb.ListSongsReques
 	var songs []*songpb.Song
 	for rows.Next() {
 		var sng songpb.Song
-		var linkKind, linkURL, creatorID string
+		var linkKind, linkURL string
+		var creatorID sql.NullString
 		if err := rows.Scan(&sng.Id, &sng.Title, &sng.Artist, &sng.Description, &linkKind, &linkURL, &creatorID); err != nil {
 			return nil, status.Errorf(codes.Internal, "scan song: %v", err)
 		}
@@ -86,7 +88,7 @@ func (s *SongService) ListSongs(ctx context.Context, req *songpb.ListSongsReques
 	}
 
 	return &songpb.ListSongsResponse{
-		Songs:        songs,
+		Songs:         songs,
 		NextPageToken: nextToken,
 	}, nil
 }
@@ -170,8 +172,8 @@ func (s *SongService) UpdateSong(ctx context.Context, req *songpb.UpdateSongRequ
 		return nil, status.Errorf(codes.Internal, "load permissions: %v", err)
 	}
 
-	var creatorID string
-	row := db.QueryRowContext(ctx, `SELECT COALESCE(created_by, '') FROM song WHERE id = $1`, req.GetId())
+	var creatorID sql.NullString
+	row := db.QueryRowContext(ctx, `SELECT COALESCE(created_by, NULL) FROM song WHERE id = $1`, req.GetId())
 	if err := row.Scan(&creatorID); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, status.Error(codes.NotFound, "song not found")
@@ -226,8 +228,8 @@ func (s *SongService) DeleteSong(ctx context.Context, req *songpb.SongId) (*empt
 		return nil, status.Errorf(codes.Internal, "load permissions: %v", err)
 	}
 
-	var creatorID string
-	row := db.QueryRowContext(ctx, `SELECT COALESCE(created_by, '') FROM song WHERE id = $1`, req.GetId())
+	var creatorID sql.NullString
+	row := db.QueryRowContext(ctx, `SELECT COALESCE(created_by, NULL) FROM song WHERE id = $1`, req.GetId())
 	if err := row.Scan(&creatorID); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, status.Error(codes.NotFound, "song not found")

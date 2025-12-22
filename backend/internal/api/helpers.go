@@ -35,7 +35,7 @@ func userIDFromCtx(ctx context.Context) (string, error) {
 
 func loadUserById(ctx context.Context, db *sql.DB, userID string) (*authpb.User, error) {
 	row := db.QueryRowContext(ctx, `
-		SELECT id, display_name, tg_username, COALESCE(avatar_url, '')
+		SELECT id, display_name, username, COALESCE(avatar_url, '')
 		FROM app_user WHERE id = $1
 	`, userID)
 	var u authpb.User
@@ -47,7 +47,7 @@ func loadUserById(ctx context.Context, db *sql.DB, userID string) (*authpb.User,
 
 func loadUserByUsername(ctx context.Context, db *sql.DB, username string) (*authpb.User, error) {
 	row := db.QueryRowContext(ctx, `
-		SELECT id, display_name, tg_username, COALESCE(avatar_url, '')
+		SELECT id, display_name, username, COALESCE(avatar_url, '')
 		FROM app_user WHERE username = $1
 	`, username)
 	var u authpb.User
@@ -116,14 +116,14 @@ func mapSongLinkKindToDB(kind songpb.SongLinkType) (string, error) {
 	}
 }
 
-func permissionAllowsSongEdit(perms *permissionpb.PermissionSet, ownerID, currentID string) bool {
+func permissionAllowsSongEdit(perms *permissionpb.PermissionSet, ownerID sql.NullString, currentID string) bool {
 	if perms == nil || perms.Songs == nil {
 		return false
 	}
 	if perms.Songs.EditAnySongs {
 		return true
 	}
-	return perms.Songs.EditOwnSongs && ownerID != "" && ownerID == currentID
+	return perms.Songs.EditOwnSongs && ownerID.String != "" && ownerID.String == currentID
 }
 
 func permissionAllowsJoinEdit(perms *permissionpb.PermissionSet, ownerID, currentID string) bool {
@@ -146,11 +146,12 @@ func permissionAllowsTracklistEdit(perms *permissionpb.PermissionSet) bool {
 
 func loadSongDetails(ctx context.Context, db *sql.DB, songID, currentUserID string) (*songpb.SongDetails, error) {
 	row := db.QueryRowContext(ctx, `
-		SELECT id, title, artist, description, link_kind, link_url, COALESCE(created_by, '')
+		SELECT id, title, artist, description, link_kind, link_url, COALESCE(created_by, NULL)
 		FROM song WHERE id = $1
 	`, songID)
 	var s songpb.Song
-	var linkKind, linkURL, creatorID string
+	var linkKind, linkURL string
+	var creatorID sql.NullString
 	if err := row.Scan(&s.Id, &s.Title, &s.Artist, &s.Description, &linkKind, &linkURL, &creatorID); err != nil {
 		return nil, err
 	}
@@ -200,7 +201,7 @@ func loadSongRoles(ctx context.Context, db *sql.DB, songID string) ([]string, er
 func loadSongAssignments(ctx context.Context, db *sql.DB, songID string) ([]*songpb.RoleAssignment, error) {
 	rows, err := db.QueryContext(ctx, `
 		SELECT sra.role,
-		       au.id, au.display_name, COALESCE(au.tg_username, ''), COALESCE(au.avatar_url, ''),
+		       au.id, au.display_name, COALESCE(au.username, ''), COALESCE(au.avatar_url, ''),
 		       sra.joined_at
 		FROM song_role_assignment sra
 		JOIN app_user au ON sra.user_id = au.id
@@ -300,7 +301,7 @@ func loadTracklist(ctx context.Context, db *sql.DB, eventID string) (*eventpb.Tr
 func loadEventParticipants(ctx context.Context, db *sql.DB, eventID string) ([]*songpb.RoleAssignment, error) {
 	rows, err := db.QueryContext(ctx, `
 		SELECT ep.role,
-		       au.id, au.display_name, COALESCE(au.tg_username, ''), COALESCE(au.avatar_url, ''),
+		       au.id, au.display_name, COALESCE(au.username, ''), COALESCE(au.avatar_url, ''),
 		       ep.joined_at
 		FROM event_participant ep
 		JOIN app_user au ON ep.user_id = au.id

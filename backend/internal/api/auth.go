@@ -62,7 +62,7 @@ func checkPasswordHash(password, hash string) bool {
 }
 
 func generateAccessToken(ctx context.Context, userID uuid.UUID, username string) (string, error) {
-	cfg := ctx.Value("cfg").(*config.Config)
+	cfg := ctx.Value("cfg").(config.Config)
 	expirationTime := time.Now().Add(accessTokenExp)
 
 	claims := &JWTClaims{
@@ -90,7 +90,7 @@ func generateRefreshToken() (string, error) {
 }
 
 func verifyToken(ctx context.Context, tokenString string) (*JWTClaims, error) {
-	cfg := ctx.Value("cfg").(*config.Config)
+	cfg := ctx.Value("cfg").(config.Config)
 	token, err := jwt.ParseWithClaims(tokenString, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -176,7 +176,7 @@ func (s *AuthService) Register(ctx context.Context, req *authpb.RegisterUserRequ
 	err = tx.QueryRowContext(ctx, `
 		INSERT INTO app_user (username, password_hash, display_name, avatar_url, is_chat_member) 
 		VALUES ($1, $2, $3, $4, FALSE)
-		RETURNING id, display_name, avatar_url, created_at`,
+		RETURNING id, display_name, avatar_url`,
 		username,
 		hashedPassword,
 		displayName,
@@ -644,21 +644,25 @@ func getUserPermissions(ctx context.Context, db interface{}, userID uuid.UUID) (
 		return nil, fmt.Errorf("unsupported database type")
 	}
 
-	var permissions permissionspb.PermissionSet
+	permissions := &permissionspb.PermissionSet{
+		Join:   &permissionspb.JoinPermissions{},
+		Songs:  &permissionspb.SongPermissions{},
+		Events: &permissionspb.EventPermissions{},
+	}
 
 	err := queryRow.QueryRowContext(ctx, `
-		SELECT edit_own_participation, edit_any_participation, 
-		       edit_own_songs, edit_any_songs, edit_events, edit_tracklists
-		FROM user_permissions 
-		WHERE user_id = $1`,
+    SELECT edit_own_participation, edit_any_participation, 
+           edit_own_songs, edit_any_songs, edit_events, edit_tracklists
+    FROM user_permissions 
+    WHERE user_id = $1`,
 		userID,
 	).Scan(
-		permissions.GetJoin().GetEditOwnParticipation(),
-		permissions.GetJoin().GetEditAnyParticipation(),
-		permissions.GetSongs().GetEditOwnSongs(),
-		permissions.GetSongs().GetEditAnySongs(),
-		permissions.GetEvents().GetEditEvents(),
-		permissions.GetEvents().GetEditTracklists(),
+		&permissions.Join.EditOwnParticipation,
+		&permissions.Join.EditAnyParticipation,
+		&permissions.Songs.EditOwnSongs,
+		&permissions.Songs.EditAnySongs,
+		&permissions.Events.EditEvents,
+		&permissions.Events.EditTracklists,
 	)
 
 	if err != nil {
@@ -669,7 +673,7 @@ func getUserPermissions(ctx context.Context, db interface{}, userID uuid.UUID) (
 		return nil, err
 	}
 
-	return &permissions, nil
+	return permissions, nil
 }
 
 var PublicMethods = map[string]bool{

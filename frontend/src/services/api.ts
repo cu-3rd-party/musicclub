@@ -1,4 +1,10 @@
 import { createClient } from "@connectrpc/connect";
+import { createConnectTransport } from "@connectrpc/connect-web";
+import type {
+	AuthSession,
+	Credentials,
+	RegisterUserRequest
+} from "../proto/auth_pb";
 import { create } from "@bufbuild/protobuf";
 
 import { transport } from "./config";
@@ -11,14 +17,22 @@ export const authClient = createClient(AuthService, transport);
 export const songClient = createClient(SongService, transport);
 export const eventClient = createClient(EventService, transport);
 
-export function loginWithTelegram(initData: string, tgUserId?: number | string) {
-	return authClient.loginWithTelegram(
-		create(TgLoginRequestSchema, {
-			initData,
-			tgUserId: tgUserId ? BigInt(tgUserId) : BigInt(0),
-		}),
-	);
-}
+// Login with username/password
+export const login = async (credentials: Credentials): Promise<AuthSession> => {
+	return await authClient.login(credentials);
+};
+
+// Register new user
+export const register = async (request: RegisterUserRequest): Promise<AuthSession> => {
+	return await authClient.register(request);
+};
+
+// Clear all login state
+export const logout = () => {
+	localStorage.removeItem("access_token");
+	localStorage.removeItem("refresh_token");
+	window.location.href = "/";
+};
 
 export function getProfile() {
 	return authClient.getProfile({});
