@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package musicclub.permissions;
 
+option go_package = "musicclubbot/backend/proto/permissions;permissionspb";
+
 // Aggregated permissions for a user session.
 message PermissionSet {
   JoinPermissions join = 1;

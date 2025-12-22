@@ -15,8 +15,8 @@
 
   backend:
     build:
-      context: .
-      dockerfile: backend.Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile
     ports:
       - "6969:6969"
     restart: unless-stopped
@@ -33,9 +33,6 @@
       - "5173:80"
     env_file:
       - .env
-    environment:
-      # Point the browser bundle at the backend service inside the Docker network
-      VITE_GRPC_HOST: http://backend:6969
     depends_on:
       - backend
 

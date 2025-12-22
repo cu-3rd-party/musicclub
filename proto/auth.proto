@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package musicclub.auth;
 
+option go_package = "musicclubbot/backend/proto/auth;authpb";
+
 import "google/protobuf/empty.proto";
 import "permissions.proto";
 import "user.proto";

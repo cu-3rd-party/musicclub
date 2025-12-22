@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package musicclub.user;
 
+option go_package = "musicclubbot/backend/proto/user;userpb";
+
 // Minimal user info for displaying assignments and ownership.
 message User {
   string id = 1;
