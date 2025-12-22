@@ -8,26 +8,56 @@ import "google/protobuf/empty.proto";
 import "permissions.proto";
 import "user.proto";
 
-// Authentication and membership gating for the mini app.
+// Authentication and membership gating for the app.
 service AuthService {
-  // Telegram OAuth (Mini App) login. Returns JWT and membership info.
-  rpc LoginWithTelegram(TgLoginRequest) returns (AuthSession);
+  // Registers the new user in the system.
+  rpc Register(RegisterUserRequest) returns (AuthSession);
+
+  // Logins the user.
+  rpc Login(Credentials) returns (AuthSession);
+
+  // Refreshes JWT token pair.
+  rpc Refresh(RefreshRequest) returns (TokenPair);
+
+  // Generates Telegram url to link account with telegram.
+  rpc GetTgLoginLink(musicclub.user.User) returns (TgLoginLinkResponse);
 
   // Returns current user profile and permissions for UI gating.
   rpc GetProfile(google.protobuf.Empty) returns (ProfileResponse);
 }
 
-message TgLoginRequest {
-  // Raw init data from Telegram Mini App (used for signature verification).
-  string init_data = 1;
+message Credentials {
+  string username = 1;
+  string password = 2;
+}
 
+message RegisterUserRequest {
+  Credentials credentials = 1;
+  musicclub.user.User profile = 2;
+}
+
+message RefreshRequest {
+  string refresh_token = 1;
+}
+
+message TokenPair {
+  string access_token = 1;
+  string refresh_token = 2;
+}
+
+message TgLoginLinkResponse {
+  string login_link = 1;
+}
+
+message TgLoginRequest {
+  musicclub.user.User user = 1;
   // Optional explicit Telegram user id (if provided by the client).
   uint64 tg_user_id = 2;
 }
 
 message AuthSession {
-  // JWT access token.
-  string access_token = 1;
+  // JWT token pair.
+  TokenPair tokens = 1;
 
   // Token issued-at and expiration (unix seconds).
   uint64 iat = 2;

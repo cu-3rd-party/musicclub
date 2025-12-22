@@ -8,7 +8,7 @@ import type { EmptySchema } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_empty } from "@bufbuild/protobuf/wkt";
 import type { PermissionSet } from "./permissions_pb.ts";
 import { file_permissions } from "./permissions_pb.ts";
-import type { User } from "./user_pb.ts";
+import type { User, UserSchema } from "./user_pb.ts";
 import { file_user } from "./user_pb.ts";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -16,18 +16,116 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file auth.proto.
  */
 export const file_auth: GenFile = /*@__PURE__*/
-  fileDesc("CgphdXRoLnByb3RvEg5tdXNpY2NsdWIuYXV0aCI3Cg5UZ0xvZ2luUmVxdWVzdBIRCglpbml0X2RhdGEYASABKAkSEgoKdGdfdXNlcl9pZBgCIAEoBCLRAQoLQXV0aFNlc3Npb24SFAoMYWNjZXNzX3Rva2VuGAEgASgJEgsKA2lhdBgCIAEoBBILCgNleHAYAyABKAQSFgoOaXNfY2hhdF9tZW1iZXIYBCABKAgSGAoQam9pbl9yZXF1ZXN0X3VybBgFIAEoCRIlCgdwcm9maWxlGAYgASgLMhQubXVzaWNjbHViLnVzZXIuVXNlchI5CgtwZXJtaXNzaW9ucxgHIAEoCzIkLm11c2ljY2x1Yi5wZXJtaXNzaW9ucy5QZXJtaXNzaW9uU2V0InMKD1Byb2ZpbGVSZXNwb25zZRIlCgdwcm9maWxlGAEgASgLMhQubXVzaWNjbHViLnVzZXIuVXNlchI5CgtwZXJtaXNzaW9ucxgCIAEoCzIkLm11c2ljY2x1Yi5wZXJtaXNzaW9ucy5QZXJtaXNzaW9uU2V0MqYBCgtBdXRoU2VydmljZRJQChFMb2dpbldpdGhUZWxlZ3JhbRIeLm11c2ljY2x1Yi5hdXRoLlRnTG9naW5SZXF1ZXN0GhsubXVzaWNjbHViLmF1dGguQXV0aFNlc3Npb24SRQoKR2V0UHJvZmlsZRIWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRofLm11c2ljY2x1Yi5hdXRoLlByb2ZpbGVSZXNwb25zZUIcWhptdXNpY2NsdWJib3QvYmFja2VuZC9wcm90b2IGcHJvdG8z", [file_google_protobuf_empty, file_permissions, file_user]);
+  fileDesc("CgphdXRoLnByb3RvEg5tdXNpY2NsdWIuYXV0aCIxCgtDcmVkZW50aWFscxIQCgh1c2VybmFtZRgBIAEoCRIQCghwYXNzd29yZBgCIAEoCSJuChNSZWdpc3RlclVzZXJSZXF1ZXN0EjAKC2NyZWRlbnRpYWxzGAEgASgLMhsubXVzaWNjbHViLmF1dGguQ3JlZGVudGlhbHMSJQoHcHJvZmlsZRgCIAEoCzIULm11c2ljY2x1Yi51c2VyLlVzZXIiJwoOUmVmcmVzaFJlcXVlc3QSFQoNcmVmcmVzaF90b2tlbhgBIAEoCSI4CglUb2tlblBhaXISFAoMYWNjZXNzX3Rva2VuGAEgASgJEhUKDXJlZnJlc2hfdG9rZW4YAiABKAkiKQoTVGdMb2dpbkxpbmtSZXNwb25zZRISCgpsb2dpbl9saW5rGAEgASgJIkgKDlRnTG9naW5SZXF1ZXN0EiIKBHVzZXIYASABKAsyFC5tdXNpY2NsdWIudXNlci5Vc2VyEhIKCnRnX3VzZXJfaWQYAiABKAQi5gEKC0F1dGhTZXNzaW9uEikKBnRva2VucxgBIAEoCzIZLm11c2ljY2x1Yi5hdXRoLlRva2VuUGFpchILCgNpYXQYAiABKAQSCwoDZXhwGAMgASgEEhYKDmlzX2NoYXRfbWVtYmVyGAQgASgIEhgKEGpvaW5fcmVxdWVzdF91cmwYBSABKAkSJQoHcHJvZmlsZRgGIAEoCzIULm11c2ljY2x1Yi51c2VyLlVzZXISOQoLcGVybWlzc2lvbnMYByABKAsyJC5tdXNpY2NsdWIucGVybWlzc2lvbnMuUGVybWlzc2lvblNldCJzCg9Qcm9maWxlUmVzcG9uc2USJQoHcHJvZmlsZRgBIAEoCzIULm11c2ljY2x1Yi51c2VyLlVzZXISOQoLcGVybWlzc2lvbnMYAiABKAsyJC5tdXNpY2NsdWIucGVybWlzc2lvbnMuUGVybWlzc2lvblNldDK1AgoLQXV0aFNlcnZpY2USTAoIUmVnaXN0ZXISIy5tdXNpY2NsdWIuYXV0aC5SZWdpc3RlclVzZXJSZXF1ZXN0GhsubXVzaWNjbHViLmF1dGguQXV0aFNlc3Npb24SRAoHUmVmcmVzaBIeLm11c2ljY2x1Yi5hdXRoLlJlZnJlc2hSZXF1ZXN0GhkubXVzaWNjbHViLmF1dGguVG9rZW5QYWlyEksKDkdldFRnTG9naW5MaW5rEhQubXVzaWNjbHViLnVzZXIuVXNlchojLm11c2ljY2x1Yi5hdXRoLlRnTG9naW5MaW5rUmVzcG9uc2USRQoKR2V0UHJvZmlsZRIWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRofLm11c2ljY2x1Yi5hdXRoLlByb2ZpbGVSZXNwb25zZUIcWhptdXNpY2NsdWJib3QvYmFja2VuZC9wcm90b2IGcHJvdG8z", [file_google_protobuf_empty, file_permissions, file_user]);
+
+/**
+ * @generated from message musicclub.auth.Credentials
+ */
+export type Credentials = Message<"musicclub.auth.Credentials"> & {
+  /**
+   * @generated from field: string username = 1;
+   */
+  username: string;
+
+  /**
+   * @generated from field: string password = 2;
+   */
+  password: string;
+};
+
+/**
+ * Describes the message musicclub.auth.Credentials.
+ * Use `create(CredentialsSchema)` to create a new message.
+ */
+export const CredentialsSchema: GenMessage<Credentials> = /*@__PURE__*/
+  messageDesc(file_auth, 0);
+
+/**
+ * @generated from message musicclub.auth.RegisterUserRequest
+ */
+export type RegisterUserRequest = Message<"musicclub.auth.RegisterUserRequest"> & {
+  /**
+   * @generated from field: musicclub.auth.Credentials credentials = 1;
+   */
+  credentials?: Credentials;
+
+  /**
+   * @generated from field: musicclub.user.User profile = 2;
+   */
+  profile?: User;
+};
+
+/**
+ * Describes the message musicclub.auth.RegisterUserRequest.
+ * Use `create(RegisterUserRequestSchema)` to create a new message.
+ */
+export const RegisterUserRequestSchema: GenMessage<RegisterUserRequest> = /*@__PURE__*/
+  messageDesc(file_auth, 1);
+
+/**
+ * @generated from message musicclub.auth.RefreshRequest
+ */
+export type RefreshRequest = Message<"musicclub.auth.RefreshRequest"> & {
+  /**
+   * @generated from field: string refresh_token = 1;
+   */
+  refreshToken: string;
+};
+
+/**
+ * Describes the message musicclub.auth.RefreshRequest.
+ * Use `create(RefreshRequestSchema)` to create a new message.
+ */
+export const RefreshRequestSchema: GenMessage<RefreshRequest> = /*@__PURE__*/
+  messageDesc(file_auth, 2);
+
+/**
+ * @generated from message musicclub.auth.TokenPair
+ */
+export type TokenPair = Message<"musicclub.auth.TokenPair"> & {
+  /**
+   * @generated from field: string access_token = 1;
+   */
+  accessToken: string;
+
+  /**
+   * @generated from field: string refresh_token = 2;
+   */
+  refreshToken: string;
+};
+
+/**
+ * Describes the message musicclub.auth.TokenPair.
+ * Use `create(TokenPairSchema)` to create a new message.
+ */
+export const TokenPairSchema: GenMessage<TokenPair> = /*@__PURE__*/
+  messageDesc(file_auth, 3);
+
+/**
+ * @generated from message musicclub.auth.TgLoginLinkResponse
+ */
+export type TgLoginLinkResponse = Message<"musicclub.auth.TgLoginLinkResponse"> & {
+  /**
+   * @generated from field: string login_link = 1;
+   */
+  loginLink: string;
+};
+
+/**
+ * Describes the message musicclub.auth.TgLoginLinkResponse.
+ * Use `create(TgLoginLinkResponseSchema)` to create a new message.
+ */
+export const TgLoginLinkResponseSchema: GenMessage<TgLoginLinkResponse> = /*@__PURE__*/
+  messageDesc(file_auth, 4);
 
 /**
  * @generated from message musicclub.auth.TgLoginRequest
  */
 export type TgLoginRequest = Message<"musicclub.auth.TgLoginRequest"> & {
   /**
-   * Raw init data from Telegram Mini App (used for signature verification).
-   *
-   * @generated from field: string init_data = 1;
+   * @generated from field: musicclub.user.User user = 1;
    */
-  initData: string;
+  user?: User;
 
   /**
    * Optional explicit Telegram user id (if provided by the client).
@@ -42,18 +140,18 @@ export type TgLoginRequest = Message<"musicclub.auth.TgLoginRequest"> & {
  * Use `create(TgLoginRequestSchema)` to create a new message.
  */
 export const TgLoginRequestSchema: GenMessage<TgLoginRequest> = /*@__PURE__*/
-  messageDesc(file_auth, 0);
+  messageDesc(file_auth, 5);
 
 /**
  * @generated from message musicclub.auth.AuthSession
  */
 export type AuthSession = Message<"musicclub.auth.AuthSession"> & {
   /**
-   * JWT access token.
+   * JWT token pair.
    *
-   * @generated from field: string access_token = 1;
+   * @generated from field: musicclub.auth.TokenPair tokens = 1;
    */
-  accessToken: string;
+  tokens?: TokenPair;
 
   /**
    * Token issued-at and expiration (unix seconds).
@@ -101,7 +199,7 @@ export type AuthSession = Message<"musicclub.auth.AuthSession"> & {
  * Use `create(AuthSessionSchema)` to create a new message.
  */
 export const AuthSessionSchema: GenMessage<AuthSession> = /*@__PURE__*/
-  messageDesc(file_auth, 1);
+  messageDesc(file_auth, 6);
 
 /**
  * @generated from message musicclub.auth.ProfileResponse
@@ -123,23 +221,43 @@ export type ProfileResponse = Message<"musicclub.auth.ProfileResponse"> & {
  * Use `create(ProfileResponseSchema)` to create a new message.
  */
 export const ProfileResponseSchema: GenMessage<ProfileResponse> = /*@__PURE__*/
-  messageDesc(file_auth, 2);
+  messageDesc(file_auth, 7);
 
 /**
- * Authentication and membership gating for the mini app.
+ * Authentication and membership gating for the app.
  *
  * @generated from service musicclub.auth.AuthService
  */
 export const AuthService: GenService<{
   /**
-   * Telegram OAuth (Mini App) login. Returns JWT and membership info.
+   * Registers the new user in the system.
    *
-   * @generated from rpc musicclub.auth.AuthService.LoginWithTelegram
+   * @generated from rpc musicclub.auth.AuthService.Register
    */
-  loginWithTelegram: {
+  register: {
     methodKind: "unary";
-    input: typeof TgLoginRequestSchema;
+    input: typeof RegisterUserRequestSchema;
     output: typeof AuthSessionSchema;
+  },
+  /**
+   * Refreshes JWT token pair.
+   *
+   * @generated from rpc musicclub.auth.AuthService.Refresh
+   */
+  refresh: {
+    methodKind: "unary";
+    input: typeof RefreshRequestSchema;
+    output: typeof TokenPairSchema;
+  },
+  /**
+   * Generates Telegram url to link account with telegram.
+   *
+   * @generated from rpc musicclub.auth.AuthService.GetTgLoginLink
+   */
+  getTgLoginLink: {
+    methodKind: "unary";
+    input: typeof UserSchema;
+    output: typeof TgLoginLinkResponseSchema;
   },
   /**
    * Returns current user profile and permissions for UI gating.

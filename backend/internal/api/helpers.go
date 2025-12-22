@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -88,58 +87,6 @@ func loadPermissions(ctx context.Context, db *sql.DB, userID string) (*permissio
 		EditTracklists: tracks,
 	}
 	return &p, nil
-}
-
-func upsertUserByTelegram(ctx context.Context, db *sql.DB, tgUserID uint64, initData string) (userID string, isChatMember bool, err error) {
-	// For now initData is not verified. We just store a best-effort record.
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return "", false, err
-	}
-	defer tx.Rollback()
-
-	row := tx.QueryRowContext(ctx, `
-		SELECT id, is_chat_member FROM app_user WHERE tg_user_id = $1
-	`, tgUserID)
-	switch err := row.Scan(&userID, &isChatMember); err {
-	case nil:
-		// existing user
-	case sql.ErrNoRows:
-		display := fmt.Sprintf("tg_%d", tgUserID)
-		err = tx.QueryRowContext(ctx, `
-			INSERT INTO app_user (tg_user_id, display_name, is_chat_member)
-			VALUES ($1, $2, FALSE)
-			RETURNING id, is_chat_member
-		`, tgUserID, display).Scan(&userID, &isChatMember)
-		if err != nil {
-			return "", false, err
-		}
-	default:
-		return "", false, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		return "", false, err
-	}
-	return userID, isChatMember, nil
-}
-
-func ensureJoinRequest(ctx context.Context, db *sql.DB, userID string) (token string, err error) {
-	row := db.QueryRowContext(ctx, `
-		SELECT token FROM join_request WHERE user_id = $1 AND status = 'pending'
-	`, userID)
-	switch err := row.Scan(&token); err {
-	case nil:
-		return token, nil
-	case sql.ErrNoRows:
-	default:
-		return "", err
-	}
-
-	err = db.QueryRowContext(ctx, `
-		INSERT INTO join_request (user_id) VALUES ($1) RETURNING token
-	`, userID).Scan(&token)
-	return token, err
 }
 
 func mapSongLinkType(dbValue string) songpb.SongLinkType {
