@@ -13,7 +13,8 @@ import (
 )
 
 // Run initializes and starts the gRPC server with stub handlers.
-func Run(ctx context.Context, cfg config.Config) error {
+func Run(ctx context.Context) error {
+	cfg := ctx.Value("cfg").(config.Config)
 	lis, err := net.Listen("tcp", cfg.GRPCAddr())
 	if err != nil {
 		return fmt.Errorf("listen on %s: %w", cfg.GRPCAddr(), err)

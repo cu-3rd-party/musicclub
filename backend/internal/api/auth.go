@@ -7,6 +7,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	authpb "musicclubbot/backend/proto"
+
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -16,6 +17,9 @@ type AuthService struct {
 }
 
 func (s *AuthService) LoginWithTelegram(ctx context.Context, req *authpb.TgLoginRequest) (*authpb.AuthSession, error) {
+	// example of accessing database or config from context
+	// db := ctx.Value("db").(*sql.DB)
+	// cfg := ctx.Value("cfg").(config.Config)
 	return nil, status.Errorf(codes.Unimplemented, "LoginWithTelegram not yet implemented")
 }
 
