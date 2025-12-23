@@ -7,7 +7,7 @@ import App from "./components/App";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnWindowFocus: false
+      refetchOnWindowFocus: true
     }
   }
 });
