@@ -3,7 +3,7 @@ name: Proto codegen
 on:
   push:
     paths:
-      - '**/proto/**'
+      - "**/proto/**"
 
 permissions:
   contents: write
