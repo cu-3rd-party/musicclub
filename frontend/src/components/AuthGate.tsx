@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Code, ConnectError } from "@connectrpc/connect";
 
-import { getProfile, login, register } from "../services/api";
+import { getProfile, login, logout, register } from "../services/api";
 import { setTokenPair } from "../services/config";
 import { CredentialsSchema, RegisterUserRequestSchema } from "../proto/auth_pb";
 import SongList from "./SongList";
@@ -32,6 +33,7 @@ const AuthGate: React.FC = () => {
 	const isUnauthedCode = profileQuery.isError && (profileQuery.error as ConnectError)?.code === Code.Unauthenticated;
 	const profile = profileQuery.data?.profile as User | undefined;
 	const permissions = profileQuery.data?.permissions as PermissionSet | undefined;
+	const [isProfileOpen, setProfileOpen] = useState(false);
 
 	const handleAuthSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -246,13 +248,26 @@ const AuthGate: React.FC = () => {
 					</span>
 					Музыкальный клуб
 				</div>
-				<div className="pill">
-					<div
-						className="status-dot"
-						style={{ background: profile ? "var(--accent)" : "var(--muted)" }}
-					/>
+				<button
+					type="button"
+					className="pill"
+					style={{ cursor: "pointer" }}
+					onClick={() => setProfileOpen(true)}
+				>
+					{profile?.avatarUrl ? (
+						<img
+							src={profile.avatarUrl}
+							alt={profile.displayName}
+							className="avatar-small"
+						/>
+					) : (
+						<div
+							className="status-dot"
+							style={{ background: profile ? "var(--accent)" : "var(--muted)" }}
+						/>
+					)}
 					{profile?.displayName}
-				</div>
+				</button>
 			</div>
 			<p style={{ color: "var(--muted)", marginBottom: 12 }}>
 				Собираем сет-листы, треклисты и роли для ближайших мероприятий.
@@ -266,7 +281,55 @@ const AuthGate: React.FC = () => {
 			{hero}
 			<SongList permissions={permissions} profile={profile} />
 			<EventList permissions={permissions} />
+			{isProfileOpen && profile && (
+				<ProfileModal profile={profile} onClose={() => setProfileOpen(false)} />
+			)}
 		</div>
+	);
+};
+
+const ProfileModal: React.FC<{ profile: User; onClose: () => void }> = ({ profile, onClose }) => {
+	return createPortal(
+		<div className="modal-backdrop" onClick={onClose}>
+			<div className="card modal-window" onClick={(e) => e.stopPropagation()}>
+				<div className="section-header">
+					<div className="card-title">
+						<span role="img" aria-label="user">
+							👤
+						</span>
+						{profile.displayName}
+					</div>
+					<button className="button secondary" onClick={onClose}>
+						Закрыть
+					</button>
+				</div>
+				<div style={{ color: "var(--muted)", marginBottom: 12 }}>
+					Профиль пользователя
+				</div>
+				<div className="grid">
+					<div className="pill" style={{ justifyContent: "space-between" }}>
+						<span>Имя пользователя</span>
+						<strong>{profile.username}</strong>
+					</div>
+					{profile.avatarUrl && (
+						<div className="pill" style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+							<span>Аватар</span>
+							<img
+								src={profile.avatarUrl}
+								alt={profile.displayName}
+								className="avatar-small"
+							/>
+						</div>
+					)}
+				</div>
+				<div style={{ marginTop: 18, display: "flex", gap: 10, justifyContent: "flex-end" }}>
+					<button className="button danger" onClick={() => logout()}>
+						Выйти
+					</button>
+				</div>
+			</div>
+		</div>,
+		document.body,
 	);
 };
 

@@ -10,5 +10,5 @@ message User {
   string display_name = 2;
   string username = 3;
   string avatar_url = 4;
-  uint64 telgram_id = 5;
+  uint64 telegram_id = 5;
 }

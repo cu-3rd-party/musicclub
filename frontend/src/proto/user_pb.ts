@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file user.proto.
  */
 export const file_user: GenFile = /*@__PURE__*/
-  fileDesc("Cgp1c2VyLnByb3RvEg5tdXNpY2NsdWIudXNlciJiCgRVc2VyEgoKAmlkGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCRIQCgh1c2VybmFtZRgDIAEoCRISCgphdmF0YXJfdXJsGAQgASgJEhIKCnRlbGdyYW1faWQYBSABKARCHFoabXVzaWNjbHViYm90L2JhY2tlbmQvcHJvdG9iBnByb3RvMw");
+  fileDesc("Cgp1c2VyLnByb3RvEg5tdXNpY2NsdWIudXNlciJjCgRVc2VyEgoKAmlkGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCRIQCgh1c2VybmFtZRgDIAEoCRISCgphdmF0YXJfdXJsGAQgASgJEhMKC3RlbGVncmFtX2lkGAUgASgEQhxaGm11c2ljY2x1YmJvdC9iYWNrZW5kL3Byb3RvYgZwcm90bzM");
 
 /**
  * Minimal user info for displaying assignments and ownership.
@@ -39,9 +39,9 @@ export type User = Message<"musicclub.user.User"> & {
   avatarUrl: string;
 
   /**
-   * @generated from field: uint64 telgram_id = 5;
+   * @generated from field: uint64 telegram_id = 5;
    */
-  telgramId: bigint;
+  telegramId: bigint;
 };
 
 /**

@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"time"
 
 	"github.com/apsdehal/go-logger"
 	"google.golang.org/grpc"
@@ -9,12 +10,13 @@ import (
 
 func loggingInterceptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 	log := ctx.Value("log").(*logger.Logger)
-	log.Infof("Received request for %s", info.FullMethod)
+	start := time.Now()
 	resp, err := handler(ctx, req)
+	duration := time.Since(start)
 	if err != nil {
 		log.Errorf("Error handling %s: %v", info.FullMethod, err)
 	} else {
-		log.Infof("Successfully handled %s", info.FullMethod)
+		log.Infof("Successfully handled %s in %s", info.FullMethod, duration)
 	}
 	return resp, err
 }

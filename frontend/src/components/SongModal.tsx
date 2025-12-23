@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import type { SongDetails, SongLinkType } from "../proto/song_pb";
 
 type Props = {
@@ -52,21 +53,9 @@ const SongModal: React.FC<Props> = ({ details, onClose, onJoin, onLeave, onUpdat
 		setIsEditing(false);
 	};
 
-	return (
-		<div
-			style={{
-				position: "fixed",
-				inset: 0,
-				background: "rgba(0,0,0,0.65)",
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "center",
-				padding: 16,
-				zIndex: 1000,
-			}}
-			onClick={onClose}
-		>
-			<div className="card" style={{ maxWidth: 640, width: "100%" }} onClick={(e) => e.stopPropagation()}>
+	return createPortal(
+		<div className="modal-backdrop" onClick={onClose}>
+			<div className="card modal-window" onClick={(e) => e.stopPropagation()}>
 				<div className="section-header">
 					<div className="card-title">
 						<span role="img" aria-label="note">
@@ -182,7 +171,7 @@ const SongModal: React.FC<Props> = ({ details, onClose, onJoin, onLeave, onUpdat
 				)}
 			</div>
 		</div>
-	);
+	, document.body);
 };
 
 export default SongModal;

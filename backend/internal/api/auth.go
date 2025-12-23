@@ -608,7 +608,7 @@ func (s *AuthService) GetProfile(ctx context.Context, req *emptypb.Empty) (*auth
 		profile.AvatarUrl = avatarUrl.String
 	}
 	if tgUserID.Valid {
-		profile.TelgramId = uint64(tgUserID.Int64)
+		profile.TelegramId = uint64(tgUserID.Int64)
 	}
 
 	return &authpb.ProfileResponse{
