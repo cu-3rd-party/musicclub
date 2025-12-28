@@ -1,16 +1,14 @@
-import React, { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Code, ConnectError } from "@connectrpc/connect";
+import React, {useEffect, useState} from "react";
+import {createPortal} from "react-dom";
+import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
+import {Code, ConnectError} from "@connectrpc/connect";
 
-import { getProfile, getTgLoginLink, login, logout, register, telegramWebAppAuth } from "../services/api";
-import { setTokenPair } from "../services/config";
-import { CredentialsSchema, RegisterUserRequestSchema } from "../proto/auth_pb";
+import {getProfile, getTgLoginLink, logout, telegramWebAppAuth} from "../services/api";
+import {setTokenPair} from "../services/config";
 import SongList from "./SongList";
 import EventList from "./EventList";
-import type { PermissionSet } from "../proto/permissions_pb";
-import { UserSchema, type User } from "../proto/user_pb";
-import { create } from "@bufbuild/protobuf";
+import type {PermissionSet} from "../proto/permissions_pb";
+import {type User} from "../proto/user_pb";
 
 const AuthGate: React.FC = () => {
 	const queryClient = useQueryClient();

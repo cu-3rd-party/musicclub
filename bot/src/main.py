@@ -1,13 +1,18 @@
-import os
 import asyncio
-from uuid import UUID
 import logging
-
+import os
 from aiogram import Bot, Dispatcher, Router
-from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 from aiogram.filters import CommandStart, Command, CommandObject
+from aiogram.types import (
+    Message,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    WebAppInfo,
+)
 from aiogram.utils.i18n import I18n, gettext as _
 from aiogram.utils.i18n.middleware import I18nMiddleware
+from uuid import UUID
+
 from db import create_connection, execute
 
 logger = logging.getLogger(__name__)
@@ -90,7 +95,9 @@ async def auth_confirm(token: UUID, telegram_user_id: int) -> bool:
         logger.error("Failed to update auth linking for token %s: %s", token, exc)
         return False
 
-    logger.info("Auth confirmed for token %s and telegram user %s", token, telegram_user_id)
+    logger.info(
+        "Auth confirmed for token %s and telegram user %s", token, telegram_user_id
+    )
     return True
 
 
@@ -119,7 +126,9 @@ async def cmd_start_with_args(message: Message, command: CommandObject):
     ok = await auth_confirm(token, message.from_user.id)
 
     if ok:
-        await message.answer(_("✅ Authentication successful! You may return to the web app."))
+        await message.answer(
+            _("✅ Authentication successful! You may return to the web app.")
+        )
     else:
         await message.answer(_("❌ Authentication failed or expired."))
 
@@ -132,16 +141,17 @@ async def cmd_start(message: Message):
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="🎸 Открыть Music Club",
-                    web_app=WebAppInfo(url=WEBAPP_URL)
+                    text="🎸 Открыть Music Club", web_app=WebAppInfo(url=WEBAPP_URL)
                 )
             ]
         ]
     )
 
     await message.answer(
-        _("Добро пожаловать в Music Club! 🎸\n\nНажмите кнопку ниже, чтобы открыть приложение:"),
-        reply_markup=keyboard
+        _(
+            "Добро пожаловать в Music Club! 🎸\n\nНажмите кнопку ниже, чтобы открыть приложение:"
+        ),
+        reply_markup=keyboard,
     )
 
 

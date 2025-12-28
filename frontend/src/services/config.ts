@@ -1,7 +1,7 @@
-import { Code, ConnectError, type Interceptor, createClient } from "@connectrpc/connect";
-import { createGrpcWebTransport } from "@connectrpc/connect-web";
+import {Code, ConnectError, createClient, type Interceptor} from "@connectrpc/connect";
+import {createGrpcWebTransport} from "@connectrpc/connect-web";
 
-import { AuthService } from "../proto/auth_pb";
+import {AuthService} from "../proto/auth_pb";
 
 export const BACKEND_URL = import.meta.env.VITE_GRPC_HOST ?? "http://localhost:6969";
 

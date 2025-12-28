@@ -1,18 +1,13 @@
-import { createClient } from "@connectrpc/connect";
-import type {
-	AuthSession,
-	Credentials,
-	RegisterUserRequest,
-	TelegramWebAppAuthRequest
-} from "../proto/auth_pb";
-import { create } from "@bufbuild/protobuf";
+import {createClient} from "@connectrpc/connect";
+import type {AuthSession, Credentials, RegisterUserRequest} from "../proto/auth_pb";
+import {AuthService, TelegramWebAppAuthRequestSchema} from "../proto/auth_pb";
+import {create} from "@bufbuild/protobuf";
 
-import { clearTokenPair, transport } from "./config";
-import { AuthService, ProfileResponseSchema, TelegramWebAppAuthRequestSchema, TgLoginRequestSchema } from "../proto/auth_pb";
-import { SongService, CreateSongRequestSchema, JoinRoleRequestSchema, LeaveRoleRequestSchema, ListSongsRequestSchema, SongIdSchema, UpdateSongRequestSchema } from "../proto/song_pb";
-import { EventService, CreateEventRequestSchema, EventIdSchema, ListEventsRequestSchema, SetTracklistRequestSchema, UpdateEventRequestSchema } from "../proto/event_pb";
-import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { UserSchema, type User } from "../proto/user_pb";
+import {clearTokenPair, transport} from "./config";
+import {SongService} from "../proto/song_pb";
+import {EventService} from "../proto/event_pb";
+import type {Timestamp} from "@bufbuild/protobuf/wkt";
+import {type User, UserSchema} from "../proto/user_pb";
 
 export const authClient = createClient(AuthService, transport);
 export const songClient = createClient(SongService, transport);
