@@ -229,8 +229,28 @@ a {
 }
 
 .modal-window .scroll-area {
-  max-height: calc(80vh - 120px);
+  max-height: calc(82vh - 80px);
   overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 4px;
+}
+
+.modal-window .scroll-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-window .scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-window .scroll-area::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.modal-window .scroll-area::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
 }
 
 @keyframes pop {

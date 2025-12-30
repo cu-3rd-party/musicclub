@@ -65,6 +65,7 @@ const SongModal: React.FC<Props> = ({ details, onClose, onJoin, onLeave, onUpdat
 						Закрыть
 					</button>
 				</div>
+				<div className="scroll-area">
 				<div style={{ color: "var(--muted)", marginBottom: 10 }}>{song?.artist}</div>
 				{song?.thumbnailUrl && (
 					<img
@@ -200,6 +201,7 @@ const SongModal: React.FC<Props> = ({ details, onClose, onJoin, onLeave, onUpdat
 						)}
 					</div>
 				)}
+				</div>
 			</div>
 		</div>
 	, document.body);
