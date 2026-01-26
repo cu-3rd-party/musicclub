@@ -21,6 +21,7 @@ message JoinPermissions {
 message SongPermissions {
   bool edit_own_songs = 1;
   bool edit_any_songs = 2;
+  bool edit_featured_songs = 3;
 }
 
 // Rights around events and tracklists.

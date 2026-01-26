@@ -71,13 +71,13 @@ func LoadUserTelegramInfo(ctx context.Context, db *sql.DB, userID string) (strin
 func LoadPermissions(ctx context.Context, db *sql.DB, userID string) (*proto.PermissionSet, error) {
 	row := db.QueryRowContext(ctx, `
 		SELECT edit_own_participation, edit_any_participation,
-		       edit_own_songs, edit_any_songs,
+		       edit_own_songs, edit_any_songs, edit_featured_songs,
 		       edit_events, edit_tracklists
 		FROM user_permissions WHERE user_id = $1
 	`, userID)
 	var p proto.PermissionSet
-	var joinOwn, joinAny, songsOwn, songsAny, events, tracks bool
-	switch err := row.Scan(&joinOwn, &joinAny, &songsOwn, &songsAny, &events, &tracks); err {
+	var joinOwn, joinAny, songsOwn, songsAny, songsFeatured, events, tracks bool
+	switch err := row.Scan(&joinOwn, &joinAny, &songsOwn, &songsAny, &songsFeatured, &events, &tracks); err {
 	case nil:
 		// ok
 	case sql.ErrNoRows:
@@ -91,8 +91,9 @@ func LoadPermissions(ctx context.Context, db *sql.DB, userID string) (*proto.Per
 		EditAnyParticipation: joinAny,
 	}
 	p.Songs = &proto.SongPermissions{
-		EditOwnSongs: songsOwn,
-		EditAnySongs: songsAny,
+		EditOwnSongs:      songsOwn,
+		EditAnySongs:      songsAny,
+		EditFeaturedSongs: songsFeatured,
 	}
 	p.Events = &proto.EventPermissions{
 		EditEvents:     events,
@@ -157,17 +158,19 @@ func PermissionAllowsTracklistEdit(perms *proto.PermissionSet) bool {
 
 func LoadSongDetails(ctx context.Context, db *sql.DB, songID, currentUserID string) (*proto.SongDetails, error) {
 	row := db.QueryRowContext(ctx, `
-		SELECT id, title, artist, description, link_kind, link_url, COALESCE(created_by, NULL), COALESCE(thumbnail_url, '')
+		SELECT id, title, artist, description, link_kind, link_url, COALESCE(created_by, NULL), COALESCE(thumbnail_url, ''), COALESCE(is_featured, FALSE)
 		FROM song WHERE id = $1
 	`, songID)
 	var s proto.Song
 	var linkKind, linkURL, thumbnailURL string
+	var isFeatured bool
 	var creatorID sql.NullString
-	if err := row.Scan(&s.Id, &s.Title, &s.Artist, &s.Description, &linkKind, &linkURL, &creatorID, &thumbnailURL); err != nil {
+	if err := row.Scan(&s.Id, &s.Title, &s.Artist, &s.Description, &linkKind, &linkURL, &creatorID, &thumbnailURL, &isFeatured); err != nil {
 		return nil, err
 	}
 	s.Link = &proto.SongLink{Kind: MapSongLinkType(linkKind), Url: linkURL}
 	s.ThumbnailUrl = thumbnailURL
+	s.Featured = isFeatured
 
 	roles, err := LoadSongRoles(ctx, db, songID)
 	if err != nil {
@@ -409,6 +412,7 @@ func GetUserPermissions(
 			edit_any_participation,
 			edit_own_songs,
 			edit_any_songs,
+			edit_featured_songs,
 			edit_events,
 			edit_tracklists
 		FROM user_permissions
@@ -418,6 +422,7 @@ func GetUserPermissions(
 		&permissions.Join.EditAnyParticipation,
 		&permissions.Songs.EditOwnSongs,
 		&permissions.Songs.EditAnySongs,
+		&permissions.Songs.EditFeaturedSongs,
 		&permissions.Events.EditEvents,
 		&permissions.Events.EditTracklists,
 	)

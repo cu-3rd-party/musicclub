@@ -85,8 +85,8 @@ func (s *AuthService) Register(ctx context.Context, req *proto.RegisterUserReque
 	// челику без тг запрещено все
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO user_permissions (user_id, edit_own_participation, edit_any_participation, 
-		                              edit_own_songs, edit_any_songs, edit_events, edit_tracklists)
-		VALUES ($1, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE)`,
+		                              edit_own_songs, edit_any_songs, edit_featured_songs, edit_events, edit_tracklists)
+		VALUES ($1, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE)`,
 		userID,
 	)
 

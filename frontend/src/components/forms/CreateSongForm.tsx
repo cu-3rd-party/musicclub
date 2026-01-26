@@ -10,10 +10,12 @@ type Props = {
 		linkKind: SongLinkType;
 		roles: string[];
 		thumbnailUrl?: string;
+		featured?: boolean;
 	}) => Promise<void>;
+	canFeature?: boolean;
 };
 
-const CreateSongForm: React.FC<Props> = ({ onSubmit }) => {
+const CreateSongForm: React.FC<Props> = ({ onSubmit, canFeature }) => {
 	const [form, setForm] = useState({
 		title: "",
 		artist: "",
@@ -22,6 +24,7 @@ const CreateSongForm: React.FC<Props> = ({ onSubmit }) => {
 		linkKind: 1 as SongLinkType,
 		roles: "вокал, гитара, бас, барабаны",
 		thumbnailUrl: "",
+		featured: false,
 	});
 	const [isSaving, setIsSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -39,8 +42,9 @@ const CreateSongForm: React.FC<Props> = ({ onSubmit }) => {
 				linkKind: form.linkKind,
 				roles: form.roles.split(",").map((r) => r.trim()).filter(Boolean),
 				thumbnailUrl: form.thumbnailUrl,
+				featured: canFeature ? form.featured : undefined,
 			});
-			setForm({ ...form, title: "", artist: "", description: "", linkUrl: "", thumbnailUrl: "" });
+			setForm({ ...form, title: "", artist: "", description: "", linkUrl: "", thumbnailUrl: "", featured: false });
 		} catch (err) {
 			setError((err as Error).message);
 		} finally {
@@ -77,6 +81,16 @@ const CreateSongForm: React.FC<Props> = ({ onSubmit }) => {
 				value={form.roles}
 				onChange={(e) => setForm({ ...form, roles: e.target.value })}
 			/>
+			{canFeature && (
+				<label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
+					<input
+						type="checkbox"
+						checked={form.featured}
+						onChange={(e) => setForm({ ...form, featured: e.target.checked })}
+					/>
+					Сделать featured
+				</label>
+			)}
 			<button className="button" type="submit" disabled={isSaving}>
 				{isSaving ? "Сохраняем…" : "Создать"}
 			</button>

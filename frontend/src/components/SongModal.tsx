@@ -15,6 +15,7 @@ type Props = {
 		linkKind: SongLinkType;
 		roles: string[];
 		thumbnailUrl?: string;
+		featured?: boolean;
 	}) => Promise<void>;
 	onDelete: () => Promise<void>;
 	canEdit: boolean;
@@ -24,6 +25,7 @@ type Props = {
 const SongModal: React.FC<Props> = ({ details, onClose, onJoin, onLeave, onUpdate, onDelete, canEdit, currentUserId }) => {
 	const { song } = details;
 	const [isEditing, setIsEditing] = useState(false);
+	const canFeature = Boolean(details.permissions?.songs?.editFeaturedSongs);
 	const [form, setForm] = useState({
 		title: song?.title ?? "",
 		artist: song?.artist ?? "",
@@ -32,6 +34,7 @@ const SongModal: React.FC<Props> = ({ details, onClose, onJoin, onLeave, onUpdat
 		linkKind: (song?.link?.kind ?? 0) as SongLinkType,
 		roles: song?.availableRoles ?? [],
 		thumbnailUrl: song?.thumbnailUrl ?? "",
+		featured: song?.featured ?? false,
 	});
 
 	const assignments = details.assignments ?? [];
@@ -50,7 +53,16 @@ const SongModal: React.FC<Props> = ({ details, onClose, onJoin, onLeave, onUpdat
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		await onUpdate(form);
+		await onUpdate({
+			title: form.title,
+			artist: form.artist,
+			description: form.description,
+			linkUrl: form.linkUrl,
+			linkKind: form.linkKind,
+			roles: form.roles,
+			thumbnailUrl: form.thumbnailUrl,
+			featured: canFeature ? form.featured : undefined,
+		});
 		setIsEditing(false);
 	};
 
@@ -191,6 +203,16 @@ const SongModal: React.FC<Props> = ({ details, onClose, onJoin, onLeave, onUpdat
 										onChange={(e) => setForm({ ...form, roles: e.target.value.split(",").map((r) => r.trim()).filter(Boolean) })}
 										placeholder="Роли через запятую"
 									/>
+									{canFeature && (
+										<label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
+											<input
+												type="checkbox"
+												checked={form.featured}
+												onChange={(e) => setForm({ ...form, featured: e.target.checked })}
+											/>
+											Featured
+										</label>
+									)}
 									<div style={{ display: "flex", gap: 10, alignItems: "center" }}>
 										<button className="button" type="submit">
 											Сохранить

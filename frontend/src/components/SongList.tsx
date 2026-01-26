@@ -49,6 +49,7 @@ const SongList: React.FC<Props> = ({ permissions, profile }) => {
 	});
 
 	const canCreate = Boolean(permissions?.songs?.editAnySongs || permissions?.songs?.editOwnSongs);
+	const canFeature = Boolean(permissions?.songs?.editFeaturedSongs);
 
 	return (
 		<div className="card">
@@ -83,6 +84,7 @@ const SongList: React.FC<Props> = ({ permissions, profile }) => {
 				<>
 					<hr style={{ border: "1px solid var(--border)", margin: "16px 0" }} />
 					<CreateSongForm
+						canFeature={canFeature}
 						onSubmit={async (payload) => {
 							await createSong(payload);
 							queryClient.invalidateQueries({ queryKey: ["songs"] });
@@ -130,9 +132,19 @@ const SongRow: React.FC<{ song: Song; onOpen: () => void }> = ({ song, onOpen })
 	const totalRoles = song.availableRoles?.length || 0;
 	const assignedCount = song.assignmentCount || 0;
 	const isFull = assignedCount >= totalRoles;
+	const isFeatured = Boolean(song.featured);
 
 	return (
-		<button className="button secondary" style={{ width: "100%", textAlign: "left" }} onClick={onOpen}>
+		<button
+			className="button secondary"
+			style={{
+				width: "100%",
+				textAlign: "left",
+				background: isFeatured ? "var(--featured-bg)" : undefined,
+				border: isFeatured ? "1px solid var(--featured-border)" : undefined,
+			}}
+			onClick={onOpen}
+		>
 			<div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
 				{song.thumbnailUrl && (
 					<img

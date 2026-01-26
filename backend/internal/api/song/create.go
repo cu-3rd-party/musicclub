@@ -25,6 +25,9 @@ func (s *SongService) CreateSong(ctx context.Context, req *proto.CreateSongReque
 	if perms.Songs == nil || (!perms.Songs.EditOwnSongs && !perms.Songs.EditAnySongs) {
 		return nil, status.Error(codes.PermissionDenied, "no rights to create songs")
 	}
+	if req.GetFeatured() && (perms.Songs == nil || !perms.Songs.EditFeaturedSongs) {
+		return nil, status.Error(codes.PermissionDenied, "no rights to feature songs")
+	}
 
 	linkKind, err := helpers.MapSongLinkKindToDB(req.GetLink().GetKind())
 	if err != nil {
@@ -42,10 +45,10 @@ func (s *SongService) CreateSong(ctx context.Context, req *proto.CreateSongReque
 	defer tx.Rollback()
 
 	err = tx.QueryRowContext(ctx, `
-		INSERT INTO song (title, artist, description, link_kind, link_url, created_by, thumbnail_url)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO song (title, artist, description, link_kind, link_url, created_by, thumbnail_url, is_featured)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id
-	`, req.GetTitle(), req.GetArtist(), req.GetDescription(), linkKind, req.GetLink().GetUrl(), userID, thumbnailURL).Scan(&songID)
+	`, req.GetTitle(), req.GetArtist(), req.GetDescription(), linkKind, req.GetLink().GetUrl(), userID, thumbnailURL, req.GetFeatured()).Scan(&songID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "insert song: %v", err)
 	}

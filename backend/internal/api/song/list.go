@@ -38,10 +38,10 @@ func (s *SongService) ListSongs(ctx context.Context, req *proto.ListSongsRequest
 	}
 
 	query := `
-		SELECT id, title, artist, description, link_kind, link_url, COALESCE(created_by, NULL), COALESCE(thumbnail_url, '')
+		SELECT id, title, artist, description, link_kind, link_url, COALESCE(created_by, NULL), COALESCE(thumbnail_url, ''), COALESCE(is_featured, FALSE)
 		FROM song
 	` + where + `
-		ORDER BY created_at DESC
+		ORDER BY COALESCE(is_featured, FALSE) DESC, created_at DESC
 		LIMIT $` + strconv.Itoa(len(args)+1) + `
 		OFFSET $` + strconv.Itoa(len(args)+2)
 	args = append(args, limit, offset)
@@ -58,12 +58,14 @@ func (s *SongService) ListSongs(ctx context.Context, req *proto.ListSongsRequest
 	for rows.Next() {
 		var sng proto.Song
 		var linkKind, linkURL, thumbnailURL string
+		var isFeatured bool
 		var creatorID sql.NullString
-		if err := rows.Scan(&sng.Id, &sng.Title, &sng.Artist, &sng.Description, &linkKind, &linkURL, &creatorID, &thumbnailURL); err != nil {
+		if err := rows.Scan(&sng.Id, &sng.Title, &sng.Artist, &sng.Description, &linkKind, &linkURL, &creatorID, &thumbnailURL, &isFeatured); err != nil {
 			return nil, status.Errorf(codes.Internal, "scan song: %v", err)
 		}
 		sng.Link = &proto.SongLink{Kind: helpers.MapSongLinkType(linkKind), Url: linkURL}
 		sng.ThumbnailUrl = thumbnailURL
+		sng.Featured = isFeatured
 		roles, err := helpers.LoadSongRoles(ctx, db, sng.Id)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "load roles: %v", err)
