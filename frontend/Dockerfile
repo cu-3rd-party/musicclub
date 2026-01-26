@@ -8,6 +8,7 @@ COPY tsconfig*.json vite.config.ts index.html ./
 COPY src ./src
 
 ARG VITE_GRPC_HOST
+ENV VITE_GRPC_HOST=$VITE_GRPC_HOST
 
 RUN npm run build
 

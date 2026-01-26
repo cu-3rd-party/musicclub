@@ -34,7 +34,7 @@ func Run(ctx context.Context) error {
 	reflection.Register(grpcServer)
 
 	httpServer := &http.Server{
-		Handler: newHTTPHandler(grpcServer),
+		Handler: newHTTPHandler(grpcServer, cfg),
 	}
 
 	go gracefulShutdown(ctx, grpcServer, httpServer)
@@ -59,15 +59,18 @@ func newGrpcServer(baseCtx context.Context) *grpc.Server {
 	)
 }
 
-func newHTTPHandler(grpcServer *grpc.Server) http.Handler {
+func newHTTPHandler(grpcServer *grpc.Server, cfg config.Config) http.Handler {
 	grpcWeb := grpcweb.WrapServer(
 		grpcServer,
-		grpcweb.WithOriginFunc(func(string) bool { return true }),
+		grpcweb.WithOriginFunc(func(origin string) bool {
+			_, ok := resolveAllowedOrigin(origin, cfg.AllowedOrigins)
+			return ok
+		}),
 	)
 
 	return h2c.NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if handlePreflight(w, r) {
+			if handlePreflight(w, r, cfg.AllowedOrigins) {
 				return
 			}
 
@@ -113,12 +116,20 @@ func mustLog(ctx context.Context) *logger.Logger {
 	return ctx.Value("log").(*logger.Logger)
 }
 
-func handlePreflight(w http.ResponseWriter, r *http.Request) bool {
+func handlePreflight(w http.ResponseWriter, r *http.Request, allowedOrigins []string) bool {
 	if r.Method != http.MethodOptions {
 		return false
 	}
 
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+	origin := r.Header.Get("Origin")
+	allowOrigin, ok := resolveAllowedOrigin(origin, allowedOrigins)
+	if !ok {
+		w.WriteHeader(http.StatusForbidden)
+		return true
+	}
+
+	w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
+	w.Header().Set("Vary", "Origin")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set(
 		"Access-Control-Allow-Headers",
@@ -132,4 +143,16 @@ func isGrpcWebRequest(gw *grpcweb.WrappedGrpcServer, r *http.Request) bool {
 	return gw.IsGrpcWebRequest(r) ||
 		gw.IsGrpcWebSocketRequest(r) ||
 		gw.IsAcceptableGrpcCorsRequest(r)
+}
+
+func resolveAllowedOrigin(origin string, allowedOrigins []string) (string, bool) {
+	for _, allowed := range allowedOrigins {
+		if allowed == "*" {
+			return "*", true
+		}
+		if origin != "" && origin == allowed {
+			return origin, true
+		}
+	}
+	return "", false
 }

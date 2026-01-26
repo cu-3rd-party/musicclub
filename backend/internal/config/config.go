@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strings"
 )
 
 // Config groups runtime configuration for the backend service.
@@ -13,6 +14,7 @@ type Config struct {
 	BotToken                 string
 	ChatID                   string
 	SkipChatMembershipCheck  bool
+	AllowedOrigins           []string
 }
 
 // Load reads configuration from environment with sane defaults.
@@ -24,6 +26,7 @@ func Load() Config {
 	botToken := getenv("BOT_TOKEN", "")
 	chatID := getenv("CHAT_ID", "")
 	skipCheck := getenv("SKIP_CHAT_MEMBERSHIP_CHECK", "false") == "true"
+	allowedOrigins := splitCommaList(getenv("CORS_ALLOWED_ORIGINS", "*"))
 	
 	return Config{
 		GRPCPort:                port,
@@ -33,6 +36,7 @@ func Load() Config {
 		BotToken:                botToken,
 		ChatID:                  chatID,
 		SkipChatMembershipCheck: skipCheck,
+		AllowedOrigins:          allowedOrigins,
 	}
 }
 
@@ -45,4 +49,16 @@ func getenv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func splitCommaList(value string) []string {
+	parts := strings.Split(value, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		item := strings.TrimSpace(part)
+		if item != "" {
+			out = append(out, item)
+		}
+	}
+	return out
 }
