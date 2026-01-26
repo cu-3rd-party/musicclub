@@ -55,6 +55,19 @@ func LoadUserByUsername(ctx context.Context, db *sql.DB, username string) (*prot
 	return &u, nil
 }
 
+func LoadUserTelegramInfo(ctx context.Context, db *sql.DB, userID string) (string, string, sql.NullInt64, error) {
+	row := db.QueryRowContext(ctx, `
+		SELECT display_name, username, tg_user_id
+		FROM app_user WHERE id = $1
+	`, userID)
+	var displayName, username string
+	var telegramID sql.NullInt64
+	if err := row.Scan(&displayName, &username, &telegramID); err != nil {
+		return "", "", sql.NullInt64{}, err
+	}
+	return displayName, username, telegramID, nil
+}
+
 func LoadPermissions(ctx context.Context, db *sql.DB, userID string) (*proto.PermissionSet, error) {
 	row := db.QueryRowContext(ctx, `
 		SELECT edit_own_participation, edit_any_participation,

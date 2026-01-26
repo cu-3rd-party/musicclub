@@ -3,6 +3,8 @@ package event
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"html"
 	"log"
 	"strings"
 	"time"
@@ -33,7 +35,7 @@ func announceNewEvent(ctx context.Context, db *sql.DB, userID string, event *pro
 	title := strings.TrimSpace(event.GetTitle())
 	location := strings.TrimSpace(event.GetLocation())
 	when := formatEventStart(event.GetStartAt())
-	addedBy := displayNameForUser(ctx, db, userID, "Кто-то")
+	addedBy := userLink(ctx, db, userID, "Кто-то")
 
 	message := buildEventAnnouncementMessage(title, location, when, addedBy)
 	if message == "" {
@@ -50,8 +52,8 @@ func announceNewEvent(ctx context.Context, db *sql.DB, userID string, event *pro
 }
 
 func buildEventAnnouncementMessage(title, location, when, addedBy string) string {
-	title = strings.TrimSpace(title)
-	location = strings.TrimSpace(location)
+	title = html.EscapeString(strings.TrimSpace(title))
+	location = html.EscapeString(strings.TrimSpace(location))
 	when = strings.TrimSpace(when)
 	addedBy = strings.TrimSpace(addedBy)
 
@@ -91,16 +93,26 @@ func formatEventStart(ts *timestamppb.Timestamp) string {
 	return t.Local().Format("02.01.2006 15:04")
 }
 
-func displayNameForUser(ctx context.Context, db *sql.DB, userID, fallback string) string {
-	user, err := helpers.LoadUserById(ctx, db, userID)
+func userLink(ctx context.Context, db *sql.DB, userID, fallback string) string {
+	displayName, username, telegramID, err := helpers.LoadUserTelegramInfo(ctx, db, userID)
 	if err != nil {
-		return fallback
+		return html.EscapeString(fallback)
 	}
-	if strings.TrimSpace(user.DisplayName) != "" {
-		return user.DisplayName
+
+	label := strings.TrimSpace(displayName)
+	if label == "" {
+		label = strings.TrimSpace(username)
+		if label != "" {
+			label = "@" + label
+		}
 	}
-	if strings.TrimSpace(user.Username) != "" {
-		return "@" + user.Username
+	if label == "" {
+		label = fallback
 	}
-	return fallback
+
+	escapedLabel := html.EscapeString(label)
+	if telegramID.Valid {
+		return fmt.Sprintf(`<a href="tg://user?id=%d">%s</a>`, telegramID.Int64, escapedLabel)
+	}
+	return escapedLabel
 }

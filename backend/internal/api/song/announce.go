@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"html"
 	"log"
 	"strings"
 	"time"
@@ -33,7 +34,7 @@ func announceNewSong(ctx context.Context, db *sql.DB, userID string, req *proto.
 		return
 	}
 
-	addedBy := displayNameForUser(ctx, db, userID, "Кто-то")
+	addedBy := userLink(ctx, db, userID, "Кто-то")
 
 	message := buildAnnouncementMessage(title, artist, addedBy, link)
 	if message == "" {
@@ -50,8 +51,8 @@ func announceNewSong(ctx context.Context, db *sql.DB, userID string, req *proto.
 }
 
 func buildAnnouncementMessage(title, artist, addedBy, link string) string {
-	title = strings.TrimSpace(title)
-	artist = strings.TrimSpace(artist)
+	title = html.EscapeString(strings.TrimSpace(title))
+	artist = html.EscapeString(strings.TrimSpace(artist))
 	addedBy = strings.TrimSpace(addedBy)
 	link = strings.TrimSpace(link)
 
@@ -81,7 +82,7 @@ func buildAnnouncementMessage(title, artist, addedBy, link string) string {
 	}
 	if link != "" {
 		b.WriteString("\n")
-		b.WriteString(link)
+		b.WriteString(songLink(link))
 	}
 	return b.String()
 }
@@ -106,7 +107,7 @@ func announceRoleChange(ctx context.Context, db *sql.DB, userID string, song *pr
 	artist := strings.TrimSpace(song.GetArtist())
 	link := strings.TrimSpace(song.GetLink().GetUrl())
 
-	userName := displayNameForUser(ctx, db, userID, "Кто-то")
+	userName := userLink(ctx, db, userID, "Кто-то")
 	message := buildRoleChangeMessage(title, artist, userName, role, verb, link)
 	if message == "" {
 		return
@@ -122,10 +123,10 @@ func announceRoleChange(ctx context.Context, db *sql.DB, userID string, song *pr
 }
 
 func buildRoleChangeMessage(title, artist, userName, role, verb, link string) string {
-	title = strings.TrimSpace(title)
-	artist = strings.TrimSpace(artist)
+	title = html.EscapeString(strings.TrimSpace(title))
+	artist = html.EscapeString(strings.TrimSpace(artist))
 	userName = strings.TrimSpace(userName)
-	role = strings.TrimSpace(role)
+	role = html.EscapeString(strings.TrimSpace(role))
 	verb = strings.TrimSpace(verb)
 	link = strings.TrimSpace(link)
 
@@ -159,23 +160,41 @@ func buildRoleChangeMessage(title, artist, userName, role, verb, link string) st
 	b.WriteString(role)
 	if link != "" {
 		b.WriteString("\n")
-		b.WriteString(link)
+		b.WriteString(songLink(link))
 	}
 	return b.String()
 }
 
-func displayNameForUser(ctx context.Context, db *sql.DB, userID, fallback string) string {
-	user, err := helpers.LoadUserById(ctx, db, userID)
+func userLink(ctx context.Context, db *sql.DB, userID, fallback string) string {
+	displayName, username, telegramID, err := helpers.LoadUserTelegramInfo(ctx, db, userID)
 	if err != nil {
-		return fallback
+		return html.EscapeString(fallback)
 	}
-	if strings.TrimSpace(user.DisplayName) != "" {
-		return user.DisplayName
+
+	label := strings.TrimSpace(displayName)
+	if label == "" {
+		label = strings.TrimSpace(username)
+		if label != "" {
+			label = "@" + label
+		}
 	}
-	if strings.TrimSpace(user.Username) != "" {
-		return "@" + user.Username
+	if label == "" {
+		label = fallback
 	}
-	return fallback
+
+	escapedLabel := html.EscapeString(label)
+	if telegramID.Valid {
+		return fmt.Sprintf(`<a href="tg://user?id=%d">%s</a>`, telegramID.Int64, escapedLabel)
+	}
+	return escapedLabel
+}
+
+func songLink(link string) string {
+	link = strings.TrimSpace(link)
+	if link == "" {
+		return ""
+	}
+	return fmt.Sprintf(`<a href="%s">Послушать</a>`, html.EscapeString(link))
 }
 
 func notifyTimeout() time.Duration {

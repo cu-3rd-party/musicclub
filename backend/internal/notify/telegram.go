@@ -14,6 +14,7 @@ const telegramTimeout = 5 * time.Second
 type telegramSendMessageRequest struct {
 	ChatID                string `json:"chat_id"`
 	Text                  string `json:"text"`
+	ParseMode             string `json:"parse_mode,omitempty"`
 	DisableWebPagePreview bool   `json:"disable_web_page_preview,omitempty"`
 }
 
@@ -27,6 +28,7 @@ func SendTelegramMessage(ctx context.Context, token, chatID, text string) error 
 	body, err := json.Marshal(telegramSendMessageRequest{
 		ChatID:                chatID,
 		Text:                  text,
+		ParseMode:             "HTML",
 		DisableWebPagePreview: false,
 	})
 	if err != nil {
