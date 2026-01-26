@@ -39,7 +39,7 @@ const SongModal: React.FC<Props> = ({ details, onClose, onJoin, onLeave, onUpdat
 	const linkLabel = useMemo(() => {
 		const map: Record<number, string> = {
 			1: "YouTube",
-			2: "Яндекс Музыка",
+			2: "Я.Музыка",
 			3: "Soundcloud",
 		};
 		return map[form.linkKind] ?? "Ссылка";
@@ -66,145 +66,145 @@ const SongModal: React.FC<Props> = ({ details, onClose, onJoin, onLeave, onUpdat
 					</button>
 				</div>
 				<div className="scroll-area">
-				<div style={{ color: "var(--muted)", marginBottom: 10 }}>{song?.artist}</div>
-				{song?.thumbnailUrl && (
-					<img
-						src={song.thumbnailUrl}
-						alt={song.title}
-						style={{
-							width: "100%",
-							maxHeight: 240,
-							objectFit: "cover",
-							borderRadius: 8,
-							marginBottom: 12
-						}}
-						onError={(e) => {
-							e.currentTarget.style.display = "none";
-						}}
-					/>
-				)}
-				{song?.link?.url && (
-					<a href={song.link.url} target="_blank" rel="noreferrer" className="pill">
-						{linkLabel}
-					</a>
-				)}
-				{song?.description && <p style={{ marginTop: 12, lineHeight: 1.5 }}>{song.description}</p>}
+					<div style={{ color: "var(--muted)", marginBottom: 10 }}>{song?.artist}</div>
+					{song?.thumbnailUrl && (
+						<img
+							src={song.thumbnailUrl}
+							alt={song.title}
+							style={{
+								width: "100%",
+								maxHeight: 240,
+								objectFit: "cover",
+								borderRadius: 8,
+								marginBottom: 12
+							}}
+							onError={(e) => {
+								e.currentTarget.style.display = "none";
+							}}
+						/>
+					)}
+					{song?.link?.url && (
+						<a href={song.link.url} target="_blank" rel="noreferrer" className="pill">
+							{linkLabel}
+						</a>
+					)}
+					{song?.description && <p style={{ marginTop: 12, lineHeight: 1.5 }}>{song.description}</p>}
 
-				<div style={{ marginTop: 14 }}>
-					<div className="card-title" style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
-						<span>Роли</span>
-						<span style={{
-							fontSize: 12,
-							padding: "2px 8px",
-							borderRadius: 4,
-							backgroundColor: assignments.length >= (song?.availableRoles?.length || 0) ? "var(--danger-bg)" : "var(--accent-bg)",
-							color: assignments.length >= (song?.availableRoles?.length || 0) ? "var(--danger)" : "var(--accent)"
-						}}>
-							{assignments.length}/{song?.availableRoles?.length || 0}
-						</span>
-						<span style={{
-							fontSize: 11,
-							color: assignments.length >= (song?.availableRoles?.length || 0) ? "var(--danger)" : "var(--accent)",
-							fontWeight: 600
-						}}>
-							{assignments.length >= (song?.availableRoles?.length || 0) ? "укомплектовано" : "есть места"}
-						</span>
-					</div>
-					<div className="tags">
-						{song?.availableRoles?.map((role: string, index: number) => {
-							const members = assignments.filter((a) => a.role === role);
-							const isMine = members.some((m) => m.user?.id === currentUserId);
-							const isFull = assignments.length >= (song?.availableRoles?.length || 0);
-							return (
-								<div key={`${role}-${index}`} className="pill" style={{ borderColor: isMine ? "var(--accent)" : "var(--border)" }}>
-									<div style={{ flex: 1 }}>
-										<div style={{ fontWeight: 700 }}>{role}</div>
-										<div style={{ fontSize: 12, color: "var(--muted)" }}>
-											{members.length === 0 ? "Свободно" : members.map((m) => m.user?.displayName).join(", ")}
+					<div style={{ marginTop: 14 }}>
+						<div className="card-title" style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
+							<span>Роли</span>
+							<span style={{
+								fontSize: 12,
+								padding: "2px 8px",
+								borderRadius: 4,
+								backgroundColor: assignments.length >= (song?.availableRoles?.length || 0) ? "var(--danger-bg)" : "var(--accent-bg)",
+								color: assignments.length >= (song?.availableRoles?.length || 0) ? "var(--danger)" : "var(--accent)"
+							}}>
+								{assignments.length}/{song?.availableRoles?.length || 0}
+							</span>
+							<span style={{
+								fontSize: 11,
+								color: assignments.length >= (song?.availableRoles?.length || 0) ? "var(--danger)" : "var(--accent)",
+								fontWeight: 600
+							}}>
+								{assignments.length >= (song?.availableRoles?.length || 0) ? "укомплектовано" : "есть места"}
+							</span>
+						</div>
+						<div className="tags">
+							{song?.availableRoles?.map((role: string, index: number) => {
+								const members = assignments.filter((a) => a.role === role);
+								const isMine = members.some((m) => m.user?.id === currentUserId);
+								const isFull = assignments.length >= (song?.availableRoles?.length || 0);
+								return (
+									<div key={`${role}-${index}`} className="pill" style={{ borderColor: isMine ? "var(--accent)" : "var(--border)" }}>
+										<div style={{ flex: 1 }}>
+											<div style={{ fontWeight: 700 }}>{role}</div>
+											<div style={{ fontSize: 12, color: "var(--muted)" }}>
+												{members.length === 0 ? "Свободно" : members.map((m) => m.user?.displayName).join(", ")}
+											</div>
 										</div>
+										{isMine ? (
+											<button className="button secondary" onClick={() => onLeave(role)}>
+												Снять участие
+											</button>
+										) : (
+											<button className="button" onClick={() => onJoin(role)} disabled={isFull}>
+												Присоединиться
+											</button>
+										)}
 									</div>
-									{isMine ? (
-										<button className="button secondary" onClick={() => onLeave(role)}>
-											Снять участие
-										</button>
-									) : (
-										<button className="button" onClick={() => onJoin(role)} disabled={isFull}>
-											Присоединиться
-										</button>
-									)}
-								</div>
-							);
-						})}
+								);
+							})}
+						</div>
 					</div>
-				</div>
 
-				<div style={{ marginTop: 14 }}>
-					<div className="card-title" style={{ marginBottom: 8 }}>
-						Участники
-					</div>
-					<div className="grid">
-						{assignments.map((a) => (
-							<div key={a.role + a.user?.id} className="pill">
-								{a.user?.displayName} — {a.role}
-							</div>
-						))}
-						{assignments.length === 0 && <div style={{ color: "var(--muted)" }}>Пока пусто</div>}
-					</div>
-				</div>
-
-				{canEdit && (
-					<div style={{ marginTop: 16 }}>
-						<button className="button secondary" onClick={() => setIsEditing((v) => !v)}>
-							{isEditing ? "Скрыть форму" : "Редактировать"}
-						</button>
-						{isEditing && (
-							<form onSubmit={handleSubmit} className="grid" style={{ marginTop: 12 }}>
-								<input className="input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Название" required />
-								<input className="input" value={form.artist} onChange={(e) => setForm({ ...form, artist: e.target.value })} placeholder="Исполнитель" required />
-								<textarea
-									className="textarea"
-									value={form.description}
-									onChange={(e) => setForm({ ...form, description: e.target.value })}
-									placeholder="Описание"
-								/>
-								<input
-									className="input"
-									value={form.linkUrl}
-									onChange={(e) => setForm({ ...form, linkUrl: e.target.value })}
-									placeholder="Ссылка"
-									required
-								/>
-								<select
-									className="select"
-									value={form.linkKind}
-									onChange={(e) => setForm({ ...form, linkKind: Number(e.target.value) as SongLinkType })}
-								>
-									<option value={1}>YouTube</option>
-									<option value={2}>Яндекс Музыка</option>
-									<option value={3}>Soundcloud</option>
-								</select>
-								<input
-									className="input"
-									value={form.roles.join(", ")}
-									onChange={(e) => setForm({ ...form, roles: e.target.value.split(",").map((r) => r.trim()).filter(Boolean) })}
-									placeholder="Роли через запятую"
-								/>
-								<div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-									<button className="button" type="submit">
-										Сохранить
-									</button>
-									<button className="button danger" type="button" onClick={() => onDelete()}>
-										Удалить песню
-									</button>
+					<div style={{ marginTop: 14 }}>
+						<div className="card-title" style={{ marginBottom: 8 }}>
+							Участники
+						</div>
+						<div className="grid">
+							{assignments.map((a) => (
+								<div key={a.role + a.user?.id} className="pill">
+									{a.user?.displayName} — {a.role}
 								</div>
-							</form>
-						)}
+							))}
+							{assignments.length === 0 && <div style={{ color: "var(--muted)" }}>Пока пусто</div>}
+						</div>
 					</div>
-				)}
+
+					{canEdit && (
+						<div style={{ marginTop: 16 }}>
+							<button className="button secondary" onClick={() => setIsEditing((v) => !v)}>
+								{isEditing ? "Скрыть форму" : "Редактировать"}
+							</button>
+							{isEditing && (
+								<form onSubmit={handleSubmit} className="grid" style={{ marginTop: 12 }}>
+									<input className="input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Название" required />
+									<input className="input" value={form.artist} onChange={(e) => setForm({ ...form, artist: e.target.value })} placeholder="Исполнитель" required />
+									<textarea
+										className="textarea"
+										value={form.description}
+										onChange={(e) => setForm({ ...form, description: e.target.value })}
+										placeholder="Описание"
+									/>
+									<input
+										className="input"
+										value={form.linkUrl}
+										onChange={(e) => setForm({ ...form, linkUrl: e.target.value })}
+										placeholder="Ссылка"
+										required
+									/>
+									<select
+										className="select"
+										value={form.linkKind}
+										onChange={(e) => setForm({ ...form, linkKind: Number(e.target.value) as SongLinkType })}
+									>
+										<option value={1}>YouTube</option>
+										<option value={2}>Яндекс Музыка</option>
+										<option value={3}>Soundcloud</option>
+									</select>
+									<input
+										className="input"
+										value={form.roles.join(", ")}
+										onChange={(e) => setForm({ ...form, roles: e.target.value.split(",").map((r) => r.trim()).filter(Boolean) })}
+										placeholder="Роли через запятую"
+									/>
+									<div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+										<button className="button" type="submit">
+											Сохранить
+										</button>
+										<button className="button danger" type="button" onClick={() => onDelete()}>
+											Удалить песню
+										</button>
+									</div>
+								</form>
+							)}
+						</div>
+					)}
 				</div>
 			</div>
 		</div>
-	, document.body);
+		, document.body);
 };
 
 export default SongModal;
