@@ -56,5 +56,12 @@ func (s *EventService) CreateEvent(ctx context.Context, req *proto.CreateEventRe
 		return nil, status.Errorf(codes.Internal, "commit: %v", err)
 	}
 
-	return helpers.LoadEventDetails(ctx, db, eventID, userID)
+	details, err := helpers.LoadEventDetails(ctx, db, eventID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	announceNewEvent(ctx, db, userID, details.GetEvent())
+
+	return details, nil
 }

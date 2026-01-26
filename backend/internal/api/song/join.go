@@ -26,13 +26,23 @@ func (s *SongService) JoinRole(ctx context.Context, req *proto.JoinRoleRequest) 
 		return nil, status.Error(codes.PermissionDenied, "no rights to join roles")
 	}
 
-	if _, err := db.ExecContext(ctx, `
+	res, err := db.ExecContext(ctx, `
 		INSERT INTO song_role_assignment (song_id, role, user_id)
 		VALUES ($1, $2, $3)
 		ON CONFLICT (song_id, role, user_id) DO NOTHING
-	`, req.GetSongId(), req.GetRole(), userID); err != nil {
+	`, req.GetSongId(), req.GetRole(), userID)
+	if err != nil {
 		return nil, status.Errorf(codes.Internal, "join role: %v", err)
 	}
 
-	return helpers.LoadSongDetails(ctx, db, req.GetSongId(), userID)
+	details, err := helpers.LoadSongDetails(ctx, db, req.GetSongId(), userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if rows, _ := res.RowsAffected(); rows > 0 {
+		announceRoleChange(ctx, db, userID, details.GetSong(), req.GetRole(), "joined")
+	}
+
+	return details, nil
 }

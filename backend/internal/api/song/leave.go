@@ -26,11 +26,21 @@ func (s *SongService) LeaveRole(ctx context.Context, req *proto.LeaveRoleRequest
 		return nil, status.Error(codes.PermissionDenied, "no rights to leave roles")
 	}
 
-	if _, err := db.ExecContext(ctx, `
+	res, err := db.ExecContext(ctx, `
 		DELETE FROM song_role_assignment WHERE song_id = $1 AND role = $2 AND user_id = $3
-	`, req.GetSongId(), req.GetRole(), userID); err != nil {
+	`, req.GetSongId(), req.GetRole(), userID)
+	if err != nil {
 		return nil, status.Errorf(codes.Internal, "leave role: %v", err)
 	}
 
-	return helpers.LoadSongDetails(ctx, db, req.GetSongId(), userID)
+	details, err := helpers.LoadSongDetails(ctx, db, req.GetSongId(), userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if rows, _ := res.RowsAffected(); rows > 0 {
+		announceRoleChange(ctx, db, userID, details.GetSong(), req.GetRole(), "left")
+	}
+
+	return details, nil
 }
