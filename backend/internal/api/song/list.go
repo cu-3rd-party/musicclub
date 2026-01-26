@@ -71,9 +71,16 @@ func (s *SongService) ListSongs(ctx context.Context, req *proto.ListSongsRequest
 		sng.AvailableRoles = roles
 		sng.EditableByMe = helpers.PermissionAllowsSongEdit(perms, creatorID, currentUserID)
 
-		// Count participants assigned to this song
+		// Count filled roles (distinct roles with at least one participant)
 		var assignmentCount int32
-		countQuery := `SELECT COUNT(*) FROM song_role_assignment WHERE song_id = $1`
+		countQuery := `
+			SELECT COUNT(DISTINCT sra.role)
+			FROM song_role_assignment sra
+			JOIN song_role sr
+				ON sr.song_id = sra.song_id
+				AND sr.role = sra.role
+			WHERE sra.song_id = $1
+		`
 		if err := db.QueryRowContext(ctx, countQuery, sng.Id).Scan(&assignmentCount); err != nil {
 			return nil, status.Errorf(codes.Internal, "count assignments: %v", err)
 		}

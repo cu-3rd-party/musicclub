@@ -35,6 +35,9 @@ const SongModal: React.FC<Props> = ({ details, onClose, onJoin, onLeave, onUpdat
 	});
 
 	const assignments = details.assignments ?? [];
+	const filledRoleCount = useMemo(() => new Set(assignments.map((a) => a.role)).size, [assignments]);
+	const totalRoles = song?.availableRoles?.length || 0;
+	const isFull = filledRoleCount >= totalRoles;
 
 	const linkLabel = useMemo(() => {
 		const map: Record<number, string> = {
@@ -97,24 +100,23 @@ const SongModal: React.FC<Props> = ({ details, onClose, onJoin, onLeave, onUpdat
 								fontSize: 12,
 								padding: "2px 8px",
 								borderRadius: 4,
-								backgroundColor: assignments.length >= (song?.availableRoles?.length || 0) ? "var(--danger-bg)" : "var(--accent-bg)",
-								color: assignments.length >= (song?.availableRoles?.length || 0) ? "var(--danger)" : "var(--accent)"
+								backgroundColor: isFull ? "var(--danger-bg)" : "var(--accent-bg)",
+								color: isFull ? "var(--danger)" : "var(--accent)"
 							}}>
-								{assignments.length}/{song?.availableRoles?.length || 0}
+								{filledRoleCount}/{totalRoles}
 							</span>
 							<span style={{
 								fontSize: 11,
-								color: assignments.length >= (song?.availableRoles?.length || 0) ? "var(--danger)" : "var(--accent)",
+								color: isFull ? "var(--danger)" : "var(--accent)",
 								fontWeight: 600
 							}}>
-								{assignments.length >= (song?.availableRoles?.length || 0) ? "укомплектовано" : "есть места"}
+								{isFull ? "укомплектовано" : "есть места"}
 							</span>
 						</div>
 						<div className="tags">
 							{song?.availableRoles?.map((role: string, index: number) => {
 								const members = assignments.filter((a) => a.role === role);
 								const isMine = members.some((m) => m.user?.id === currentUserId);
-								const isFull = assignments.length >= (song?.availableRoles?.length || 0);
 								return (
 									<div key={`${role}-${index}`} className="pill" style={{ borderColor: isMine ? "var(--accent)" : "var(--border)" }}>
 										<div style={{ flex: 1 }}>
