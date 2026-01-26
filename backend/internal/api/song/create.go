@@ -58,5 +58,12 @@ func (s *SongService) CreateSong(ctx context.Context, req *proto.CreateSongReque
 		return nil, status.Errorf(codes.Internal, "commit: %v", err)
 	}
 
-	return helpers.LoadSongDetails(ctx, db, songID, userID)
+	details, err := helpers.LoadSongDetails(ctx, db, songID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	announceNewSong(ctx, db, userID, req)
+
+	return details, nil
 }
