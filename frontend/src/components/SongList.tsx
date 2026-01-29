@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createSong, deleteSong, getSong, joinSongRole, leaveSongRole, listSongs, updateSong } from "../services/api";
 import type { PermissionSet } from "../proto/permissions_pb";
 import type { Song, SongDetails, SongLinkType } from "../proto/song_pb";
@@ -17,10 +17,17 @@ const SongList: React.FC<Props> = ({ permissions, profile }) => {
 	const [query, setQuery] = useState("");
 	const [selectedId, setSelectedId] = useState<string | null>(null);
 
-	const listQuery = useQuery({
+	const listQuery = useInfiniteQuery({
 		queryKey: ["songs", query],
-		queryFn: () => listSongs(query),
+		queryFn: ({ pageParam }) => listSongs(query, pageParam ?? ""),
+		getNextPageParam: (lastPage) => lastPage.nextPageToken || undefined,
+		initialPageParam: "",
 	});
+
+	const songs = useMemo(() => {
+		const pages = listQuery.data?.pages ?? [];
+		return pages.flatMap((page) => page.songs);
+	}, [listQuery.data]);
 
 	const detailQuery = useQuery<SongDetails | null>({
 		queryKey: ["song", selectedId],
@@ -74,9 +81,21 @@ const SongList: React.FC<Props> = ({ permissions, profile }) => {
 
 			{listQuery.data && (
 				<div className="grid">
-					{listQuery.data.songs.map((song: Song) => (
+					{songs.map((song: Song) => (
 						<SongRow key={song.id} song={song} onOpen={() => setSelectedId(song.id)} />
 					))}
+				</div>
+			)}
+
+			{listQuery.hasNextPage && (
+				<div style={{ marginTop: 12, display: "flex", justifyContent: "center" }}>
+					<button
+						className="button"
+						onClick={() => listQuery.fetchNextPage()}
+						disabled={listQuery.isFetchingNextPage}
+					>
+						{listQuery.isFetchingNextPage ? "Загружаем…" : "Показать еще"}
+					</button>
 				</div>
 			)}
 
