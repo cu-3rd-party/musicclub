@@ -1,5 +1,4 @@
-import React, { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createEvent, getEvent, listEvents, setTracklist, updateEvent } from "../services/api";
 import type { PermissionSet } from "../proto/permissions_pb";
 import type { Event, EventDetails } from "../proto/event_pb";
@@ -12,20 +11,55 @@ type Props = {
 	permissions?: PermissionSet;
 };
 
-const EventList: React.FC<Props> = ({ permissions }) => {
-	const queryClient = useQueryClient();
+type ListState = {
+	items: Event[];
+	isLoading: boolean;
+	error?: Error | null;
+};
+
+const EventList = ({ permissions }: Props) => {
 	const [selectedId, setSelectedId] = useState<string | null>(null);
+	const [listState, setListState] = useState<ListState>({ items: [], isLoading: false, error: null });
+	const [details, setDetails] = useState<EventDetails | null>(null);
+	const [detailError, setDetailError] = useState<Error | null>(null);
+	const [isDetailLoading, setIsDetailLoading] = useState(false);
 
-	const listQuery = useQuery({
-		queryKey: ["events"],
-		queryFn: () => listEvents(),
-	});
+	const fetchEvents = useCallback(async () => {
+		setListState((prev) => ({ ...prev, isLoading: true, error: null }));
+		try {
+			const res = await listEvents();
+			setListState({ items: res.events, isLoading: false, error: null });
+		} catch (err) {
+			setListState({ items: [], isLoading: false, error: err as Error });
+		}
+	}, []);
 
-	const detailQuery = useQuery({
-		queryKey: ["event", selectedId],
-		queryFn: () => (selectedId ? getEvent(selectedId) : Promise.resolve(null)),
-		enabled: Boolean(selectedId),
-	});
+	useEffect(() => {
+		fetchEvents();
+	}, [fetchEvents]);
+
+	const fetchDetails = useCallback(async (eventId: string) => {
+		setIsDetailLoading(true);
+		setDetailError(null);
+		try {
+			const res = await getEvent(eventId);
+			setDetails(res);
+		} catch (err) {
+			setDetails(null);
+			setDetailError(err as Error);
+		} finally {
+			setIsDetailLoading(false);
+		}
+	}, []);
+
+	useEffect(() => {
+		if (!selectedId) {
+			setDetails(null);
+			setDetailError(null);
+			return;
+		}
+		fetchDetails(selectedId);
+	}, [selectedId, fetchDetails]);
 
 	const canEditEvents = Boolean(permissions?.events?.editEvents);
 	const canEditTracklists = Boolean(permissions?.events?.editTracklists || permissions?.events?.editEvents);
@@ -41,12 +75,12 @@ const EventList: React.FC<Props> = ({ permissions }) => {
 				</div>
 			</div>
 
-			{listQuery.isLoading && <div>Загружаем мероприятия…</div>}
-			{listQuery.isError && <div style={{ color: "var(--danger)" }}>Ошибка: {(listQuery.error as Error).message}</div>}
+			{listState.isLoading && <div>Загружаем мероприятия…</div>}
+			{listState.error && <div style={{ color: "var(--danger)" }}>Ошибка: {listState.error.message}</div>}
 
-			{listQuery.data && (
+			{listState.items.length > 0 && (
 				<div className="grid">
-					{listQuery.data.events.map((evt: Event) => (
+					{listState.items.map((evt: Event) => (
 						<button key={evt.id} className="button secondary" style={{ textAlign: "left" }} onClick={() => setSelectedId(evt.id)}>
 							<div style={{ fontWeight: 700 }}>{evt.title}</div>
 							<div style={{ color: "var(--muted)", fontSize: 13 }}>{formatDate(timestampToDate(evt.startAt as Timestamp | undefined))}</div>
@@ -62,26 +96,26 @@ const EventList: React.FC<Props> = ({ permissions }) => {
 					<CreateEventForm
 						onSubmit={async (payload) => {
 							await createEvent(payload);
-							queryClient.invalidateQueries({ queryKey: ["events"] });
+							fetchEvents();
 						}}
 					/>
 				</>
 			)}
 
-			{selectedId && detailQuery.data && (
+			{selectedId && details && !isDetailLoading && !detailError && (
 				<EventDetailsCard
-					data={detailQuery.data}
+					data={details}
 					onClose={() => setSelectedId(null)}
 					onUpdate={async (payload: { title: string; startAt?: Timestamp; location?: string; notifyDayBefore?: boolean; notifyHourBefore?: boolean }) => {
 						await updateEvent({ ...payload, id: selectedId });
-						queryClient.invalidateQueries({ queryKey: ["event", selectedId] });
-						queryClient.invalidateQueries({ queryKey: ["events"] });
+						await fetchDetails(selectedId);
+						await fetchEvents();
 					}}
 					onSetTracklist={
 						canEditTracklists
 							? async (items) => {
 									await setTracklist(selectedId, items);
-									queryClient.invalidateQueries({ queryKey: ["event", selectedId] });
+									await fetchDetails(selectedId);
 								}
 							: undefined
 					}
@@ -102,7 +136,7 @@ type EventDetailsCardProps = {
 	canEditTracklists: boolean;
 };
 
-const EventDetailsCard: React.FC<EventDetailsCardProps> = ({ data, onClose, onUpdate, onSetTracklist, canEditEvents, canEditTracklists }) => {
+const EventDetailsCard = ({ data, onClose, onUpdate, onSetTracklist, canEditEvents, canEditTracklists }: EventDetailsCardProps) => {
 	const evt = data.event;
 	const [form, setForm] = useState({
 		title: evt?.title ?? "",

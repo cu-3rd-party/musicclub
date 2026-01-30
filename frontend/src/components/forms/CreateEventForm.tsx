@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import type { FormEvent } from "react";
 import { create } from "@bufbuild/protobuf";
 import { TimestampSchema } from "@bufbuild/protobuf/wkt";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
@@ -14,7 +15,7 @@ type Props = {
 	}) => Promise<void>;
 };
 
-const CreateEventForm: React.FC<Props> = ({ onSubmit }) => {
+const CreateEventForm = ({ onSubmit }: Props) => {
 	const [form, setForm] = useState({
 		title: "",
 		startAt: "",
@@ -26,7 +27,7 @@ const CreateEventForm: React.FC<Props> = ({ onSubmit }) => {
 	const [isSaving, setIsSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	const handleSubmit = async (e: React.FormEvent) => {
+	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault();
 		setIsSaving(true);
 		setError(null);

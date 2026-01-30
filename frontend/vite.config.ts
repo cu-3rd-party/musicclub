@@ -1,8 +1,17 @@
 import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import preact from "@preact/preset-vite";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [preact()],
+  build: {
+    minify: "terser",
+    terserOptions: {
+      compress: {
+        passes: 2,
+        drop_console: true,
+      },
+    },
+  },
   server: {
     port: 5173
   }

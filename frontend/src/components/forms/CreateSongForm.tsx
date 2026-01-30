@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import type { FormEvent } from "react";
 import type { SongLinkType } from "../../proto/song_pb";
 
 type Props = {
@@ -15,7 +16,7 @@ type Props = {
 	canFeature?: boolean;
 };
 
-const CreateSongForm: React.FC<Props> = ({ onSubmit, canFeature }) => {
+const CreateSongForm = ({ onSubmit, canFeature }: Props) => {
 	const [form, setForm] = useState({
 		title: "",
 		artist: "",
@@ -29,7 +30,7 @@ const CreateSongForm: React.FC<Props> = ({ onSubmit, canFeature }) => {
 	const [isSaving, setIsSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	const handleSubmit = async (e: React.FormEvent) => {
+	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault();
 		setIsSaving(true);
 		setError(null);

@@ -1,5 +1,4 @@
-import React, { useMemo, useState } from "react";
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createSong, deleteSong, getSong, joinSongRole, leaveSongRole, listSongs, updateSong } from "../services/api";
 import type { PermissionSet } from "../proto/permissions_pb";
 import type { Song, SongDetails, SongLinkType } from "../proto/song_pb";
@@ -12,51 +11,123 @@ type Props = {
 	profile?: User;
 };
 
-const SongList: React.FC<Props> = ({ permissions, profile }) => {
-	const queryClient = useQueryClient();
+type ListState = {
+	items: Song[];
+	nextPageToken?: string;
+	isLoading: boolean;
+	isFetchingNext: boolean;
+	error?: Error | null;
+};
+
+const SongList = ({ permissions, profile }: Props) => {
 	const [query, setQuery] = useState("");
 	const [selectedId, setSelectedId] = useState<string | null>(null);
-
-	const listQuery = useInfiniteQuery({
-		queryKey: ["songs", query],
-		queryFn: ({ pageParam }) => listSongs(query, pageParam ?? ""),
-		getNextPageParam: (lastPage) => lastPage.nextPageToken || undefined,
-		initialPageParam: "",
+	const [listState, setListState] = useState<ListState>({
+		items: [],
+		nextPageToken: undefined,
+		isLoading: false,
+		isFetchingNext: false,
+		error: null,
 	});
+	const nextPageTokenRef = useRef<string | undefined>(undefined);
+	const [details, setDetails] = useState<SongDetails | null>(null);
+	const [isDetailLoading, setIsDetailLoading] = useState(false);
+	const [detailError, setDetailError] = useState<Error | null>(null);
+	const wasHiddenRef = useRef(false);
 
-	const songs = useMemo(() => {
-		const pages = listQuery.data?.pages ?? [];
-		return pages.flatMap((page) => page.songs);
-	}, [listQuery.data]);
+	const fetchSongs = useCallback(async (reset = false) => {
+		setListState((prev) => ({
+			...prev,
+			isLoading: reset ? true : prev.isLoading,
+			isFetchingNext: reset ? false : true,
+			error: null,
+		}));
 
-	const detailQuery = useQuery<SongDetails | null>({
-		queryKey: ["song", selectedId],
-		queryFn: () => (selectedId ? getSong(selectedId) : Promise.resolve(null)),
-		enabled: Boolean(selectedId),
-	});
+		const pageToken = reset ? "" : nextPageTokenRef.current ?? "";
+		if (reset) {
+			nextPageTokenRef.current = undefined;
+		}
+		try {
+			const res = await listSongs(query, pageToken);
+			nextPageTokenRef.current = res.nextPageToken || undefined;
+			setListState((prev) => ({
+				items: reset ? res.songs : [...prev.items, ...res.songs],
+				nextPageToken: nextPageTokenRef.current,
+				isLoading: false,
+				isFetchingNext: false,
+				error: null,
+			}));
+		} catch (err) {
+			setListState((prev) => ({
+				...prev,
+				isLoading: false,
+				isFetchingNext: false,
+				error: err as Error,
+			}));
+		}
+	}, [query]);
 
-	const joinMutation = useMutation<SongDetails, Error, { songId: string; role: string }>({
-		mutationFn: ({ songId, role }) => joinSongRole(songId, role),
-		onSuccess: (data) => {
-			if (data?.song?.id) {
-				queryClient.invalidateQueries({ queryKey: ["songs"] });
-				queryClient.setQueryData(["song", data.song.id], data);
+	useEffect(() => {
+		setListState((prev) => ({ ...prev, isLoading: true, error: null, nextPageToken: undefined }));
+		fetchSongs(true);
+	}, [query, fetchSongs]);
+
+	useEffect(() => {
+		const markHidden = () => {
+			wasHiddenRef.current = true;
+		};
+		const handleFocus = () => {
+			if (!wasHiddenRef.current) {
+				return;
 			}
-		},
-	});
-
-	const leaveMutation = useMutation<SongDetails, Error, { songId: string; role: string }>({
-		mutationFn: ({ songId, role }) => leaveSongRole(songId, role),
-		onSuccess: (data) => {
-			if (data?.song?.id) {
-				queryClient.invalidateQueries({ queryKey: ["songs"] });
-				queryClient.setQueryData(["song", data.song.id], data);
+			wasHiddenRef.current = false;
+			fetchSongs(true);
+		};
+		const handleVisibility = () => {
+			if (document.hidden) {
+				wasHiddenRef.current = true;
+				return;
 			}
-		},
-	});
+			handleFocus();
+		};
+
+		window.addEventListener("focus", handleFocus);
+		window.addEventListener("blur", markHidden);
+		document.addEventListener("visibilitychange", handleVisibility);
+
+		return () => {
+			window.removeEventListener("focus", handleFocus);
+			window.removeEventListener("blur", markHidden);
+			document.removeEventListener("visibilitychange", handleVisibility);
+		};
+	}, [fetchSongs]);
+
+	const fetchDetails = useCallback(async (songId: string) => {
+		setIsDetailLoading(true);
+		setDetailError(null);
+		try {
+			const res = await getSong(songId);
+			setDetails(res);
+		} catch (err) {
+			setDetails(null);
+			setDetailError(err as Error);
+		} finally {
+			setIsDetailLoading(false);
+		}
+	}, []);
+
+	useEffect(() => {
+		if (!selectedId) {
+			setDetails(null);
+			setDetailError(null);
+			return;
+		}
+		fetchDetails(selectedId);
+	}, [selectedId, fetchDetails]);
 
 	const canCreate = Boolean(permissions?.songs?.editAnySongs || permissions?.songs?.editOwnSongs);
 	const canFeature = Boolean(permissions?.songs?.editFeaturedSongs);
+	const hasNextPage = Boolean(listState.nextPageToken);
 
 	return (
 		<div className="card">
@@ -76,25 +147,25 @@ const SongList: React.FC<Props> = ({ permissions, profile }) => {
 				/>
 			</div>
 
-			{listQuery.isLoading && <div>Загружаем песни…</div>}
-			{listQuery.isError && <div style={{ color: "var(--danger)" }}>Ошибка: {(listQuery.error as Error).message}</div>}
+			{listState.isLoading && listState.items.length === 0 && <div>Загружаем песни…</div>}
+			{listState.error && <div style={{ color: "var(--danger)" }}>Ошибка: {listState.error.message}</div>}
 
-			{listQuery.data && (
+			{listState.items.length > 0 && (
 				<div className="grid">
-					{songs.map((song: Song) => (
+					{listState.items.map((song: Song) => (
 						<SongRow key={song.id} song={song} onOpen={() => setSelectedId(song.id)} />
 					))}
 				</div>
 			)}
 
-			{listQuery.hasNextPage && (
+			{hasNextPage && (
 				<div style={{ marginTop: 12, display: "flex", justifyContent: "center" }}>
 					<button
 						className="button"
-						onClick={() => listQuery.fetchNextPage()}
-						disabled={listQuery.isFetchingNextPage}
+						onClick={() => fetchSongs(false)}
+						disabled={listState.isFetchingNext}
 					>
-						{listQuery.isFetchingNextPage ? "Загружаем…" : "Показать еще"}
+						{listState.isFetchingNext ? "Загружаем…" : "Показать еще"}
 					</button>
 				</div>
 			)}
@@ -106,30 +177,38 @@ const SongList: React.FC<Props> = ({ permissions, profile }) => {
 						canFeature={canFeature}
 						onSubmit={async (payload) => {
 							await createSong(payload);
-							queryClient.invalidateQueries({ queryKey: ["songs"] });
+							fetchSongs(true);
 						}}
 					/>
 				</>
 			)}
 
-			{selectedId && detailQuery.data && (
+			{selectedId && details && !isDetailLoading && !detailError && (
 				<SongModal
-					details={detailQuery.data}
+					details={details}
 					onClose={() => setSelectedId(null)}
-					onJoin={(role) => joinMutation.mutate({ songId: selectedId, role })}
-					onLeave={(role) => leaveMutation.mutate({ songId: selectedId, role })}
+					onJoin={async (role) => {
+						await joinSongRole(selectedId, role);
+						await fetchDetails(selectedId);
+						await fetchSongs(true);
+					}}
+					onLeave={async (role) => {
+						await leaveSongRole(selectedId, role);
+						await fetchDetails(selectedId);
+						await fetchSongs(true);
+					}}
 					onUpdate={async (payload) => {
 						await updateSong({ ...payload, id: selectedId });
-						queryClient.invalidateQueries({ queryKey: ["song", selectedId] });
-						queryClient.invalidateQueries({ queryKey: ["songs"] });
+						await fetchDetails(selectedId);
+						await fetchSongs(true);
 					}}
 					onDelete={async () => {
 						await deleteSong(selectedId);
 						setSelectedId(null);
-						queryClient.invalidateQueries({ queryKey: ["songs"] });
+						await fetchSongs(true);
 					}}
-					canEdit={Boolean(detailQuery.data.permissions?.songs?.editAnySongs || detailQuery.data.permissions?.songs?.editOwnSongs)}
-					canEditAny={Boolean(detailQuery.data.permissions?.songs?.editAnySongs)}
+					canEdit={Boolean(details.permissions?.songs?.editAnySongs || details.permissions?.songs?.editOwnSongs)}
+					canEditAny={Boolean(details.permissions?.songs?.editAnySongs)}
 					currentUserId={profile?.id ?? ""}
 				/>
 			)}
@@ -137,7 +216,7 @@ const SongList: React.FC<Props> = ({ permissions, profile }) => {
 	);
 };
 
-const SongRow: React.FC<{ song: Song; onOpen: () => void }> = ({ song, onOpen }) => {
+const SongRow = ({ song, onOpen }: { song: Song; onOpen: () => void }) => {
 	const badge = useMemo(() => {
 		const kind = song.link?.kind ?? 0;
 		const map: Record<number, string> = {

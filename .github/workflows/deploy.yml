@@ -19,5 +19,5 @@ jobs:
           key: ${{ secrets.VDS_SSH_KEY }}
           script: |
             cd /opt/musicclub
-            cd source && git pull && cd -
+            cd source && git fetch && git reset --hard origin/master && git clean -fdx && cd -
             docker compose -f docker-compose.yml up -d --build

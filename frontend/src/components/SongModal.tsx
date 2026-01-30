@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import type { FormEvent } from "react";
 import { createPortal } from "react-dom";
 import type { SongDetails, SongLinkType } from "../proto/song_pb";
 
@@ -23,7 +24,7 @@ type Props = {
 	currentUserId: string;
 };
 
-const SongModal: React.FC<Props> = ({ details, onClose, onJoin, onLeave, onUpdate, onDelete, canEdit, canEditAny, currentUserId }) => {
+const SongModal = ({ details, onClose, onJoin, onLeave, onUpdate, onDelete, canEdit, canEditAny, currentUserId }: Props) => {
 	const { song } = details;
 	const [isEditing, setIsEditing] = useState(false);
 	const canFeature = Boolean(details.permissions?.songs?.editFeaturedSongs);
@@ -69,7 +70,7 @@ const SongModal: React.FC<Props> = ({ details, onClose, onJoin, onLeave, onUpdat
 		return map[form.linkKind] ?? "Ссылка";
 	}, [form.linkKind]);
 
-	const handleSubmit = async (e: React.FormEvent) => {
+	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault();
 		await onUpdate({
 			title: form.title,

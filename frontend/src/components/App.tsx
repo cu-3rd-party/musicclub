@@ -1,8 +1,7 @@
-import React from "react";
 import AuthGate from "./AuthGate";
 import "../styles/global.css";
 
-const App: React.FC = () => {
+const App = () => {
 	return (
 		<div className="app-shell">
 			<AuthGate />

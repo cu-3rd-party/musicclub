@@ -1,45 +1,52 @@
-import React, {useEffect, useState} from "react";
-import {createPortal} from "react-dom";
-import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
-import {Code, ConnectError} from "@connectrpc/connect";
+import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { Code, ConnectError } from "@connectrpc/connect";
 
-import {getProfile, getTgLoginLink, logout, telegramWebAppAuth} from "../services/api";
-import {setTokenPair} from "../services/config";
+import { getProfile, getTgLoginLink, logout, telegramWebAppAuth } from "../services/api";
+import { setTokenPair } from "../services/config";
 import SongList from "./SongList";
 import EventList from "./EventList";
-import type {PermissionSet} from "../proto/permissions_pb";
-import {type User} from "../proto/user_pb";
+import type { PermissionSet } from "../proto/permissions_pb";
+import type { User } from "../proto/user_pb";
+import type { ProfileResponse } from "../proto/auth_pb";
 
-const AuthGate: React.FC = () => {
-	const queryClient = useQueryClient();
+const AuthGate = () => {
 	const [authError, setAuthError] = useState<string | null>(null);
 	const [isAuthenticating, setIsAuthenticating] = useState(false);
 	const [tgLinkError, setTgLinkError] = useState<string | null>(null);
-
-	const profileQuery = useQuery({
-		queryKey: ["profile"],
-		queryFn: () => getProfile(),
-		retry: false,
-	});
-
-	const isUnauthedCode = profileQuery.isError && (profileQuery.error as ConnectError)?.code === Code.Unauthenticated;
-	const profile = profileQuery.data?.profile as User | undefined;
-	const permissions = profileQuery.data?.permissions as PermissionSet | undefined;
+	const [profileData, setProfileData] = useState<ProfileResponse | null>(null);
+	const [profileError, setProfileError] = useState<Error | null>(null);
+	const [isProfileLoading, setIsProfileLoading] = useState(true);
 	const [isProfileOpen, setProfileOpen] = useState(false);
-	const tgLoginLinkMutation = useMutation({
-		mutationFn: () => getTgLoginLink(profile ? { id: profile.id } : undefined),
-	});
+	const [isGettingTgLink, setIsGettingTgLink] = useState(false);
+
+	const loadProfile = useCallback(async () => {
+		setIsProfileLoading(true);
+		setProfileError(null);
+		try {
+			const data = await getProfile();
+			setProfileData(data);
+		} catch (err) {
+			setProfileError(err as Error);
+			setProfileData(null);
+		} finally {
+			setIsProfileLoading(false);
+		}
+	}, []);
+
+	useEffect(() => {
+		loadProfile();
+	}, [loadProfile]);
+
+	const isUnauthedCode = profileError instanceof ConnectError && profileError.code === Code.Unauthenticated;
+	const profile = profileData?.profile as User | undefined;
+	const permissions = profileData?.permissions as PermissionSet | undefined;
 
 	// Auto-authenticate via Telegram WebApp
 	useEffect(() => {
 		const tg = window.Telegram?.WebApp;
 
-		console.log("🔧 [DEBUG] Telegram WebApp:", tg);
-		console.log("🔧 [DEBUG] initData:", tg?.initData);
-		console.log("🔧 [DEBUG] initDataUnsafe:", tg?.initDataUnsafe);
-
 		if (!tg || !tg.initData) {
-			console.warn("⚠️ Not running in Telegram WebApp or initData is empty");
 			return;
 		}
 
@@ -48,14 +55,12 @@ const AuthGate: React.FC = () => {
 		tg.expand();
 
 		const performTelegramAuth = async () => {
-			if (isAuthenticating || profileQuery.data) {
+			if (isAuthenticating || profileData) {
 				return;
 			}
 
 			setIsAuthenticating(true);
 			setAuthError(null);
-
-			console.log("🔐 Authenticating with initData:", tg.initData);
 
 			try {
 				const session = await telegramWebAppAuth(tg.initData);
@@ -67,7 +72,7 @@ const AuthGate: React.FC = () => {
 				}
 
 				setTokenPair(session.tokens.accessToken, session.tokens.refreshToken);
-				await queryClient.invalidateQueries({ queryKey: ["profile"] });
+				await loadProfile();
 			} catch (err: any) {
 				if (err instanceof ConnectError) {
 					setAuthError(err.message);
@@ -82,9 +87,9 @@ const AuthGate: React.FC = () => {
 		if (isUnauthedCode && !isAuthenticating) {
 			performTelegramAuth();
 		}
-	}, [isUnauthedCode, isAuthenticating, profileQuery.data, queryClient]);
+	}, [isUnauthedCode, isAuthenticating, profileData, loadProfile]);
 
-	if (profileQuery.isLoading) {
+	if (isProfileLoading) {
 		return (
 			<div className="card" style={{ maxWidth: 400, margin: "80px auto" }}>
 				<div className="card-title">Загружаем профиль…</div>
@@ -162,17 +167,17 @@ const AuthGate: React.FC = () => {
 		);
 	}
 
-	if (profileQuery.isError) {
+	if (profileError) {
 		return (
 			<div className="card" style={{ maxWidth: 400, margin: "80px auto" }}>
 				<div className="card-title">Ошибка</div>
 				<div style={{ padding: "20px", textAlign: "center" }}>
 					<p style={{ color: "var(--danger)", marginBottom: 16 }}>
-						Ошибка загрузки профиля: {(profileQuery.error as Error).message}
+						Ошибка загрузки профиля: {profileError.message}
 					</p>
 					<button
 						className="button"
-						onClick={() => profileQuery.refetch()}
+						onClick={() => loadProfile()}
 					>
 						Попробовать снова
 					</button>
@@ -214,7 +219,6 @@ const AuthGate: React.FC = () => {
 			<p style={{ color: "var(--muted)", marginBottom: 12 }}>
 				Собираем сет-листы, треклисты и роли для ближайших мероприятий.
 			</p>
-			{profileQuery.data && "isChatMember" in profileQuery.data ? null : null}
 			{profile && !profile.telegramId && (
 				<div className="pill" style={{ justifyContent: "space-between", alignItems: "center", gap: 12 }}>
 					<div style={{ flex: 1, minWidth: 0 }}>
@@ -227,11 +231,12 @@ const AuthGate: React.FC = () => {
 					<button
 						className="button"
 						type="button"
-						disabled={tgLoginLinkMutation.isPending}
+						disabled={isGettingTgLink}
 						onClick={async () => {
 							setTgLinkError(null);
+							setIsGettingTgLink(true);
 							try {
-								const res = await tgLoginLinkMutation.mutateAsync();
+								const res = await getTgLoginLink(profile ? { id: profile.id } : undefined);
 								if (res.loginLink) {
 									window.open(res.loginLink, "_blank", "noopener");
 								}
@@ -241,10 +246,12 @@ const AuthGate: React.FC = () => {
 								} else {
 									setTgLinkError((err as Error).message);
 								}
+							} finally {
+								setIsGettingTgLink(false);
 							}
 						}}
 					>
-						{tgLoginLinkMutation.isPending ? "Получаем..." : "Получить ссылку"}
+						{isGettingTgLink ? "Получаем..." : "Получить ссылку"}
 					</button>
 				</div>
 			)}
@@ -263,7 +270,7 @@ const AuthGate: React.FC = () => {
 	);
 };
 
-const ProfileModal: React.FC<{ profile: User; onClose: () => void }> = ({ profile, onClose }) => {
+const ProfileModal = ({ profile, onClose }: { profile: User; onClose: () => void }) => {
 	return createPortal(
 		<div className="modal-backdrop" onClick={onClose}>
 			<div className="card modal-window" onClick={(e) => e.stopPropagation()}>
