@@ -216,9 +216,6 @@ const AuthGate = () => {
 					{profile?.displayName}
 				</button>
 			</div>
-			<p style={{ color: "var(--muted)", marginBottom: 12 }}>
-				Собираем сет-листы, треклисты и роли для ближайших мероприятий.
-			</p>
 			{profile && !profile.telegramId && (
 				<div className="pill" style={{ justifyContent: "space-between", alignItems: "center", gap: 12 }}>
 					<div style={{ flex: 1, minWidth: 0 }}>

@@ -22,6 +22,9 @@ type ListState = {
 const SongList = ({ permissions, profile }: Props) => {
 	const [query, setQuery] = useState("");
 	const [selectedId, setSelectedId] = useState<string | null>(null);
+	const [showFull, setShowFull] = useState(true);
+	const [showNotFull, setShowNotFull] = useState(true);
+	const [isFilterOpen, setIsFilterOpen] = useState(false);
 	const [listState, setListState] = useState<ListState>({
 		items: [],
 		nextPageToken: undefined,
@@ -34,6 +37,7 @@ const SongList = ({ permissions, profile }: Props) => {
 	const [isDetailLoading, setIsDetailLoading] = useState(false);
 	const [detailError, setDetailError] = useState<Error | null>(null);
 	const wasHiddenRef = useRef(false);
+	const filterMenuRef = useRef<HTMLDivElement | null>(null);
 
 	const fetchSongs = useCallback(async (reset = false) => {
 		setListState((prev) => ({
@@ -102,6 +106,25 @@ const SongList = ({ permissions, profile }: Props) => {
 		};
 	}, [fetchSongs]);
 
+	useEffect(() => {
+		if (!isFilterOpen) {
+			return;
+		}
+		const handleClickOutside = (event: MouseEvent) => {
+			if (!filterMenuRef.current) {
+				return;
+			}
+			if (filterMenuRef.current.contains(event.target as Node)) {
+				return;
+			}
+			setIsFilterOpen(false);
+		};
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => {
+			document.removeEventListener("mousedown", handleClickOutside);
+		};
+	}, [isFilterOpen]);
+
 	const fetchDetails = useCallback(async (songId: string) => {
 		setIsDetailLoading(true);
 		setDetailError(null);
@@ -128,31 +151,73 @@ const SongList = ({ permissions, profile }: Props) => {
 	const canCreate = Boolean(permissions?.songs?.editAnySongs || permissions?.songs?.editOwnSongs);
 	const canFeature = Boolean(permissions?.songs?.editFeaturedSongs);
 	const hasNextPage = Boolean(listState.nextPageToken);
+	const filteredItems = useMemo(() => {
+		if (showFull && showNotFull) {
+			return listState.items;
+		}
+		return listState.items.filter((song) => {
+			const totalRoles = song.availableRoles?.length || 0;
+			const assignedCount = song.assignmentCount || 0;
+			const isFull = assignedCount >= totalRoles;
+			return (showFull && isFull) || (showNotFull && !isFull);
+		});
+	}, [listState.items, showFull, showNotFull]);
 
 	return (
 		<div className="card">
 			<div className="section-header">
-				<div className="card-title">
-					<span role="img" aria-label="song">
-						🎵
-					</span>
-					Песни
+				<div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", width: "100%" }}>
+					<input
+						className="input"
+						placeholder="Поиск по названию или исполнителю"
+						value={query}
+						onChange={(e) => setQuery(e.target.value)}
+						style={{ flex: 1, minWidth: 240 }}
+					/>
+					<div className="dropdown" ref={filterMenuRef}>
+						<button
+							className="button secondary"
+							type="button"
+							aria-haspopup="true"
+							aria-expanded={isFilterOpen}
+							onClick={() => setIsFilterOpen((prev) => !prev)}
+						>
+							Фильтры
+						</button>
+						{isFilterOpen && (
+							<div className="dropdown-menu">
+								<label className="checkbox">
+									<input
+										className="checkbox-input"
+										type="checkbox"
+										checked={showFull}
+										onChange={(e) => setShowFull(e.target.checked)}
+									/>
+									<span className="checkbox-box" aria-hidden="true" />
+									<span className="checkbox-label">укомплектованные</span>
+								</label>
+								<label className="checkbox">
+									<input
+										className="checkbox-input"
+										type="checkbox"
+										checked={showNotFull}
+										onChange={(e) => setShowNotFull(e.target.checked)}
+									/>
+									<span className="checkbox-box" aria-hidden="true" />
+									<span className="checkbox-label">с местами</span>
+								</label>
+							</div>
+						)}
+					</div>
 				</div>
-				<input
-					className="input"
-					placeholder="Поиск по названию или исполнителю"
-					value={query}
-					onChange={(e) => setQuery(e.target.value)}
-					style={{ maxWidth: 280 }}
-				/>
 			</div>
 
 			{listState.isLoading && listState.items.length === 0 && <div>Загружаем песни…</div>}
 			{listState.error && <div style={{ color: "var(--danger)" }}>Ошибка: {listState.error.message}</div>}
 
-			{listState.items.length > 0 && (
+			{filteredItems.length > 0 && (
 				<div className="grid">
-					{listState.items.map((song: Song) => (
+					{filteredItems.map((song: Song) => (
 						<SongRow key={song.id} song={song} onOpen={() => setSelectedId(song.id)} />
 					))}
 				</div>
