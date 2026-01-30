@@ -26,7 +26,7 @@ func (s *SongService) LeaveRole(ctx context.Context, req *proto.LeaveRoleRequest
 		return nil, status.Error(codes.PermissionDenied, "no rights to leave roles")
 	}
 
-	res, err := db.ExecContext(ctx, `
+	_, err = db.ExecContext(ctx, `
 		DELETE FROM song_role_assignment WHERE song_id = $1 AND role = $2 AND user_id = $3
 	`, req.GetSongId(), req.GetRole(), userID)
 	if err != nil {
