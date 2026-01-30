@@ -443,4 +443,5 @@ var PublicMethods = map[string]bool{
 	"/musicclub.auth.AuthService/Register":           true,
 	"/musicclub.auth.AuthService/Refresh":            true,
 	"/musicclub.auth.AuthService/TelegramWebAppAuth": true,
+	"/musicclub.auth.AuthService/GetTgLoginLink":     true,
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Code, ConnectError } from "@connectrpc/connect";
 
@@ -19,6 +19,8 @@ const AuthGate = () => {
 	const [isProfileLoading, setIsProfileLoading] = useState(true);
 	const [isProfileOpen, setProfileOpen] = useState(false);
 	const [isGettingTgLink, setIsGettingTgLink] = useState(false);
+	const [needsTgLink, setNeedsTgLink] = useState(false);
+	const hasAutoAuthAttempted = useRef(false);
 
 	const loadProfile = useCallback(async () => {
 		setIsProfileLoading(true);
@@ -42,7 +44,6 @@ const AuthGate = () => {
 	const profile = profileData?.profile as User | undefined;
 	const permissions = profileData?.permissions as PermissionSet | undefined;
 
-	// Auto-authenticate via Telegram WebApp
 	useEffect(() => {
 		const tg = window.Telegram?.WebApp;
 
@@ -53,41 +54,81 @@ const AuthGate = () => {
 		// Signal to Telegram that the app is ready
 		tg.ready();
 		tg.expand();
+	}, []);
 
-		const performTelegramAuth = async () => {
-			if (isAuthenticating || profileData) {
+	const requestTgLink = useCallback(
+		async (userId?: string) => {
+			if (isGettingTgLink) {
+				return;
+			}
+			setTgLinkError(null);
+			setIsGettingTgLink(true);
+			try {
+				const res = await getTgLoginLink(userId ? { id: userId } : undefined);
+				if (res.loginLink) {
+					window.open(res.loginLink, "_blank", "noopener");
+				}
+			} catch (err: any) {
+				if (err instanceof ConnectError) {
+					setTgLinkError(err.message);
+				} else {
+					setTgLinkError((err as Error).message);
+				}
+			} finally {
+				setIsGettingTgLink(false);
+			}
+		},
+		[isGettingTgLink],
+	);
+
+	const performTelegramAuth = useCallback(async () => {
+		if (isAuthenticating || profileData) {
+			return;
+		}
+
+		const tg = window.Telegram?.WebApp;
+		if (!tg || !tg.initData) {
+			setAuthError("Откройте приложение через Telegram Mini App");
+			return;
+		}
+
+		setIsAuthenticating(true);
+		setAuthError(null);
+		setNeedsTgLink(false);
+
+		try {
+			const session = await telegramWebAppAuth(tg.initData);
+
+			if (session.tokens?.accessToken == null || session.tokens?.refreshToken == null) {
+				setAuthError("Сервер не вернул токены авторизации");
 				return;
 			}
 
-			setIsAuthenticating(true);
-			setAuthError(null);
-
-			try {
-				const session = await telegramWebAppAuth(tg.initData);
-
-				if (session.tokens?.accessToken == null || session.tokens?.refreshToken == null) {
-					setAuthError("Сервер не вернул токены авторизации");
-					setIsAuthenticating(false);
-					return;
-				}
-
-				setTokenPair(session.tokens.accessToken, session.tokens.refreshToken);
-				await loadProfile();
-			} catch (err: any) {
-				if (err instanceof ConnectError) {
-					setAuthError(err.message);
-				} else {
-					setAuthError((err as Error).message);
-				}
-			} finally {
-				setIsAuthenticating(false);
+			setTokenPair(session.tokens.accessToken, session.tokens.refreshToken);
+			await loadProfile();
+		} catch (err: any) {
+			const message = err instanceof ConnectError ? err.message : (err as Error).message;
+			setAuthError(message);
+			if (/you must be a member/i.test(message)) {
+				setNeedsTgLink(true);
+				await requestTgLink(profile?.id);
 			}
-		};
-
-		if (isUnauthedCode && !isAuthenticating) {
-			performTelegramAuth();
+		} finally {
+			setIsAuthenticating(false);
 		}
-	}, [isUnauthedCode, isAuthenticating, profileData, loadProfile]);
+	}, [isAuthenticating, profileData, loadProfile, requestTgLink, profile?.id]);
+
+	useEffect(() => {
+		const tg = window.Telegram?.WebApp;
+		if (!isUnauthedCode || !tg?.initData) {
+			return;
+		}
+		if (hasAutoAuthAttempted.current) {
+			return;
+		}
+		hasAutoAuthAttempted.current = true;
+		void performTelegramAuth();
+	}, [isUnauthedCode, performTelegramAuth]);
 
 	if (isProfileLoading) {
 		return (
@@ -127,7 +168,7 @@ const AuthGate = () => {
 						<strong style={{ display: "block", marginBottom: 8 }}>Как открыть приложение:</strong>
 						<ol style={{ margin: 0, paddingLeft: 20, lineHeight: 1.6 }}>
 							<li>Откройте Telegram</li>
-							<li>Найдите бота @{window.location.hostname.includes('localhost') ? 'mikeaiogrambot' : 'YourBotUsername'}</li>
+							<li>Найдите бота <a href="https://t.me/cumusicclubbot">@cumusicclubbot</a></li>
 							<li>Нажмите кнопку "Открыть приложение"</li>
 						</ol>
 					</div>
@@ -144,7 +185,7 @@ const AuthGate = () => {
 					</span>
 					Музыкальный клуб
 				</div>
-				{authError ? (
+				{authError && (
 					<div style={{
 						padding: "16px",
 						backgroundColor: "var(--danger-bg)",
@@ -155,14 +196,57 @@ const AuthGate = () => {
 					}}>
 						{authError}
 					</div>
-				) : (
-					<div style={{ textAlign: "center", padding: "40px 0" }}>
-						<div className="spinner" style={{ marginBottom: 16 }} />
-						<p style={{ color: "var(--muted)" }}>
-							Авторизация через Telegram...
-						</p>
-					</div>
 				)}
+				<div style={{ textAlign: "center", padding: "28px 0" }}>
+					{isAuthenticating ? (
+						<>
+							<div className="spinner" style={{ marginBottom: 16 }} />
+							<p style={{ color: "var(--muted)" }}>
+								Авторизация через Telegram...
+							</p>
+						</>
+					) : (
+						<>
+							{hasAutoAuthAttempted.current ? (
+								<p style={{ color: "var(--muted)", marginBottom: 16 }}>
+									Нажмите кнопку, чтобы подключиться через Telegram.
+								</p>
+							) : (
+								<>
+									<div className="spinner" style={{ marginBottom: 16 }} />
+									<p style={{ color: "var(--muted)" }}>
+										Пробуем подключиться автоматически...
+									</p>
+								</>
+							)}
+						</>
+					)}
+					{hasAutoAuthAttempted.current && !isAuthenticating && (
+						<button
+							className="button"
+							type="button"
+							disabled={isAuthenticating}
+							onClick={() => performTelegramAuth()}
+						>
+							{isAuthenticating ? "Подключаем..." : "Подключиться"}
+						</button>
+					)}
+					{needsTgLink && (
+						<div style={{ marginTop: 12 }}>
+							<button
+								className="button secondary"
+								type="button"
+								disabled={isGettingTgLink}
+								onClick={() => requestTgLink(profile?.id)}
+							>
+								{isGettingTgLink ? "Получаем..." : "Получить ссылку"}
+							</button>
+							{tgLinkError && (
+								<div style={{ color: "var(--danger)", marginTop: 8 }}>{tgLinkError}</div>
+							)}
+						</div>
+					)}
+				</div>
 			</div>
 		);
 	}
@@ -229,24 +313,7 @@ const AuthGate = () => {
 						className="button"
 						type="button"
 						disabled={isGettingTgLink}
-						onClick={async () => {
-							setTgLinkError(null);
-							setIsGettingTgLink(true);
-							try {
-								const res = await getTgLoginLink(profile ? { id: profile.id } : undefined);
-								if (res.loginLink) {
-									window.open(res.loginLink, "_blank", "noopener");
-								}
-							} catch (err: any) {
-								if (err instanceof ConnectError) {
-									setTgLinkError(err.message);
-								} else {
-									setTgLinkError((err as Error).message);
-								}
-							} finally {
-								setIsGettingTgLink(false);
-							}
-						}}
+						onClick={() => requestTgLink(profile?.id)}
 					>
 						{isGettingTgLink ? "Получаем..." : "Получить ссылку"}
 					</button>

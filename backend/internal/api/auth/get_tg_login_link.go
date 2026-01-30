@@ -14,10 +14,21 @@ import (
 )
 
 func (s *AuthService) GetTgLoginLink(ctx context.Context, req *proto.User) (*proto.TgLoginLinkResponse, error) {
-	// Get user ID from context (user must be authenticated)
-	userIDStr, err := helpers.UserIDFromCtx(ctx)
-	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "authentication required")
+	// Prefer explicit user id in request; fallback to authenticated context.
+	userIDStr := ""
+	if req != nil && req.GetId() != "" {
+		userIDStr = req.GetId()
+	}
+	if userIDStr == "" {
+		var err error
+		userIDStr, err = helpers.UserIDFromCtx(ctx)
+		if err != nil {
+			return nil, status.Error(codes.Unauthenticated, "authentication required")
+		}
+	} else {
+		if ctxUserID, err := helpers.UserIDFromCtx(ctx); err == nil && ctxUserID != userIDStr {
+			return nil, status.Error(codes.PermissionDenied, "user mismatch")
+		}
 	}
 
 	userID, err := uuid.Parse(userIDStr)
@@ -38,6 +49,9 @@ func (s *AuthService) GetTgLoginLink(ctx context.Context, req *proto.User) (*pro
 	).Scan(&existingTgID)
 
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, status.Error(codes.NotFound, "user not found")
+		}
 		return nil, status.Errorf(codes.Internal, "query user: %v", err)
 	}
 
