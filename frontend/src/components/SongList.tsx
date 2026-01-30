@@ -277,13 +277,6 @@ const SongRow = ({ song, onOpen }: { song: Song; onOpen: () => void }) => {
 					}}>
 						{assignedCount}/{totalRoles}
 					</span>
-					<span style={{
-						fontSize: 11,
-						color: isFull ? "var(--danger)" : "var(--accent)",
-						fontWeight: 600
-					}}>
-						{isFull ? "укомплектовано" : "есть места"}
-					</span>
 					<span className="pill">{badge}</span>
 				</div>
 			</div>

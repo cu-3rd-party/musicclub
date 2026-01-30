@@ -136,13 +136,6 @@ const SongModal = ({ details, onClose, onJoin, onLeave, onUpdate, onDelete, canE
 							}}>
 								{filledRoleCount}/{totalRoles}
 							</span>
-							<span style={{
-								fontSize: 11,
-								color: isFull ? "var(--danger)" : "var(--accent)",
-								fontWeight: 600
-							}}>
-								{isFull ? "укомплектовано" : "есть места"}
-							</span>
 						</div>
 						<div className="tags">
 							{song?.availableRoles?.map((role: string, index: number) => {
