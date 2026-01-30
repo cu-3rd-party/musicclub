@@ -268,7 +268,7 @@ const SongRow = ({ song, onOpen }: { song: Song; onOpen: () => void }) => {
 				</div>
 				<div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
 					<span style={{
-						fontSize: 12,
+						fontSize: 18,
 						padding: "2px 6px",
 						borderRadius: 4,
 						backgroundColor: isFull ? "var(--danger-bg)" : "var(--accent-bg)",
