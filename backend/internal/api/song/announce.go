@@ -87,19 +87,18 @@ func buildAnnouncementMessage(title, artist, addedBy, link string) string {
 	return b.String()
 }
 
-func announceRoleChange(ctx context.Context, db *sql.DB, userID string, song *proto.Song, role, verb string) {
+func announceSongFull(ctx context.Context, db *sql.DB, song *proto.Song) {
 	cfgValue := ctx.Value("cfg")
 	cfg, ok := cfgValue.(config.Config)
 	if !ok {
-		log.Printf("[WARN] Failed to read config from context; skipping role announcement")
+		log.Printf("[WARN] Failed to read config from context; skipping full song announcement")
 		return
 	}
 	if strings.TrimSpace(cfg.BotToken) == "" || strings.TrimSpace(cfg.ChatID) == "" {
 		return
 	}
 
-	role = strings.TrimSpace(role)
-	if role == "" || song == nil {
+	if song == nil {
 		return
 	}
 
@@ -107,8 +106,7 @@ func announceRoleChange(ctx context.Context, db *sql.DB, userID string, song *pr
 	artist := strings.TrimSpace(song.GetArtist())
 	link := strings.TrimSpace(song.GetLink().GetUrl())
 
-	userName := userLink(ctx, db, userID, "Кто-то")
-	message := buildRoleChangeMessage(title, artist, userName, role, verb, link)
+	message := buildSongFullMessage(title, artist, link)
 	if message == "" {
 		return
 	}
@@ -117,22 +115,15 @@ func announceRoleChange(ctx context.Context, db *sql.DB, userID string, song *pr
 		bg, cancel := context.WithTimeout(context.Background(), notifyTimeout())
 		defer cancel()
 		if err := notify.SendTelegramMessage(bg, token, chatID, text); err != nil {
-			log.Printf("[WARN] Failed to send role announcement: %v", err)
+			log.Printf("[WARN] Failed to send full song announcement: %v", err)
 		}
 	}(cfg.BotToken, cfg.ChatID, message)
 }
 
-func buildRoleChangeMessage(title, artist, userName, role, verb, link string) string {
+func buildSongFullMessage(title, artist, link string) string {
 	title = html.EscapeString(strings.TrimSpace(title))
 	artist = html.EscapeString(strings.TrimSpace(artist))
-	userName = strings.TrimSpace(userName)
-	role = html.EscapeString(strings.TrimSpace(role))
-	verb = strings.TrimSpace(verb)
 	link = strings.TrimSpace(link)
-
-	if userName == "" || role == "" {
-		return ""
-	}
 
 	main := ""
 	switch {
@@ -145,20 +136,13 @@ func buildRoleChangeMessage(title, artist, userName, role, verb, link string) st
 	}
 
 	var b strings.Builder
-	if verb == "left" {
-		b.WriteString("Участник покинул роль")
-	} else {
-		b.WriteString("Участник занял роль")
-	}
+	b.WriteString("Песня укомплектована")
 	if main != "" {
 		b.WriteString(": ")
 		b.WriteString(main)
 	}
-	b.WriteString("\n")
-	b.WriteString(userName)
-	b.WriteString(" — ")
-	b.WriteString(role)
 	if link != "" {
+		b.WriteString("\n")
 		b.WriteString("\n")
 		b.WriteString(songLink(link))
 	}

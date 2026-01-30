@@ -38,9 +38,5 @@ func (s *SongService) LeaveRole(ctx context.Context, req *proto.LeaveRoleRequest
 		return nil, err
 	}
 
-	if rows, _ := res.RowsAffected(); rows > 0 {
-		announceRoleChange(ctx, db, userID, details.GetSong(), req.GetRole(), "left")
-	}
-
 	return details, nil
 }

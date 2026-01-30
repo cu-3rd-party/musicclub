@@ -2,6 +2,7 @@ package song
 
 import (
 	"context"
+	"database/sql"
 	"musicclubbot/backend/internal/helpers"
 	"musicclubbot/backend/proto"
 
@@ -26,6 +27,11 @@ func (s *SongService) JoinRole(ctx context.Context, req *proto.JoinRoleRequest) 
 		return nil, status.Error(codes.PermissionDenied, "no rights to join roles")
 	}
 
+	wasFull, err := isSongFull(ctx, db, req.GetSongId())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "check song fullness: %v", err)
+	}
+
 	res, err := db.ExecContext(ctx, `
 		INSERT INTO song_role_assignment (song_id, role, user_id)
 		VALUES ($1, $2, $3)
@@ -41,8 +47,42 @@ func (s *SongService) JoinRole(ctx context.Context, req *proto.JoinRoleRequest) 
 	}
 
 	if rows, _ := res.RowsAffected(); rows > 0 {
-		announceRoleChange(ctx, db, userID, details.GetSong(), req.GetRole(), "joined")
+		isFull, err := isSongFull(ctx, db, req.GetSongId())
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "check song fullness: %v", err)
+		}
+		if isFull && !wasFull {
+			announceSongFull(ctx, db, details.GetSong())
+		}
 	}
 
 	return details, nil
+}
+
+func isSongFull(ctx context.Context, db *sql.DB, songID string) (bool, error) {
+	var totalRoles int32
+	if err := db.QueryRowContext(ctx, `
+		SELECT COUNT(*)
+		FROM song_role
+		WHERE song_id = $1
+	`, songID).Scan(&totalRoles); err != nil {
+		return false, err
+	}
+	if totalRoles == 0 {
+		return false, nil
+	}
+
+	var filledRoles int32
+	if err := db.QueryRowContext(ctx, `
+		SELECT COUNT(DISTINCT sra.role)
+		FROM song_role_assignment sra
+		JOIN song_role sr
+			ON sr.song_id = sra.song_id
+			AND sr.role = sra.role
+		WHERE sra.song_id = $1
+	`, songID).Scan(&filledRoles); err != nil {
+		return false, err
+	}
+
+	return filledRoles >= totalRoles, nil
 }
