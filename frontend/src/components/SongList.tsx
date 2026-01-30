@@ -277,7 +277,6 @@ const SongRow = ({ song, onOpen }: { song: Song; onOpen: () => void }) => {
 					}}>
 						{assignedCount}/{totalRoles}
 					</span>
-					<span className="pill">{badge}</span>
 				</div>
 			</div>
 		</button>
