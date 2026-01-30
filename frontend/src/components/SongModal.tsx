@@ -50,7 +50,8 @@ const SongModal: React.FC<Props> = ({ details, onClose, onJoin, onLeave, onUpdat
 			.filter((value): value is string => Boolean(value));
 		const uniqueMentions = Array.from(new Set(mentions));
 		const mentionLines = uniqueMentions.map((name) => (name.startsWith("@") ? name : `@${name}`));
-		const quoteLines = mentionLines.map((line) => `> ${line}`).join("\n");
+		// const quoteLines = mentionLines.map((line) => `> ${line}`).join("\n");
+		const quoteLines = mentionLines.join("\n");
 		const payload = `**${title}:**\n${quoteLines}`;
 		try {
 			await navigator.clipboard.writeText(payload);
