@@ -19,10 +19,11 @@ type Props = {
 	}) => Promise<void>;
 	onDelete: () => Promise<void>;
 	canEdit: boolean;
+	canEditAny: boolean;
 	currentUserId: string;
 };
 
-const SongModal: React.FC<Props> = ({ details, onClose, onJoin, onLeave, onUpdate, onDelete, canEdit, currentUserId }) => {
+const SongModal: React.FC<Props> = ({ details, onClose, onJoin, onLeave, onUpdate, onDelete, canEdit, canEditAny, currentUserId }) => {
 	const { song } = details;
 	const [isEditing, setIsEditing] = useState(false);
 	const canFeature = Boolean(details.permissions?.songs?.editFeaturedSongs);
@@ -41,6 +42,21 @@ const SongModal: React.FC<Props> = ({ details, onClose, onJoin, onLeave, onUpdat
 	const filledRoleCount = useMemo(() => new Set(assignments.map((a) => a.role)).size, [assignments]);
 	const totalRoles = song?.availableRoles?.length || 0;
 	const isFull = filledRoleCount >= totalRoles;
+
+	const handleCopyMentions = async () => {
+		const title = song?.title ?? "";
+		const mentions = assignments
+			.map((assignment) => assignment.user?.username || assignment.user?.displayName)
+			.filter((value): value is string => Boolean(value));
+		const uniqueMentions = Array.from(new Set(mentions));
+		const mentionLines = uniqueMentions.map((name) => (name.startsWith("@") ? name : `@${name}`));
+		const payload = `**${title}:**\n\`\`\`\n${mentionLines.join("\n")}\n\`\`\``;
+		try {
+			await navigator.clipboard.writeText(payload);
+		} catch (error) {
+			console.error("Failed to copy song info", error);
+		}
+	};
 
 	const linkLabel = useMemo(() => {
 		const map: Record<number, string> = {
@@ -153,8 +169,13 @@ const SongModal: React.FC<Props> = ({ details, onClose, onJoin, onLeave, onUpdat
 					</div>
 
 					<div style={{ marginTop: 14 }}>
-						<div className="card-title" style={{ marginBottom: 8 }}>
-							Участники
+						<div className="card-title" style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
+							<span>Участники</span>
+							{canEditAny && (
+								<button className="button secondary" type="button" onClick={handleCopyMentions}>
+									Скопировать теги
+								</button>
+							)}
 						</div>
 						<div className="grid">
 							{assignments.map((a) => (

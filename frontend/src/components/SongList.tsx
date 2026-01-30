@@ -129,6 +129,7 @@ const SongList: React.FC<Props> = ({ permissions, profile }) => {
 						queryClient.invalidateQueries({ queryKey: ["songs"] });
 					}}
 					canEdit={Boolean(detailQuery.data.permissions?.songs?.editAnySongs || detailQuery.data.permissions?.songs?.editOwnSongs)}
+					canEditAny={Boolean(detailQuery.data.permissions?.songs?.editAnySongs)}
 					currentUserId={profile?.id ?? ""}
 				/>
 			)}
