@@ -37,11 +37,22 @@ func Run(ctx context.Context) error {
 	httpServer := &http.Server{
 		Handler: newHTTPHandler(grpcServer, cfg),
 	}
+	metricsServer := &http.Server{
+		Addr:    cfg.MetricsAddr(),
+		Handler: newMetricsHandler(),
+	}
 
 	go gracefulShutdown(ctx, grpcServer, httpServer)
+	go gracefulMetricsShutdown(ctx, metricsServer)
 	go song.BackfillSongTopics(ctx)
 
 	log.Infof("Starting gRPC server on %s", cfg.GRPCAddr())
+	log.Infof("Starting metrics server on %s", cfg.MetricsAddr())
+	go func() {
+		if err := metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Errorf("metrics server exited with error: %v", err)
+		}
+	}()
 	if err := httpServer.Serve(lis); err != nil && err != http.ErrServerClosed {
 		return fmt.Errorf("serve gRPC/gRPC-Web: %w", err)
 	}
@@ -55,6 +66,7 @@ func newGrpcServer(baseCtx context.Context) *grpc.Server {
 	return grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			withBaseContext(baseCtx),
+			metricsInterceptor,
 			loggingInterceptor,
 			auth.AuthInterceptor,
 		),
@@ -91,6 +103,11 @@ func gracefulShutdown(ctx context.Context, grpcServer *grpc.Server, httpServer *
 	<-ctx.Done()
 	grpcServer.GracefulStop()
 	_ = httpServer.Shutdown(context.Background())
+}
+
+func gracefulMetricsShutdown(ctx context.Context, metricsServer *http.Server) {
+	<-ctx.Done()
+	_ = metricsServer.Shutdown(context.Background())
 }
 
 func withBaseContext(base context.Context) grpc.UnaryServerInterceptor {
