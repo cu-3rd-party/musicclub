@@ -15,6 +15,7 @@ import (
 
 	"musicclubbot/backend/internal/api"
 	"musicclubbot/backend/internal/api/auth"
+	"musicclubbot/backend/internal/api/song"
 	"musicclubbot/backend/internal/config"
 )
 
@@ -38,6 +39,7 @@ func Run(ctx context.Context) error {
 	}
 
 	go gracefulShutdown(ctx, grpcServer, httpServer)
+	go song.BackfillSongTopics(ctx)
 
 	log.Infof("Starting gRPC server on %s", cfg.GRPCAddr())
 	if err := httpServer.Serve(lis); err != nil && err != http.ErrServerClosed {

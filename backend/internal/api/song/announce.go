@@ -118,6 +118,12 @@ func announceSongFull(ctx context.Context, db *sql.DB, song *proto.Song) {
 			log.Printf("[WARN] Failed to send full song announcement: %v", err)
 		}
 	}(cfg.BotToken, cfg.ChatID, message)
+
+	go func(songID, title, artist, link string) {
+		bg, cancel := context.WithTimeout(context.Background(), notifyTimeout()*3)
+		defer cancel()
+		ensureSongTopicAndNotify(bg, db, cfg, songID, title, artist, link)
+	}(song.GetId(), title, artist, link)
 }
 
 func buildSongFullMessage(title, artist, link string) string {
