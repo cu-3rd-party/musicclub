@@ -1,9 +1,12 @@
 from aiogram.utils.i18n import I18n
+from pathlib import Path
 from psycopg2._psycopg import connection
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from db import create_connection
+
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 class Settings(BaseSettings):
@@ -35,7 +38,7 @@ class Settings(BaseSettings):
     @property
     def i18n(self) -> I18n:
         return I18n(
-            path="locales",
+            path=str(BASE_DIR / "locales"),
             default_locale="en",
             domain="bot",
         )
