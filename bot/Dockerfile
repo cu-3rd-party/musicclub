@@ -1,25 +1,18 @@
-FROM python:3.11-slim AS builder
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    VIRTUAL_ENV=/app/.venv \
+    PATH="/app/.venv/bin:$PATH"
+
 WORKDIR /app
 
-RUN apt-get update \
-    && apt-get install -y build-essential --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
+COPY pyproject.toml /app/pyproject.toml
+COPY uv.lock /app/uv.lock
+RUN pip install --no-cache-dir uv \
+    && uv venv /app/.venv \
+    && uv sync --frozen --no-dev
 
-COPY requirements.txt .
-RUN pip install --upgrade pip \
-    && pip wheel -r requirements.txt -w /wheels
+COPY . /app/
 
-FROM python:3.11-slim
-WORKDIR /app
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends libgcc1 \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY --from=builder /wheels /wheels
-RUN pip install --no-cache-dir /wheels/*
-
-COPY . .
-ENV PYTHONUNBUFFERED=1
-
-CMD ["python", "src/main.py"]
+CMD ["/app/.venv/bin/python", "src/main.py"]

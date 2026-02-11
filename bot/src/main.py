@@ -9,35 +9,14 @@ from aiogram.types import (
     InlineKeyboardButton,
     WebAppInfo,
 )
-from aiogram.utils.i18n import I18n, gettext as _
+from aiogram.utils.i18n import gettext as _
 from aiogram.utils.i18n.middleware import I18nMiddleware
 from uuid import UUID
 
-from db import create_connection, execute
+from db import execute
+from settings import settings
 
 logger = logging.getLogger(__name__)
-
-
-def getenv(name: str):
-    v = os.getenv(name)
-    if not v:
-        logger.error("%s environment variable is not set.", name)
-        os.exit(1)
-    return v
-
-
-DB_URL = getenv("POSTGRES_URL")
-BOT_TOKEN = getenv("BOT_TOKEN")
-WEBAPP_URL = os.getenv("WEBAPP_URL", "http://localhost:5173")
-DB_CONN = create_connection(DB_URL)
-
-
-# ---------------- i18n ----------------
-i18n = I18n(
-    path="locales",
-    default_locale="en",
-    domain="bot",
-)
 
 
 class MyI18nMiddleware(I18nMiddleware):
@@ -51,13 +30,13 @@ router = Router()
 
 
 async def auth_confirm(token: UUID, telegram_user_id: int) -> bool:
-    if DB_CONN is None:
+    if settings.DB_CONN is None:
         logger.error("Database connection is not available.")
         return False
 
     try:
         rows = execute(
-            DB_CONN,
+            settings.DB_CONN,
             "SELECT user_id, success FROM tg_auth_user WHERE id = %s",
             (str(token),),
             fetch=True,
@@ -77,17 +56,17 @@ async def auth_confirm(token: UUID, telegram_user_id: int) -> bool:
 
     try:
         execute(
-            DB_CONN,
+            settings.DB_CONN,
             "UPDATE tg_auth_user SET tg_user_id = %s, success = TRUE WHERE id = %s",
             (telegram_user_id, str(token)),
         )
         execute(
-            DB_CONN,
+            settings.DB_CONN,
             "UPDATE app_user SET tg_user_id = %s WHERE id = %s",
             (telegram_user_id, str(user_id)),
         )
         execute(
-            DB_CONN,
+            settings.DB_CONN,
             "UPDATE user_permissions SET edit_own_participation = TRUE, edit_own_songs = TRUE WHERE user_id = %s",
             (str(user_id),),
         )
@@ -141,7 +120,8 @@ async def cmd_start(message: Message):
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="🎸 Открыть Music Club", web_app=WebAppInfo(url=WEBAPP_URL)
+                    text="🎸 Открыть Music Club",
+                    web_app=WebAppInfo(url=settings.WEBAPP_URL),
                 )
             ]
         ]
@@ -166,14 +146,14 @@ async def main():
         level=os.environ.get("LOGLEVEL", "INFO").upper(),
         format="%(levelname)s:\t[%(asctime)s] - %(message)s",
     )
-    bot = Bot(BOT_TOKEN)
+    bot = Bot(settings.BOT_TOKEN)
     dp = Dispatcher()
 
-    dp.message.middleware(MyI18nMiddleware(i18n))
+    dp.message.middleware(MyI18nMiddleware(settings.i18n))
     dp.include_router(router)
 
     logger.info("Starting polling for bot")
-    logger.info("WebApp URL: %s", WEBAPP_URL)
+    logger.info("WebApp URL: %s", settings.WEBAPP_URL)
     await dp.start_polling(bot)
 
 
