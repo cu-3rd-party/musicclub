@@ -3,11 +3,23 @@ msgstr ""
 "Language: ru\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 
-msgid "Open webapp"
-msgstr "Открыть веб-приложение"
+msgid "start.button"
+msgstr "🎸 Открыть Music Club"
 
-msgid "Welcome! Click the button below to open the webapp:\n{url}"
-msgstr "Добро пожаловать! Нажмите кнопку ниже, чтобы открыть веб-приложение:\n{url}"
+msgid "start.welcome"
+msgstr "Добро пожаловать в Music Club! 🎸\n\nНажмите кнопку ниже, чтобы открыть приложение:"
 
-msgid "Send /start to get the webapp link."
+msgid "help.start"
 msgstr "Отправьте /start, чтобы получить ссылку на веб-приложение."
+
+msgid "start.invalid_param"
+msgstr "Некорректный параметр /start."
+
+msgid "start.invalid_token"
+msgstr "Неверный токен аутентификации."
+
+msgid "auth.ok"
+msgstr "✅ Аутентификация успешна! Можно вернуться в веб-приложение."
+
+msgid "auth.fail"
+msgstr "❌ Аутентификация не удалась или истекла."

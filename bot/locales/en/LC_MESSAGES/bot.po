@@ -3,11 +3,23 @@ msgstr ""
 "Language: en\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 
-msgid "Open webapp"
-msgstr "Open webapp"
+msgid "start.button"
+msgstr "🎸 Open Music Club"
 
-msgid "Welcome! Click the button below to open the webapp:\n{url}"
-msgstr "Welcome! Click the button below to open the webapp:\n{url}"
+msgid "start.welcome"
+msgstr "Welcome to Music Club! 🎸\n\nTap the button below to open the app:"
 
-msgid "Send /start to get the webapp link."
-msgstr "Send /start to get the webapp link."
+msgid "help.start"
+msgstr "Send /start to get the web app link."
+
+msgid "start.invalid_param"
+msgstr "Invalid start parameter."
+
+msgid "start.invalid_token"
+msgstr "Invalid authentication token."
+
+msgid "auth.ok"
+msgstr "✅ Authentication successful! You may return to the web app."
+
+msgid "auth.fail"
+msgstr "❌ Authentication failed or expired."
