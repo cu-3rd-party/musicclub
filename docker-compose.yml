@@ -50,6 +50,13 @@
       - .env
     depends_on:
       - db
+  calendar:
+    build:
+      context: ./calendar
+      dockerfile: Dockerfile
+    ports:
+      - "6965:8080"
+    restart: unless-stopped
 
   prometheus:
     image: prom/prometheus:v2.52.0
