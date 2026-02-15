@@ -2,7 +2,7 @@ package song
 
 import (
 	"context"
-	"musicclubbot/backend/internal/helpers"
+	helpers2 "musicclubbot/backend/pkg/helpers"
 	"musicclubbot/backend/proto"
 
 	"google.golang.org/grpc/codes"
@@ -10,15 +10,15 @@ import (
 )
 
 func (s *SongService) CreateSong(ctx context.Context, req *proto.CreateSongRequest) (*proto.SongDetails, error) {
-	userID, err := helpers.UserIDFromCtx(ctx)
+	userID, err := helpers2.UserIDFromCtx(ctx)
 	if err != nil {
 		return nil, err
 	}
-	db, err := helpers.DbFromCtx(ctx)
+	db, err := helpers2.DbFromCtx(ctx)
 	if err != nil {
 		return nil, err
 	}
-	perms, err := helpers.LoadPermissions(ctx, db, userID)
+	perms, err := helpers2.LoadPermissions(ctx, db, userID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "load permissions: %v", err)
 	}
@@ -29,13 +29,13 @@ func (s *SongService) CreateSong(ctx context.Context, req *proto.CreateSongReque
 		return nil, status.Error(codes.PermissionDenied, "no rights to feature songs")
 	}
 
-	linkKind, err := helpers.MapSongLinkKindToDB(req.GetLink().GetKind())
+	linkKind, err := helpers2.MapSongLinkKindToDB(req.GetLink().GetKind())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	// Auto-extract or use custom thumbnail URL
-	thumbnailURL := helpers.NormalizeThumbnailURL(req.GetThumbnailUrl(), linkKind, req.GetLink().GetUrl())
+	thumbnailURL := helpers2.NormalizeThumbnailURL(req.GetThumbnailUrl(), linkKind, req.GetLink().GetUrl())
 
 	var songID string
 	tx, err := db.BeginTx(ctx, nil)
@@ -61,7 +61,7 @@ func (s *SongService) CreateSong(ctx context.Context, req *proto.CreateSongReque
 		return nil, status.Errorf(codes.Internal, "commit: %v", err)
 	}
 
-	details, err := helpers.LoadSongDetails(ctx, db, songID, userID)
+	details, err := helpers2.LoadSongDetails(ctx, db, songID, userID)
 	if err != nil {
 		return nil, err
 	}

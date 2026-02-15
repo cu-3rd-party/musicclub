@@ -2,7 +2,7 @@ package event
 
 import (
 	"context"
-	"musicclubbot/backend/internal/helpers"
+	"musicclubbot/backend/pkg/helpers"
 	"musicclubbot/backend/proto"
 
 	"google.golang.org/grpc/codes"

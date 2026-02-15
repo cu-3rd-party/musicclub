@@ -1,8 +1,7 @@
 package config
 
 import (
-	"os"
-	"strings"
+	. "musicclubbot/backend/pkg/config"
 )
 
 // Config groups runtime configuration for the backend service.
@@ -20,15 +19,15 @@ type Config struct {
 
 // Load reads configuration from environment with sane defaults.
 func Load() Config {
-	port := getenv("GRPC_PORT", "6969")
-	metricsPort := getenv("METRICS_PORT", "9091")
-	url := getenv("POSTGRES_URL", "postgres://user:password@localhost:5432/musicclubbot")
-	jwtSecret := []byte(getenv("JWT_SECRET", "change-this-in-prod"))
-	botUsername := getenv("BOT_USERNAME", "YourBotUsername")
-	botToken := getenv("BOT_TOKEN", "")
-	chatID := getenv("CHAT_ID", "")
-	skipCheck := getenv("SKIP_CHAT_MEMBERSHIP_CHECK", "false") == "true"
-	allowedOrigins := splitCommaList(getenv("CORS_ALLOWED_ORIGINS", "*"))
+	port := GetEnv("GRPC_PORT", "6969")
+	metricsPort := GetEnv("METRICS_PORT", "9091")
+	url := GetEnv("POSTGRES_URL", "postgres://user:password@localhost:5432/musicclubbot")
+	jwtSecret := []byte(GetEnv("JWT_SECRET", "change-this-in-prod"))
+	botUsername := GetEnv("BOT_USERNAME", "YourBotUsername")
+	botToken := GetEnv("BOT_TOKEN", "")
+	chatID := GetEnv("CHAT_ID", "")
+	skipCheck := GetEnv("SKIP_CHAT_MEMBERSHIP_CHECK", "false") == "true"
+	allowedOrigins := SplitCommaList(GetEnv("CORS_ALLOWED_ORIGINS", "*"))
 
 	return Config{
 		GRPCPort:                port,
@@ -49,23 +48,4 @@ func (c Config) GRPCAddr() string {
 
 func (c Config) MetricsAddr() string {
 	return ":" + c.MetricsPort
-}
-
-func getenv(key, fallback string) string {
-	if v, ok := os.LookupEnv(key); ok && v != "" {
-		return v
-	}
-	return fallback
-}
-
-func splitCommaList(value string) []string {
-	parts := strings.Split(value, ",")
-	out := make([]string, 0, len(parts))
-	for _, part := range parts {
-		item := strings.TrimSpace(part)
-		if item != "" {
-			out = append(out, item)
-		}
-	}
-	return out
 }
