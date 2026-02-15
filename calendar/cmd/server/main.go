@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"musicclubbot/calendar/internal/api"
 	"musicclubbot/calendar/internal/config"
+	"musicclubbot/calendar/pkg/db"
 )
 
 func main() {
@@ -12,6 +14,16 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to load config: %v", err)
 	}
+
+	dbConn, err := db.Open(context.Background(), cfg.DbURL)
+	if err != nil {
+		log.Fatalf("failed to connect to database: %v", err)
+	}
+	defer func() {
+		if err := dbConn.Close(); err != nil {
+			log.Printf("failed to close database: %v", err)
+		}
+	}()
 
 	router := api.NewRouter(api.Config{
 		BasePath:      cfg.APIBasePath,

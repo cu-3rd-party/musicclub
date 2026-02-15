@@ -5,6 +5,7 @@ go 1.25
 require (
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/gin-gonic/gin v1.10.0
+	github.com/lib/pq v1.11.2
 	github.com/prometheus/client_golang v1.19.1
 )
 
