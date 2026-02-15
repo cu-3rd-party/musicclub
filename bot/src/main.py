@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
     logger.info("WebApp URL: %s", settings.WEBAPP_URL)
 
     if settings.WEBHOOK_URL:
-        await bot.set_webhook(settings.WEBHOOK_URL, secret_token=settings.SECRET_TOKEN)
+        await bot.set_webhook(settings.WEBHOOK_URL, secret_token=settings.secret_token)
         logger.info("Webhook set: %s", settings.WEBHOOK_URL)
     else:
         await bot.delete_webhook()
@@ -52,7 +52,7 @@ app = FastAPI(lifespan=lifespan)
 
 @app.post("/telegram/webhook")
 async def handle_webhook(request: Request):
-    if request.headers.get("X-Telegram-Bot-Api-Secret-Token") != settings.SECRET_TOKEN:
+    if request.headers.get("X-Telegram-Bot-Api-Secret-Token") != settings.secret_token:
         raise HTTPException(status_code=403, detail="Forbidden")
 
     update = types.Update(**await request.json())

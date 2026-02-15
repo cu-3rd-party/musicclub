@@ -23,4 +23,5 @@ RUN make compile-locales
 
 EXPOSE 8000
 
+ENV PYTHONPATH=/app/src
 CMD ["/app/.venv/bin/uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

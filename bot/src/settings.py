@@ -1,4 +1,5 @@
 import random
+import secrets
 from aiogram.utils.i18n import I18n
 from pathlib import Path
 from psycopg2._psycopg import connection
@@ -25,11 +26,12 @@ class Settings(BaseSettings):
     BOT_TOKEN: str
     WEBAPP_URL: str = Field(default="http://localhost:5173")
     WEBHOOK_URL: str | None = Field(default=None)
+    SECRET_TOKEN: str | None
     SECRET_TOKEN_LENGTH: int = 24
 
     @property
     def secret_token(self) -> str:
-        return str(random.randbytes(self.SECRET_TOKEN_LENGTH))
+        return self.SECRET_TOKEN or secrets.token_urlsafe(self.SECRET_TOKEN_LENGTH)
 
     @property
     def db_url(self) -> str:
