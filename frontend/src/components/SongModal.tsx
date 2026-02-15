@@ -34,7 +34,7 @@ const SongModal = ({ details, onClose, onJoin, onLeave, onUpdate, onDelete, canE
 		description: song?.description ?? "",
 		linkUrl: song?.link?.url ?? "",
 		linkKind: (song?.link?.kind ?? 0) as SongLinkType,
-		roles: song?.availableRoles ?? [],
+		rolesText: (song?.availableRoles ?? []).join(", "),
 		thumbnailUrl: song?.thumbnailUrl ?? "",
 		featured: song?.featured ?? false,
 	});
@@ -72,13 +72,17 @@ const SongModal = ({ details, onClose, onJoin, onLeave, onUpdate, onDelete, canE
 
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault();
+		const roles = form.rolesText
+			.split(",")
+			.map((role) => role.trim())
+			.filter(Boolean);
 		await onUpdate({
 			title: form.title,
 			artist: form.artist,
 			description: form.description,
 			linkUrl: form.linkUrl,
 			linkKind: form.linkKind,
-			roles: form.roles,
+			roles,
 			thumbnailUrl: form.thumbnailUrl,
 			featured: canFeature ? form.featured : undefined,
 		});
@@ -216,8 +220,8 @@ const SongModal = ({ details, onClose, onJoin, onLeave, onUpdate, onDelete, canE
 									</select>
 									<input
 										className="input"
-										value={form.roles.join(", ")}
-										onChange={(e) => setForm({ ...form, roles: e.target.value.split(",").map((r) => r.trim()).filter(Boolean) })}
+										value={form.rolesText}
+										onChange={(e) => setForm({ ...form, rolesText: e.target.value })}
 										placeholder="Роли через запятую"
 									/>
 									{canFeature && (
