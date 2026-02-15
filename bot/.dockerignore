@@ -1,14 +1,1 @@
-__pycache__
-*.pyc
-*.pyo
-.pytest_cache
-.mypy_cache
-.venv
-env
-venv
-.env
-dist
-build
-*.egg-info
-__pycache__/
-/*.pyc
+./.gitignore

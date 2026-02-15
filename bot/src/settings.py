@@ -23,6 +23,7 @@ class Settings(BaseSettings):
 
     BOT_TOKEN: str
     WEBAPP_URL: str = Field(default="http://localhost:5173")
+    WEBHOOK_URL: str | None = Field(default=None)
 
     @property
     def db_url(self) -> str:

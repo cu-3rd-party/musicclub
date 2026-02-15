@@ -7,6 +7,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y \
+    make \
+    gettext \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY pyproject.toml /app/pyproject.toml
 COPY uv.lock /app/uv.lock
 RUN pip install --no-cache-dir uv \
@@ -14,5 +19,6 @@ RUN pip install --no-cache-dir uv \
     && uv sync --frozen --no-dev
 
 COPY . /app/
+RUN make compile-locales
 
 CMD ["/app/.venv/bin/python", "src/main.py"]
