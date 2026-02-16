@@ -67,8 +67,6 @@
     build:
       context: ./bot
       dockerfile: Dockerfile
-    ports:
-      - "6966:8080"
     restart: unless-stopped
     env_file:
       - .env
