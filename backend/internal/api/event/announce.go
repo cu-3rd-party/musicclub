@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"html"
 	"log"
+	"musicclubbot/backend/pkg/helpers"
 	"strings"
 	"time"
 
 	"musicclubbot/backend/internal/config"
-	"musicclubbot/backend/internal/helpers"
 	"musicclubbot/backend/internal/notify"
 	"musicclubbot/backend/proto"
 

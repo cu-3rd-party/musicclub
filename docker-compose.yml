@@ -1,9 +1,43 @@
 ﻿services:
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/templates:ro
+      - ./nginx/docker-entrypoint.d/01-init-ssl.sh:/docker-entrypoint.d/01-init-ssl.sh:ro
+      - ./certbot/www:/var/www/certbot:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+    depends_on:
+      - backend
+      - frontend
+      - adminer
+      - grafana
+
+  certbot:
+    image: certbot/certbot:v2.11.0
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - nginx
+    volumes:
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
+    entrypoint: /bin/sh
+    command: -c "certbot certonly --webroot -w /var/www/certbot -d ${SERVER_HOST} -d adminer.${SERVER_HOST} -d grafana.${SERVER_HOST} --email ${LETSENCRYPT_EMAIL} --agree-tos --no-eff-email --keep-until-expiring --expand && while :; do certbot renew --webroot -w /var/www/certbot; sleep 12h & wait $${!}; done"
+
+  # --- Storage ---
   db:
     image: postgres:18-alpine
     restart: unless-stopped
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
     env_file:
       - .env
     volumes:
@@ -12,56 +46,69 @@
   adminer:
     image: adminer
     restart: unless-stopped
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
 
+  # --- Backend
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    ports:
-      - "6969:6969"
-      - "9091:9091"
+    expose:
+      - "6969"
+      - "9091"
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - db
+  calendar:
+    build:
+      context: ./calendar
+      dockerfile: Dockerfile
+    expose:
+      - "8080"
     restart: unless-stopped
     env_file:
       - .env
     depends_on:
       - db
 
+  # --- UI ---
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_GRPC_HOST: ${VITE_GRPC_HOST}
-    ports:
-      - "5173:5173"
+        VITE_GRPC_HOST: ${WEBAPP_URL}/api
+    expose:
+      - "5173"
     env_file:
       - .env
-
   bot:
     build:
       context: ./bot
       dockerfile: Dockerfile
-    ports:
-      - "6966:8080"
+    expose:
+      - "8000"
     restart: unless-stopped
     env_file:
       - .env
     depends_on:
       - db
+      - calendar
 
+  # --- Metrics ---
   prometheus:
     image: prom/prometheus:v2.52.0
     restart: unless-stopped
     volumes:
       - ./prometheus:/etc/prometheus
-
   grafana:
     image: grafana/grafana:11.2.0
     restart: unless-stopped
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     env_file:
       - .env
     environment:

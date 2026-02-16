@@ -2,7 +2,7 @@ package auth
 
 import (
 	"context"
-	"musicclubbot/backend/internal/helpers"
+	"musicclubbot/backend/pkg/helpers"
 	"strings"
 
 	"github.com/google/uuid"
@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// Authentication middleware
+// AuthInterceptor Authentication middleware
 func AuthInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	if helpers.PublicMethods[info.FullMethod] {
 		return handler(ctx, req)

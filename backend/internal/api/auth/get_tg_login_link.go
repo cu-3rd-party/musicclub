@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"musicclubbot/backend/internal/config"
-	"musicclubbot/backend/internal/helpers"
+	"musicclubbot/backend/pkg/helpers"
 	"musicclubbot/backend/proto"
 
 	"github.com/google/uuid"

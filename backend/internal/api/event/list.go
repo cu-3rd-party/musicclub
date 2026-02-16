@@ -3,7 +3,7 @@ package event
 import (
 	"context"
 	"database/sql"
-	"musicclubbot/backend/internal/helpers"
+	"musicclubbot/backend/pkg/helpers"
 	"musicclubbot/backend/proto"
 	"strconv"
 	"strings"

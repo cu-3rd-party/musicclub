@@ -23,3 +23,45 @@ msgstr "✅ Authentication successful! You may return to the web app."
 
 msgid "auth.fail"
 msgstr "❌ Authentication failed or expired."
+
+msgid "calendar.attach.prompt"
+msgstr "Please attach your calendar in Music Club so we can schedule you for events."
+
+msgid "calendar.attach.button"
+msgstr "Attach calendar"
+
+msgid "calendar.attach.ask"
+msgstr "Send your calendar ICS URL."
+
+msgid "calendar.attach.invalid_url"
+msgstr "That does not look like a valid ICS URL. Please send a link ending with .ics."
+
+msgid "calendar.attach.not_linked"
+msgstr "Please link your account in the Music Club web app first, then try again."
+
+msgid "calendar.attach.success"
+msgstr "✅ Calendar attached."
+
+msgid "calendar.attach.fail"
+msgstr "❌ Failed to attach calendar. Please try again later."
+
+msgid "email.confirm.prompt"
+msgstr "Is this your email: {email}?"
+
+msgid "email.confirm.yes"
+msgstr "Yes"
+
+msgid "email.confirm.no"
+msgstr "No"
+
+msgid "email.ask"
+msgstr "Please enter your email address."
+
+msgid "email.invalid"
+msgstr "That does not look like a valid email address. Please try again."
+
+msgid "email.save.ok"
+msgstr "✅ Email saved: {email}"
+
+msgid "email.save.fail"
+msgstr "❌ Failed to save email. Please try again later."

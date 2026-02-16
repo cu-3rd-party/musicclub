@@ -1,8 +1,9 @@
 package config
 
 import (
-	"os"
-	"strings"
+	"net/url"
+
+	. "musicclubbot/backend/pkg/config"
 )
 
 // Config groups runtime configuration for the backend service.
@@ -20,20 +21,38 @@ type Config struct {
 
 // Load reads configuration from environment with sane defaults.
 func Load() Config {
-	port := getenv("GRPC_PORT", "6969")
-	metricsPort := getenv("METRICS_PORT", "9091")
-	url := getenv("POSTGRES_URL", "postgres://user:password@localhost:5432/musicclubbot")
-	jwtSecret := []byte(getenv("JWT_SECRET", "change-this-in-prod"))
-	botUsername := getenv("BOT_USERNAME", "YourBotUsername")
-	botToken := getenv("BOT_TOKEN", "")
-	chatID := getenv("CHAT_ID", "")
-	skipCheck := getenv("SKIP_CHAT_MEMBERSHIP_CHECK", "false") == "true"
-	allowedOrigins := splitCommaList(getenv("CORS_ALLOWED_ORIGINS", "*"))
+	port := GetEnv("GRPC_PORT", "6969")
+	metricsPort := GetEnv("METRICS_PORT", "9091")
+	dbURL := GetEnv("POSTGRES_URL", "")
+	if dbURL == "" {
+		dbUser := GetEnv("POSTGRES_USER", "user")
+		dbPassword := GetEnv("POSTGRES_PASSWORD", "password")
+		dbHost := GetEnv("POSTGRES_HOST", "localhost")
+		dbPort := GetEnv("POSTGRES_PORT", "5432")
+		dbName := GetEnv("POSTGRES_DB", "musicclubbot")
+
+		u := url.URL{
+			Scheme: "postgres",
+			User:   url.UserPassword(dbUser, dbPassword),
+			Host:   dbHost + ":" + dbPort,
+			Path:   "/" + dbName,
+		}
+		q := u.Query()
+		q.Set("sslmode", "disable")
+		u.RawQuery = q.Encode()
+		dbURL = u.String()
+	}
+	jwtSecret := []byte(GetEnv("JWT_SECRET", "change-this-in-prod"))
+	botUsername := GetEnv("BOT_USERNAME", "YourBotUsername")
+	botToken := GetEnv("BOT_TOKEN", "")
+	chatID := GetEnv("CHAT_ID", "")
+	skipCheck := GetEnv("SKIP_CHAT_MEMBERSHIP_CHECK", "false") == "true"
+	allowedOrigins := SplitCommaList(GetEnv("CORS_ALLOWED_ORIGINS", "*"))
 
 	return Config{
 		GRPCPort:                port,
 		MetricsPort:             metricsPort,
-		DbUrl:                   url,
+		DbUrl:                   dbURL,
 		JwtSecretKey:            jwtSecret,
 		BotUsername:             botUsername,
 		BotToken:                botToken,
@@ -49,23 +68,4 @@ func (c Config) GRPCAddr() string {
 
 func (c Config) MetricsAddr() string {
 	return ":" + c.MetricsPort
-}
-
-func getenv(key, fallback string) string {
-	if v, ok := os.LookupEnv(key); ok && v != "" {
-		return v
-	}
-	return fallback
-}
-
-func splitCommaList(value string) []string {
-	parts := strings.Split(value, ",")
-	out := make([]string, 0, len(parts))
-	for _, part := range parts {
-		item := strings.TrimSpace(part)
-		if item != "" {
-			out = append(out, item)
-		}
-	}
-	return out
 }

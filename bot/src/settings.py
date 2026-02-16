@@ -1,7 +1,8 @@
-import random
+import re
 import secrets
-from aiogram.utils.i18n import I18n
 from pathlib import Path
+
+from aiogram.utils.i18n import I18n
 from psycopg2._psycopg import connection
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -25,9 +26,19 @@ class Settings(BaseSettings):
 
     BOT_TOKEN: str
     WEBAPP_URL: str = Field(default="http://localhost:5173")
-    WEBHOOK_URL: str | None = Field(default=None)
     SECRET_TOKEN: str | None
     SECRET_TOKEN_LENGTH: int = 24
+
+    EMAIL_DOMAIN: str = "edu.centraluniversity.ru"
+    EMAIL_RE: str = r"^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+
+    @property
+    def webhook_url(self):
+        return self.WEBAPP_URL + "/telegram/webhook"
+
+    @property
+    def email_re(self) -> re.Pattern[str]:
+        return re.compile(self.EMAIL_RE)
 
     @property
     def secret_token(self) -> str:

@@ -2,7 +2,7 @@ package auth
 
 import (
 	"context"
-	"musicclubbot/backend/internal/helpers"
+	"musicclubbot/backend/pkg/helpers"
 	"musicclubbot/backend/proto"
 	"time"
 

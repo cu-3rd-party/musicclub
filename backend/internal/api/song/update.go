@@ -3,7 +3,7 @@ package song
 import (
 	"context"
 	"database/sql"
-	"musicclubbot/backend/internal/helpers"
+	helpers2 "musicclubbot/backend/pkg/helpers"
 	"musicclubbot/backend/proto"
 	"sort"
 	"strings"
@@ -13,15 +13,15 @@ import (
 )
 
 func (s *SongService) UpdateSong(ctx context.Context, req *proto.UpdateSongRequest) (*proto.SongDetails, error) {
-	userID, err := helpers.UserIDFromCtx(ctx)
+	userID, err := helpers2.UserIDFromCtx(ctx)
 	if err != nil {
 		return nil, err
 	}
-	db, err := helpers.DbFromCtx(ctx)
+	db, err := helpers2.DbFromCtx(ctx)
 	if err != nil {
 		return nil, err
 	}
-	perms, err := helpers.LoadPermissions(ctx, db, userID)
+	perms, err := helpers2.LoadPermissions(ctx, db, userID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "load permissions: %v", err)
 	}
@@ -34,7 +34,7 @@ func (s *SongService) UpdateSong(ctx context.Context, req *proto.UpdateSongReque
 		}
 		return nil, status.Errorf(codes.Internal, "load song: %v", err)
 	}
-	if !helpers.PermissionAllowsSongEdit(perms, creatorID, userID) {
+	if !helpers2.PermissionAllowsSongEdit(perms, creatorID, userID) {
 		return nil, status.Error(codes.PermissionDenied, "no rights to edit song")
 	}
 	featuredAllowed := perms.Songs != nil && perms.Songs.EditFeaturedSongs
@@ -42,13 +42,13 @@ func (s *SongService) UpdateSong(ctx context.Context, req *proto.UpdateSongReque
 		return nil, status.Error(codes.PermissionDenied, "no rights to feature songs")
 	}
 
-	linkKind, err := helpers.MapSongLinkKindToDB(req.GetLink().GetKind())
+	linkKind, err := helpers2.MapSongLinkKindToDB(req.GetLink().GetKind())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	// Auto-extract or use custom thumbnail URL
-	thumbnailURL := helpers.NormalizeThumbnailURL(req.GetThumbnailUrl(), linkKind, req.GetLink().GetUrl())
+	thumbnailURL := helpers2.NormalizeThumbnailURL(req.GetThumbnailUrl(), linkKind, req.GetLink().GetUrl())
 
 	normalizeRoles := func(roles []string) []string {
 		uniq := make(map[string]struct{}, len(roles))
@@ -68,7 +68,7 @@ func (s *SongService) UpdateSong(ctx context.Context, req *proto.UpdateSongReque
 		return out
 	}
 
-	currentRoles, err := helpers.LoadSongRoles(ctx, db, req.GetId())
+	currentRoles, err := helpers2.LoadSongRoles(ctx, db, req.GetId())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "load roles: %v", err)
 	}
@@ -97,7 +97,7 @@ func (s *SongService) UpdateSong(ctx context.Context, req *proto.UpdateSongReque
 		`, req.GetTitle(), req.GetArtist(), req.GetDescription(), linkKind, req.GetLink().GetUrl(), thumbnailURL, req.GetId()); err != nil {
 			return nil, status.Errorf(codes.Internal, "update song: %v", err)
 		}
-		}
+	}
 
 	if len(normalizedRequested) != len(normalizedCurrent) || !slicesEqual(normalizedRequested, normalizedCurrent) {
 		if err := replaceSongRoles(ctx, tx, req.GetId(), normalizedRequested); err != nil {
@@ -109,7 +109,7 @@ func (s *SongService) UpdateSong(ctx context.Context, req *proto.UpdateSongReque
 		return nil, status.Errorf(codes.Internal, "commit: %v", err)
 	}
 
-	return helpers.LoadSongDetails(ctx, db, req.GetId(), userID)
+	return helpers2.LoadSongDetails(ctx, db, req.GetId(), userID)
 }
 
 func slicesEqual(a, b []string) bool {

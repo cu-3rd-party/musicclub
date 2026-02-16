@@ -2,13 +2,12 @@ package main
 
 import (
 	"context"
+	"musicclubbot/backend/pkg/db"
 	"os/signal"
 	"syscall"
 
 	"musicclubbot/backend/internal/app"
 	"musicclubbot/backend/internal/config"
-	"musicclubbot/backend/internal/db"
-
 	"os"
 
 	"github.com/apsdehal/go-logger"

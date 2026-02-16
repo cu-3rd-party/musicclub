@@ -11,7 +11,7 @@ import (
 	"io"
 	"log"
 	"musicclubbot/backend/internal/config"
-	"musicclubbot/backend/internal/helpers"
+	"musicclubbot/backend/pkg/helpers"
 	"musicclubbot/backend/proto"
 	"net/http"
 	"net/url"
