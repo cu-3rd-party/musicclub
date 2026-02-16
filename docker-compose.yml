@@ -50,6 +50,7 @@
       - .env
     depends_on:
       - db
+      - calendar
   calendar:
     build:
       context: ./calendar

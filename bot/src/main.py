@@ -1,11 +1,13 @@
 import asyncio
 import logging
 import os
-from aiogram import Bot, Dispatcher, types
 from contextlib import asynccontextmanager
+
+from aiogram import Bot, Dispatcher, types
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import Response
 
+import routines
 from handlers import router
 from middlewares import MyI18nMiddleware
 from settings import settings
@@ -41,10 +43,13 @@ async def lifespan(app: FastAPI):
         await bot.delete_webhook()
         logger.info("Webhook deleted (polling mode)")
 
+    routines.on_setup(app)
+
     try:
         yield
     finally:
         await bot.session.close()
+        routines.on_shutdown(app)
 
 
 app = FastAPI(lifespan=lifespan)
@@ -58,6 +63,8 @@ async def handle_webhook(request: Request):
     update = types.Update(**await request.json())
     await app.state.dp.feed_webhook_update(app.state.bot, update)
     return Response(status_code=200)
+
+    routines.on_setup()
 
 
 async def main():

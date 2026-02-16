@@ -23,3 +23,24 @@ msgstr "✅ Аутентификация успешна! Можно вернут
 
 msgid "auth.fail"
 msgstr "❌ Аутентификация не удалась или истекла."
+
+msgid "calendar.attach.prompt"
+msgstr "Пожалуйста, прикрепите свой календарь в Music Club, чтобы мы могли планировать вас на мероприятия."
+
+msgid "calendar.attach.button"
+msgstr "Прикрепить календарь"
+
+msgid "calendar.attach.ask"
+msgstr "Пришлите ссылку на ваш календарь в формате ICS."
+
+msgid "calendar.attach.invalid_url"
+msgstr "Похоже, это не ссылка на ICS. Пришлите ссылку, которая заканчивается на .ics."
+
+msgid "calendar.attach.not_linked"
+msgstr "Сначала привяжите аккаунт в веб‑приложении Music Club, затем попробуйте снова."
+
+msgid "calendar.attach.success"
+msgstr "✅ Календарь прикреплён."
+
+msgid "calendar.attach.fail"
+msgstr "❌ Не удалось прикрепить календарь. Попробуйте позже."
