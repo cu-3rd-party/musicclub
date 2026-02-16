@@ -36,9 +36,9 @@ async def lifespan(app: FastAPI):
 
     logger.info("WebApp URL: %s", settings.WEBAPP_URL)
 
-    if settings.WEBHOOK_URL:
-        await bot.set_webhook(settings.WEBHOOK_URL, secret_token=settings.secret_token)
-        logger.info("Webhook set: %s", settings.WEBHOOK_URL)
+    if settings.webhook_url:
+        await bot.set_webhook(settings.webhook_url, secret_token=settings.secret_token)
+        logger.info("Webhook set: %s", settings.webhook_url)
     else:
         await bot.delete_webhook()
         logger.info("Webhook deleted (polling mode)")
@@ -83,7 +83,7 @@ async def main():
 
 
 if __name__ == "__main__":
-    if settings.WEBHOOK_URL:
+    if settings.webhook_url:
         raise SystemExit(
             "WEBHOOK_URL is set. Run the webhook server with: uvicorn main:app --host 0.0.0.0 --port 8000"
         )
