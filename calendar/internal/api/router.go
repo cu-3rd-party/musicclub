@@ -26,8 +26,12 @@ func NewRouter(cfg Config) *gin.Engine {
 func registerRoutes(router *gin.Engine, cfg Config) {
 	group := router.Group(cfg.BasePath)
 
+	calendarHandler := handlers.NewCalendarHandler(cfg.Store, cfg.Yandex)
+
 	group.GET("/ping", handlers.Ping)
 	group.GET("/echo", handlers.Echo)
+	group.GET("/busy", calendarHandler.BusyIntervals)
+	group.GET("/profile/busy", calendarHandler.BusyIntervals)
 
 	if cfg.EnableMetrics {
 		group.GET("/metrics", gin.WrapH(promhttp.Handler()))

@@ -44,3 +44,24 @@ msgstr "✅ Calendar attached."
 
 msgid "calendar.attach.fail"
 msgstr "❌ Failed to attach calendar. Please try again later."
+
+msgid "email.confirm.prompt"
+msgstr "Is this your email: {email}?"
+
+msgid "email.confirm.yes"
+msgstr "Yes"
+
+msgid "email.confirm.no"
+msgstr "No"
+
+msgid "email.ask"
+msgstr "Please enter your email address."
+
+msgid "email.invalid"
+msgstr "That does not look like a valid email address. Please try again."
+
+msgid "email.save.ok"
+msgstr "✅ Email saved: {email}"
+
+msgid "email.save.fail"
+msgstr "❌ Failed to save email. Please try again later."

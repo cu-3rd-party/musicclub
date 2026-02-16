@@ -44,3 +44,24 @@ msgstr "✅ Календарь прикреплён."
 
 msgid "calendar.attach.fail"
 msgstr "❌ Не удалось прикрепить календарь. Попробуйте позже."
+
+msgid "email.confirm.prompt"
+msgstr "Это ваш email: {email}?"
+
+msgid "email.confirm.yes"
+msgstr "Да"
+
+msgid "email.confirm.no"
+msgstr "Нет"
+
+msgid "email.ask"
+msgstr "Пожалуйста, введите ваш email."
+
+msgid "email.invalid"
+msgstr "Похоже, это некорректный email. Попробуйте ещё раз."
+
+msgid "email.save.ok"
+msgstr "✅ Email сохранён: {email}"
+
+msgid "email.save.fail"
+msgstr "❌ Не удалось сохранить email. Попробуйте позже."
