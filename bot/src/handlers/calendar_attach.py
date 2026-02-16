@@ -1,14 +1,18 @@
 import logging
 import re
-from dataclasses import dataclass
 from urllib.parse import urlparse
-from uuid import UUID
 
 from aiogram import F, Router
-from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import (
+    CallbackQuery,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Message,
+)
 from aiogram.utils.i18n import gettext as _
 
 import db.calendar
+import db.calendar_attach
 import db.user
 from settings import settings
 
@@ -18,19 +22,6 @@ router = Router()
 _CALLBACK_ATTACH_CALENDAR = "calendar_attach"
 _CALLBACK_EMAIL_CONFIRM_YES = "email_confirm_yes"
 _CALLBACK_EMAIL_CONFIRM_NO = "email_confirm_no"
-_EMAIL_DOMAIN = "edu.centraluniversity.ru"
-_EMAIL_RE = re.compile(r"^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")
-
-
-@dataclass
-class PendingEmailGuess:
-    user_id: UUID
-    email: str
-
-
-_PENDING_CALENDAR_USERS: set[int] = set()
-_PENDING_EMAIL_GUESSES: dict[int, PendingEmailGuess] = {}
-_PENDING_EMAIL_INPUT_USERS: set[int] = set()
 
 
 def _is_valid_ics_url(value: str) -> bool:
@@ -47,14 +38,16 @@ def _is_valid_ics_url(value: str) -> bool:
 
 
 def _is_valid_email(value: str) -> bool:
-    return bool(_EMAIL_RE.match(value.strip()))
+    return bool(settings.EMAIL_RE.match(value.strip()))
 
 
 def _normalize_name_part(value: str) -> str:
     return re.sub(r"[^a-zA-Z]", "", value).lower()
 
 
-def _guess_email_from_name(display_name: str | None, fallback_first: str | None, fallback_last: str | None) -> str | None:
+def _guess_email_from_name(
+    display_name: str | None, fallback_first: str | None, fallback_last: str | None
+) -> str | None:
     tokens = []
     if display_name:
         tokens = display_name.strip().split()
@@ -74,7 +67,7 @@ def _guess_email_from_name(display_name: str | None, fallback_first: str | None,
     if not first_norm or not last_norm:
         return None
 
-    return f"{first_norm[0]}.{last_norm}@{_EMAIL_DOMAIN}"
+    return f"{first_norm[0]}.{last_norm}@{settings.EMAIL_DOMAIN}"
 
 
 def _email_confirm_keyboard() -> InlineKeyboardMarkup:
@@ -108,7 +101,11 @@ async def calendar_attach_callback(query: CallbackQuery) -> None:
         return
 
     if profile.email:
-        _PENDING_CALENDAR_USERS.add(user.id)
+        db.calendar_attach.upsert_state(
+            settings.db_conn,
+            user.id,
+            db.calendar_attach.STATE_CALENDAR_URL,
+        )
         await query.message.answer(_("calendar.attach.ask"))
         await query.answer()
         return
@@ -119,9 +116,12 @@ async def calendar_attach_callback(query: CallbackQuery) -> None:
         user.last_name,
     )
     if guess:
-        _PENDING_EMAIL_GUESSES[user.id] = PendingEmailGuess(
-            user_id=profile.id,
-            email=guess,
+        db.calendar_attach.upsert_state(
+            settings.db_conn,
+            user.id,
+            db.calendar_attach.STATE_EMAIL_GUESS,
+            pending_user_id=profile.id,
+            pending_email=guess,
         )
         await query.message.answer(
             _("email.confirm.prompt").format(email=guess),
@@ -130,7 +130,11 @@ async def calendar_attach_callback(query: CallbackQuery) -> None:
         await query.answer()
         return
 
-    _PENDING_EMAIL_INPUT_USERS.add(user.id)
+    db.calendar_attach.upsert_state(
+        settings.db_conn,
+        user.id,
+        db.calendar_attach.STATE_EMAIL_INPUT,
+    )
     await query.message.answer(_("email.ask"))
     await query.answer()
 
@@ -142,14 +146,15 @@ async def calendar_attach_message(message: Message) -> None:
         return
 
     text = (message.text or "").strip()
-    if user.id in _PENDING_EMAIL_INPUT_USERS:
+    pending = db.calendar_attach.get_state(settings.db_conn, user.id)
+    if pending and pending.state == db.calendar_attach.STATE_EMAIL_INPUT:
         if not _is_valid_email(text):
             await message.answer(_("email.invalid"))
             return
 
         profile = db.user.get_user_by_tg_id(settings.db_conn, user.id)
         if not profile:
-            _PENDING_EMAIL_INPUT_USERS.discard(user.id)
+            db.calendar_attach.clear_state(settings.db_conn, user.id)
             await message.answer(_("calendar.attach.not_linked"))
             return
 
@@ -158,13 +163,16 @@ async def calendar_attach_message(message: Message) -> None:
             await message.answer(_("email.save.fail"))
             return
 
-        _PENDING_EMAIL_INPUT_USERS.discard(user.id)
         await message.answer(_("email.save.ok").format(email=text))
-        _PENDING_CALENDAR_USERS.add(user.id)
+        db.calendar_attach.upsert_state(
+            settings.db_conn,
+            user.id,
+            db.calendar_attach.STATE_CALENDAR_URL,
+        )
         await message.answer(_("calendar.attach.ask"))
         return
 
-    if user.id not in _PENDING_CALENDAR_USERS:
+    if not pending or pending.state != db.calendar_attach.STATE_CALENDAR_URL:
         return
 
     if not _is_valid_ics_url(text):
@@ -173,12 +181,12 @@ async def calendar_attach_message(message: Message) -> None:
 
     user_id = db.calendar.get_user_id_by_tg_id(settings.db_conn, user.id)
     if not user_id:
-        _PENDING_CALENDAR_USERS.discard(user.id)
+        db.calendar_attach.clear_state(settings.db_conn, user.id)
         await message.answer(_("calendar.attach.not_linked"))
         return
 
     ok = db.calendar.upsert_calendar_url(settings.db_conn, user_id, text)
-    _PENDING_CALENDAR_USERS.discard(user.id)
+    db.calendar_attach.clear_state(settings.db_conn, user.id)
 
     if ok:
         await message.answer(_("calendar.attach.success"))
@@ -193,20 +201,30 @@ async def email_confirm_yes(query: CallbackQuery) -> None:
         await query.answer()
         return
 
-    pending = _PENDING_EMAIL_GUESSES.get(user.id)
-    if not pending:
+    pending = db.calendar_attach.get_state(settings.db_conn, user.id)
+    if not pending or pending.state != db.calendar_attach.STATE_EMAIL_GUESS:
+        await query.answer()
+        return
+    if not pending.pending_user_id or not pending.pending_email:
+        db.calendar_attach.clear_state(settings.db_conn, user.id)
         await query.answer()
         return
 
-    ok = db.user.update_user_email(settings.db_conn, pending.user_id, pending.email)
-    _PENDING_EMAIL_GUESSES.pop(user.id, None)
+    ok = db.user.update_user_email(
+        settings.db_conn, pending.pending_user_id, pending.pending_email
+    )
     if not ok:
+        db.calendar_attach.clear_state(settings.db_conn, user.id)
         await query.message.answer(_("email.save.fail"))
         await query.answer()
         return
 
-    await query.message.answer(_("email.save.ok").format(email=pending.email))
-    _PENDING_CALENDAR_USERS.add(user.id)
+    await query.message.answer(_("email.save.ok").format(email=pending.pending_email))
+    db.calendar_attach.upsert_state(
+        settings.db_conn,
+        user.id,
+        db.calendar_attach.STATE_CALENDAR_URL,
+    )
     await query.message.answer(_("calendar.attach.ask"))
     await query.answer()
 
@@ -218,9 +236,13 @@ async def email_confirm_no(query: CallbackQuery) -> None:
         await query.answer()
         return
 
-    if user.id in _PENDING_EMAIL_GUESSES:
-        _PENDING_EMAIL_GUESSES.pop(user.id, None)
-        _PENDING_EMAIL_INPUT_USERS.add(user.id)
+    pending = db.calendar_attach.get_state(settings.db_conn, user.id)
+    if pending and pending.state == db.calendar_attach.STATE_EMAIL_GUESS:
+        db.calendar_attach.upsert_state(
+            settings.db_conn,
+            user.id,
+            db.calendar_attach.STATE_EMAIL_INPUT,
+        )
         await query.message.answer(_("email.ask"))
 
     await query.answer()

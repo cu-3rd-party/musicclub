@@ -36,7 +36,12 @@ def _fetch_one(connection, query: str, params: tuple, *, error_message: str):
 
 
 def _execute_write(
-    connection, query: str, params: tuple, *, error_message: str, expect_rowcount: bool = False
+    connection,
+    query: str,
+    params: tuple,
+    *,
+    error_message: str,
+    expect_rowcount: bool = False,
 ) -> bool:
     if connection is None:
         logger.error("Database connection is not available.")
