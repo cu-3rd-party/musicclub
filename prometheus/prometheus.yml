@@ -12,4 +12,4 @@ scrape_configs:
     metrics_path: /metrics
     static_configs:
       - targets:
-          - calendar:8080
+          - calendar:6965

@@ -1,4 +1,5 @@
 ﻿services:
+  # --- Storage ---
   db:
     image: postgres:18-alpine
     restart: unless-stopped
@@ -15,6 +16,7 @@
     ports:
       - "8080:8080"
 
+  # --- Backend
   backend:
     build:
       context: ./backend
@@ -27,30 +29,6 @@
       - .env
     depends_on:
       - db
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_GRPC_HOST: ${VITE_GRPC_HOST}
-    ports:
-      - "5173:5173"
-    env_file:
-      - .env
-
-  bot:
-    build:
-      context: ./bot
-      dockerfile: Dockerfile
-    ports:
-      - "6966:8080"
-    restart: unless-stopped
-    env_file:
-      - .env
-    depends_on:
-      - db
-      - calendar
   calendar:
     build:
       context: ./calendar
@@ -63,12 +41,36 @@
     depends_on:
       - db
 
+  # --- UI ---
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_GRPC_HOST: ${VITE_GRPC_HOST}
+    ports:
+      - "5173:5173"
+    env_file:
+      - .env
+  bot:
+    build:
+      context: ./bot
+      dockerfile: Dockerfile
+    ports:
+      - "6966:8080"
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - calendar
+
+  # --- Metrics ---
   prometheus:
     image: prom/prometheus:v2.52.0
     restart: unless-stopped
     volumes:
       - ./prometheus:/etc/prometheus
-
   grafana:
     image: grafana/grafana:11.2.0
     restart: unless-stopped
