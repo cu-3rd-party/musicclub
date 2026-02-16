@@ -1,4 +1,3 @@
-import random
 import secrets
 from aiogram.utils.i18n import I18n
 from pathlib import Path

@@ -33,9 +33,7 @@ async def routine(app: fastapi.FastAPI) -> None:
             chat = await bot.get_chat(tg_id)
             locale = _locale_from_code(getattr(chat, "language_code", None))
             text = settings.i18n.gettext("calendar.attach.prompt", locale=locale)
-            button_text = settings.i18n.gettext(
-                "calendar.attach.button", locale=locale
-            )
+            button_text = settings.i18n.gettext("calendar.attach.button", locale=locale)
             keyboard = InlineKeyboardMarkup(
                 inline_keyboard=[
                     [
@@ -49,11 +47,7 @@ async def routine(app: fastapi.FastAPI) -> None:
         except Exception as exc:
             logger.warning("Failed to notify user without calendar: %s", exc)
 
-    tasks = [
-        _notify_user(tg_id)
-        for _, tg_id in users
-        if tg_id
-    ]
+    tasks = [_notify_user(tg_id) for _, tg_id in users if tg_id]
 
     if tasks:
         await asyncio.gather(*tasks)

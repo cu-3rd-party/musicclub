@@ -64,8 +64,6 @@ async def handle_webhook(request: Request):
     await app.state.dp.feed_webhook_update(app.state.bot, update)
     return Response(status_code=200)
 
-    routines.on_setup()
-
 
 async def main():
     logging.basicConfig(
