@@ -20,7 +20,8 @@ class PeriodicRoutine:
 
 
 _PERIODIC_ROUTINES: list[PeriodicRoutine] = [
-    PeriodicRoutine("without_calendar", 24 * 60 * 60, without_calendar_routine),
+    # tempfix
+    # PeriodicRoutine("without_calendar", 24 * 60 * 60, without_calendar_routine),
 ]
 
 
