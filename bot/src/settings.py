@@ -35,7 +35,10 @@ class Settings(BaseSettings):
 
     @property
     def webhook_url(self):
-        return self.WEBAPP_URL + "/telegram/webhook"
+        base = (self.WEBAPP_URL or "").rstrip("/")
+        if not base:
+            return ""
+        return base + "/telegram/webhook"
 
     @property
     def email_re(self) -> re.Pattern[str]:
