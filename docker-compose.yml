@@ -45,17 +45,6 @@
       - .env
     depends_on:
       - db
-  calendar:
-    build:
-      context: ./calendar
-      dockerfile: Dockerfile
-    expose:
-      - "8080"
-    restart: unless-stopped
-    env_file:
-      - .env
-    depends_on:
-      - db
 
   # --- UI ---
   frontend:
