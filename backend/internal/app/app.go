@@ -41,6 +41,7 @@ func Run(ctx context.Context) error {
 
 	go gracefulShutdown(ctx, grpcServer, httpServer)
 	go gracefulMetricsShutdown(ctx, metricsServer)
+	go startBusinessMetricsCollector(ctx)
 	go song.BackfillSongTopics(ctx)
 
 	log.Infof("Starting gRPC server on %s", cfg.GRPCAddr())
