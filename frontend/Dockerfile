@@ -1,10 +1,13 @@
-FROM node:25-alpine AS build
+ARG NODE_VERSION=22
+
+FROM node:${NODE_VERSION}-alpine AS build
 WORKDIR /app
 
 COPY package*.json ./
 RUN npm ci
 
-COPY tsconfig*.json vite.config.ts index.html ./
+COPY tsconfig*.json vite.config.js index.html ./
+COPY public ./public
 COPY src ./src
 
 ARG VITE_GRPC_HOST
@@ -13,13 +16,11 @@ ENV VITE_GRPC_HOST=$VITE_GRPC_HOST
 RUN npm run build
 
 
-FROM node:25-alpine AS runtime
+FROM oven/bun:1.3-alpine AS runtime
 WORKDIR /app
-
-RUN npm install -g serve
 
 COPY --from=build /app/dist ./dist
 
 EXPOSE 5173
 
-CMD ["serve", "-s", "dist", "-l", "5173"]
+CMD ["bunx", "serve", "-s", "dist", "-l", "5173"]
