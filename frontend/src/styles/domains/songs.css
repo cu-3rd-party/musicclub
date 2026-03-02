@@ -11,7 +11,7 @@
   left: 0;
   right: 0;
   bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
-  background: rgba(8, 8, 8, 0.86);
+  background: var(--bg);
   border-top: 1px solid var(--border);
   backdrop-filter: blur(12px) saturate(140%);
   z-index: 1100;
@@ -141,7 +141,7 @@
 }
 
 .song-row__count.is-open {
-  background-color: var(--accent-bg);
+  background-color: var(--bg);
   color: var(--accent);
 }
 
@@ -187,13 +187,13 @@
 
 .song-modal__role-count {
   font-size: 12px;
-  padding: 2px 8px;
+  padding: 2px 2px;
   border-radius: 4px;
   font-weight: 600;
 }
 
 .song-modal__role-count.is-open {
-  background-color: var(--accent-bg);
+  background-color: var(--bg);
   color: var(--accent);
 }
 

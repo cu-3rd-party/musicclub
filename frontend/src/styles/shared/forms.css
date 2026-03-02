@@ -17,7 +17,7 @@
   height: 16px;
   border-radius: 4px;
   border: 1px solid var(--border);
-  background: #000000;
+  background: var(--bg);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -62,7 +62,7 @@
   width: 100%;
   padding: 10px 12px;
   border-radius: 12px;
-  background: #000000;
+  background: var(--bg);
   border: 1px solid var(--border);
   color: var(--text);
   outline: none;
@@ -75,7 +75,7 @@
   width: 100%;
   padding: 4px 6px;
   border-radius: 6px;
-  background: #000000;
+  background: var(--bg);
   border: 1px solid var(--border);
   color: var(--accent-2);
   outline: none;
@@ -85,7 +85,7 @@
 }
 
 .select option {
-  background: #000000;
+  background: var(--bg);
   color: var(--text);
 }
 
