@@ -1,0 +1,25 @@
+:root {
+  --bg: linear-gradient(135deg, #000000, #0a0a0a);
+  --card: rgba(255, 255, 255, 0.05);
+  --card-strong: rgba(255, 255, 255, 0.1);
+  --text: #ffffff;
+  --muted: #aaaaaa;
+  --accent: #ff6600;
+  --accent-2: #9d4edd;
+  --accent-bg: rgba(255, 102, 0, 0.16);
+  --featured-bg: rgba(255, 102, 0, 0.18);
+  --featured-border: rgba(255, 102, 0, 0.45);
+  --danger: #ff3333;
+  --danger-bg: rgba(255, 51, 51, 0.16);
+  --border: rgba(255, 255, 255, 0.1);
+  --shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+  --tabbar-height: 72px;
+  --song-search-height: 74px;
+  font-family:
+    "Manrope",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}

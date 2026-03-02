@@ -4,6 +4,6 @@ inputs:
 plugins:
   - local: protoc-gen-es
     out: src/proto
-    opt: 
-      - target=ts
-      - import_extension=ts
+    opt:
+      - target=js
+      - import_extension=js

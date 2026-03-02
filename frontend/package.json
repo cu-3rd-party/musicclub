@@ -5,25 +5,29 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "vite build",
     "preview": "vite preview",
-    "lint": "tsc --noEmit",
-    "bundle:size": "vite build && node scripts/bundle-size.mjs"
+    "bundle:size": "vite build && node scripts/bundle-size.mjs",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
-    "@bufbuild/protobuf": "^2.10.2",
+    "@bufbuild/protobuf": "^2.11.0",
     "@connectrpc/connect": "^2.1.1",
     "@connectrpc/connect-web": "^2.1.1",
-    "preact": "^10.26.4"
+    "vue": "^3.5.29"
   },
   "devDependencies": {
-    "@bufbuild/buf": "^1.61.0",
-    "@bufbuild/protoc-gen-es": "^2.10.2",
-    "@preact/preset-vite": "^2.9.2",
-    "@types/react": "^19.2.7",
-    "@types/react-dom": "^19.2.3",
-    "terser": "^5.39.0",
-    "typescript": "^5.9.3",
-    "vite": "^7.3.0"
+    "@bufbuild/buf": "^1.66.0",
+    "@bufbuild/protoc-gen-es": "^2.11.0",
+    "@vitejs/plugin-vue": "^6.0.4",
+    "@vue/test-utils": "^2.4.6",
+    "jsdom": "^26.0.0",
+    "prettier": "^3.8.1",
+    "terser": "^5.46.0",
+    "vite": "^7.3.1",
+    "vitest": "^4.0.18"
   }
 }

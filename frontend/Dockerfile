@@ -1,4 +1,4 @@
-FROM node:20-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 
 COPY package*.json ./
@@ -13,7 +13,7 @@ ENV VITE_GRPC_HOST=$VITE_GRPC_HOST
 RUN npm run build
 
 
-FROM node:20-alpine AS runtime
+FROM node:26-alpine AS runtime
 WORKDIR /app
 
 RUN npm install -g serve

@@ -74,7 +74,9 @@ async function main() {
 
   console.log("Bundle size (dist/assets):");
   for (const row of rows) {
-    console.log(`- ${row.file}: ${formatBytes(row.raw)} | gzip ${formatBytes(row.gz)} | br ${formatBytes(row.br)}`);
+    console.log(
+      `- ${row.file}: ${formatBytes(row.raw)} | gzip ${formatBytes(row.gz)} | br ${formatBytes(row.br)}`,
+    );
   }
   console.log("Totals:");
   console.log(`- raw:   ${formatBytes(totalRaw)}`);

@@ -1,0 +1,270 @@
+.song-list-screen {
+  position: relative;
+}
+
+.song-list-body {
+  padding-bottom: calc(var(--song-search-height) + 20px);
+}
+
+.song-search-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
+  background: rgba(8, 8, 8, 0.86);
+  border-top: 1px solid var(--border);
+  backdrop-filter: blur(12px) saturate(140%);
+  z-index: 1100;
+}
+
+.song-search-bar-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.song-search-bar-inner .input {
+  flex: 1;
+  min-width: 220px;
+}
+
+.song-fab-wrap {
+  position: fixed;
+  right: 10px;
+  bottom: calc(var(--tabbar-height) + var(--song-search-height));
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+  z-index: 1150;
+}
+
+.song-fab-wrap > * {
+  pointer-events: auto;
+}
+
+.song-create-dialog {
+  position: absolute;
+  bottom: 64px;
+  right: 0;
+  width: min(420px, calc(100vw - 32px));
+  padding: 14px;
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+}
+
+.song-list__error {
+  color: var(--danger);
+}
+
+.song-list__load-more {
+  margin-top: 12px;
+  display: flex;
+  justify-content: center;
+}
+
+.song-list__load-sentinel {
+  height: 1px;
+}
+
+.song-list__divider {
+  border: 1px solid var(--border);
+  margin: 3px 0;
+}
+
+.song-row {
+  padding: 6px;
+  width: 100%;
+  text-align: left;
+}
+
+.song-row.is-featured {
+  background: var(--featured-bg);
+  border: 1px solid var(--featured-border);
+}
+
+.song-row__content {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  align-items: center;
+}
+
+.song-row__thumb {
+  width: 80px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.song-row__thumb.is-hidden {
+  display: none;
+}
+
+.song-row__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.song-row__title {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.song-row__artist {
+  color: var(--muted);
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.song-row__badge {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.song-row__count {
+  font-size: 18px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.song-row__count.is-open {
+  background-color: var(--accent-bg);
+  color: var(--accent);
+}
+
+.song-row__count.is-full {
+  background-color: var(--danger-bg);
+  color: var(--danger);
+}
+
+.song-modal__artist {
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.song-modal__thumbnail {
+  width: 100%;
+  max-height: 240px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.song-modal__thumbnail.is-hidden {
+  display: none;
+}
+
+.song-modal__description {
+  margin-top: 12px;
+  line-height: 1.5;
+}
+
+.song-modal__section {
+  margin-top: 14px;
+}
+
+.song-modal__section-title {
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+.song-modal__section-title--wide {
+  gap: 10px;
+}
+
+.song-modal__role-count {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.song-modal__role-count.is-open {
+  background-color: var(--accent-bg);
+  color: var(--accent);
+}
+
+.song-modal__role-count.is-full {
+  background-color: var(--danger-bg);
+  color: var(--danger);
+}
+
+.song-modal__role-pill {
+  border-color: var(--border);
+}
+
+.song-modal__role-pill.is-mine {
+  border-color: var(--accent);
+}
+
+.song-modal__role-info {
+  flex: 1;
+}
+
+.song-modal__role-title {
+  font-weight: 700;
+}
+
+.song-modal__role-members {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.song-modal__empty {
+  color: var(--muted);
+}
+
+.song-modal__edit {
+  margin-top: 16px;
+}
+
+.song-modal__edit-form {
+  margin-top: 12px;
+}
+
+.song-modal__feature-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.song-modal__edit-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.create-song-form {
+  gap: 10px;
+}
+
+.create-song-form__link-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 180px;
+}
+
+.create-song-form__checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.create-song-form__error {
+  color: var(--danger);
+}
