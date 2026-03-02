@@ -26,6 +26,7 @@ class Settings(BaseSettings):
 
     BOT_TOKEN: str
     WEBAPP_URL: str = Field(default="http://localhost:5173")
+    SERVER_HOST: str = Field(default="http://localhost")
     SECRET_TOKEN: str | None
     SECRET_TOKEN_LENGTH: int = 24
 
@@ -34,7 +35,7 @@ class Settings(BaseSettings):
 
     @property
     def webhook_url(self):
-        return self.WEBAPP_URL + "/telegram/webhook"
+        return self.SERVER_HOST + "/telegram/webhook"
 
     @property
     def email_re(self) -> re.Pattern[str]:
