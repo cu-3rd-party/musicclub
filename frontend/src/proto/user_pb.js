@@ -7,14 +7,13 @@ import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 /**
  * Describes the file user.proto.
  */
-export const file_user =
-  /*@__PURE__*/
-  fileDesc(
-    "Cgp1c2VyLnByb3RvEg5tdXNpY2NsdWIudXNlciJjCgRVc2VyEgoKAmlkGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCRIQCgh1c2VybmFtZRgDIAEoCRISCgphdmF0YXJfdXJsGAQgASgJEhMKC3RlbGVncmFtX2lkGAUgASgEQhxaGm11c2ljY2x1YmJvdC9iYWNrZW5kL3Byb3RvYgZwcm90bzM",
-  );
+export const file_user = /*@__PURE__*/
+  fileDesc("Cgp1c2VyLnByb3RvEg5tdXNpY2NsdWIudXNlciJjCgRVc2VyEgoKAmlkGAEgASgJEhQKDGRpc3BsYXlfbmFtZRgCIAEoCRIQCgh1c2VybmFtZRgDIAEoCRISCgphdmF0YXJfdXJsGAQgASgJEhMKC3RlbGVncmFtX2lkGAUgASgEQhxaGm11c2ljY2x1YmJvdC9iYWNrZW5kL3Byb3RvYgZwcm90bzM");
 
 /**
  * Describes the message musicclub.user.User.
  * Use `create(UserSchema)` to create a new message.
  */
-export const UserSchema = /*@__PURE__*/ messageDesc(file_user, 0);
+export const UserSchema = /*@__PURE__*/
+  messageDesc(file_user, 0);
+

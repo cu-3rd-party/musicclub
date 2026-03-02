@@ -2,15 +2,8 @@
 // @generated from file event.proto (package musicclub.event, syntax proto3)
 /* eslint-disable */
 
-import {
-  fileDesc,
-  messageDesc,
-  serviceDesc,
-} from "@bufbuild/protobuf/codegenv2";
-import {
-  file_google_protobuf_empty,
-  file_google_protobuf_timestamp,
-} from "@bufbuild/protobuf/wkt";
+import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import { file_google_protobuf_empty, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import { file_song } from "./song_pb.js";
 import { file_user } from "./user_pb.js";
 import { file_permissions } from "./permissions_pb.js";
@@ -18,85 +11,77 @@ import { file_permissions } from "./permissions_pb.js";
 /**
  * Describes the file event.proto.
  */
-export const file_event =
-  /*@__PURE__*/
-  fileDesc(
-    "CgtldmVudC5wcm90bxIPbXVzaWNjbHViLmV2ZW50IhUKB0V2ZW50SWQSCgoCaWQYASABKAkidAoRTGlzdEV2ZW50c1JlcXVlc3QSKAoEZnJvbRgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASJgoCdG8YAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEg0KBWxpbWl0GAMgASgNIjwKEkxpc3RFdmVudHNSZXNwb25zZRImCgZldmVudHMYASADKAsyFi5tdXNpY2NsdWIuZXZlbnQuRXZlbnQimQEKBUV2ZW50EgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEiwKCHN0YXJ0X2F0GAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghsb2NhdGlvbhgEIAEoCRIZChFub3RpZnlfZGF5X2JlZm9yZRgFIAEoCBIaChJub3RpZnlfaG91cl9iZWZvcmUYBiABKAgi1QEKDEV2ZW50RGV0YWlscxIlCgVldmVudBgBIAEoCzIWLm11c2ljY2x1Yi5ldmVudC5FdmVudBItCgl0cmFja2xpc3QYAiABKAsyGi5tdXNpY2NsdWIuZXZlbnQuVHJhY2tsaXN0EjQKDHBhcnRpY2lwYW50cxgDIAMoCzIeLm11c2ljY2x1Yi5zb25nLlJvbGVBc3NpZ25tZW50EjkKC3Blcm1pc3Npb25zGAQgASgLMiQubXVzaWNjbHViLnBlcm1pc3Npb25zLlBlcm1pc3Npb25TZXQiNgoJVHJhY2tsaXN0EikKBWl0ZW1zGAEgAygLMhoubXVzaWNjbHViLmV2ZW50LlRyYWNrSXRlbSJYCglUcmFja0l0ZW0SDQoFb3JkZXIYASABKA0SDwoHc29uZ19pZBgCIAEoCRIUCgxjdXN0b21fdGl0bGUYAyABKAkSFQoNY3VzdG9tX2FydGlzdBgEIAEoCSLJAQoSQ3JlYXRlRXZlbnRSZXF1ZXN0Eg0KBXRpdGxlGAEgASgJEiwKCHN0YXJ0X2F0GAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghsb2NhdGlvbhgDIAEoCRIZChFub3RpZnlfZGF5X2JlZm9yZRgEIAEoCBIaChJub3RpZnlfaG91cl9iZWZvcmUYBSABKAgSLQoJdHJhY2tsaXN0GAYgASgLMhoubXVzaWNjbHViLmV2ZW50LlRyYWNrbGlzdCKmAQoSVXBkYXRlRXZlbnRSZXF1ZXN0EgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEiwKCHN0YXJ0X2F0GAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghsb2NhdGlvbhgEIAEoCRIZChFub3RpZnlfZGF5X2JlZm9yZRgFIAEoCBIaChJub3RpZnlfaG91cl9iZWZvcmUYBiABKAgiVgoTU2V0VHJhY2tsaXN0UmVxdWVzdBIQCghldmVudF9pZBgBIAEoCRItCgl0cmFja2xpc3QYAiABKAsyGi5tdXNpY2NsdWIuZXZlbnQuVHJhY2tsaXN0MuYDCgxFdmVudFNlcnZpY2USVQoKTGlzdEV2ZW50cxIiLm11c2ljY2x1Yi5ldmVudC5MaXN0RXZlbnRzUmVxdWVzdBojLm11c2ljY2x1Yi5ldmVudC5MaXN0RXZlbnRzUmVzcG9uc2USQwoIR2V0RXZlbnQSGC5tdXNpY2NsdWIuZXZlbnQuRXZlbnRJZBodLm11c2ljY2x1Yi5ldmVudC5FdmVudERldGFpbHMSUQoLQ3JlYXRlRXZlbnQSIy5tdXNpY2NsdWIuZXZlbnQuQ3JlYXRlRXZlbnRSZXF1ZXN0Gh0ubXVzaWNjbHViLmV2ZW50LkV2ZW50RGV0YWlscxJRCgtVcGRhdGVFdmVudBIjLm11c2ljY2x1Yi5ldmVudC5VcGRhdGVFdmVudFJlcXVlc3QaHS5tdXNpY2NsdWIuZXZlbnQuRXZlbnREZXRhaWxzEj8KC0RlbGV0ZUV2ZW50EhgubXVzaWNjbHViLmV2ZW50LkV2ZW50SWQaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSUwoMU2V0VHJhY2tsaXN0EiQubXVzaWNjbHViLmV2ZW50LlNldFRyYWNrbGlzdFJlcXVlc3QaHS5tdXNpY2NsdWIuZXZlbnQuRXZlbnREZXRhaWxzQhxaGm11c2ljY2x1YmJvdC9iYWNrZW5kL3Byb3RvYgZwcm90bzM",
-    [
-      file_google_protobuf_empty,
-      file_google_protobuf_timestamp,
-      file_song,
-      file_user,
-      file_permissions,
-    ],
-  );
+export const file_event = /*@__PURE__*/
+  fileDesc("CgtldmVudC5wcm90bxIPbXVzaWNjbHViLmV2ZW50IhUKB0V2ZW50SWQSCgoCaWQYASABKAkidAoRTGlzdEV2ZW50c1JlcXVlc3QSKAoEZnJvbRgBIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASJgoCdG8YAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEg0KBWxpbWl0GAMgASgNIjwKEkxpc3RFdmVudHNSZXNwb25zZRImCgZldmVudHMYASADKAsyFi5tdXNpY2NsdWIuZXZlbnQuRXZlbnQimQEKBUV2ZW50EgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEiwKCHN0YXJ0X2F0GAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghsb2NhdGlvbhgEIAEoCRIZChFub3RpZnlfZGF5X2JlZm9yZRgFIAEoCBIaChJub3RpZnlfaG91cl9iZWZvcmUYBiABKAgi1QEKDEV2ZW50RGV0YWlscxIlCgVldmVudBgBIAEoCzIWLm11c2ljY2x1Yi5ldmVudC5FdmVudBItCgl0cmFja2xpc3QYAiABKAsyGi5tdXNpY2NsdWIuZXZlbnQuVHJhY2tsaXN0EjQKDHBhcnRpY2lwYW50cxgDIAMoCzIeLm11c2ljY2x1Yi5zb25nLlJvbGVBc3NpZ25tZW50EjkKC3Blcm1pc3Npb25zGAQgASgLMiQubXVzaWNjbHViLnBlcm1pc3Npb25zLlBlcm1pc3Npb25TZXQiNgoJVHJhY2tsaXN0EikKBWl0ZW1zGAEgAygLMhoubXVzaWNjbHViLmV2ZW50LlRyYWNrSXRlbSJYCglUcmFja0l0ZW0SDQoFb3JkZXIYASABKA0SDwoHc29uZ19pZBgCIAEoCRIUCgxjdXN0b21fdGl0bGUYAyABKAkSFQoNY3VzdG9tX2FydGlzdBgEIAEoCSLJAQoSQ3JlYXRlRXZlbnRSZXF1ZXN0Eg0KBXRpdGxlGAEgASgJEiwKCHN0YXJ0X2F0GAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghsb2NhdGlvbhgDIAEoCRIZChFub3RpZnlfZGF5X2JlZm9yZRgEIAEoCBIaChJub3RpZnlfaG91cl9iZWZvcmUYBSABKAgSLQoJdHJhY2tsaXN0GAYgASgLMhoubXVzaWNjbHViLmV2ZW50LlRyYWNrbGlzdCKmAQoSVXBkYXRlRXZlbnRSZXF1ZXN0EgoKAmlkGAEgASgJEg0KBXRpdGxlGAIgASgJEiwKCHN0YXJ0X2F0GAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghsb2NhdGlvbhgEIAEoCRIZChFub3RpZnlfZGF5X2JlZm9yZRgFIAEoCBIaChJub3RpZnlfaG91cl9iZWZvcmUYBiABKAgiVgoTU2V0VHJhY2tsaXN0UmVxdWVzdBIQCghldmVudF9pZBgBIAEoCRItCgl0cmFja2xpc3QYAiABKAsyGi5tdXNpY2NsdWIuZXZlbnQuVHJhY2tsaXN0MuYDCgxFdmVudFNlcnZpY2USVQoKTGlzdEV2ZW50cxIiLm11c2ljY2x1Yi5ldmVudC5MaXN0RXZlbnRzUmVxdWVzdBojLm11c2ljY2x1Yi5ldmVudC5MaXN0RXZlbnRzUmVzcG9uc2USQwoIR2V0RXZlbnQSGC5tdXNpY2NsdWIuZXZlbnQuRXZlbnRJZBodLm11c2ljY2x1Yi5ldmVudC5FdmVudERldGFpbHMSUQoLQ3JlYXRlRXZlbnQSIy5tdXNpY2NsdWIuZXZlbnQuQ3JlYXRlRXZlbnRSZXF1ZXN0Gh0ubXVzaWNjbHViLmV2ZW50LkV2ZW50RGV0YWlscxJRCgtVcGRhdGVFdmVudBIjLm11c2ljY2x1Yi5ldmVudC5VcGRhdGVFdmVudFJlcXVlc3QaHS5tdXNpY2NsdWIuZXZlbnQuRXZlbnREZXRhaWxzEj8KC0RlbGV0ZUV2ZW50EhgubXVzaWNjbHViLmV2ZW50LkV2ZW50SWQaFi5nb29nbGUucHJvdG9idWYuRW1wdHkSUwoMU2V0VHJhY2tsaXN0EiQubXVzaWNjbHViLmV2ZW50LlNldFRyYWNrbGlzdFJlcXVlc3QaHS5tdXNpY2NsdWIuZXZlbnQuRXZlbnREZXRhaWxzQhxaGm11c2ljY2x1YmJvdC9iYWNrZW5kL3Byb3RvYgZwcm90bzM", [file_google_protobuf_empty, file_google_protobuf_timestamp, file_song, file_user, file_permissions]);
 
 /**
  * Describes the message musicclub.event.EventId.
  * Use `create(EventIdSchema)` to create a new message.
  */
-export const EventIdSchema = /*@__PURE__*/ messageDesc(file_event, 0);
+export const EventIdSchema = /*@__PURE__*/
+  messageDesc(file_event, 0);
 
 /**
  * Describes the message musicclub.event.ListEventsRequest.
  * Use `create(ListEventsRequestSchema)` to create a new message.
  */
-export const ListEventsRequestSchema = /*@__PURE__*/ messageDesc(file_event, 1);
+export const ListEventsRequestSchema = /*@__PURE__*/
+  messageDesc(file_event, 1);
 
 /**
  * Describes the message musicclub.event.ListEventsResponse.
  * Use `create(ListEventsResponseSchema)` to create a new message.
  */
-export const ListEventsResponseSchema =
-  /*@__PURE__*/
+export const ListEventsResponseSchema = /*@__PURE__*/
   messageDesc(file_event, 2);
 
 /**
  * Describes the message musicclub.event.Event.
  * Use `create(EventSchema)` to create a new message.
  */
-export const EventSchema = /*@__PURE__*/ messageDesc(file_event, 3);
+export const EventSchema = /*@__PURE__*/
+  messageDesc(file_event, 3);
 
 /**
  * Describes the message musicclub.event.EventDetails.
  * Use `create(EventDetailsSchema)` to create a new message.
  */
-export const EventDetailsSchema = /*@__PURE__*/ messageDesc(file_event, 4);
+export const EventDetailsSchema = /*@__PURE__*/
+  messageDesc(file_event, 4);
 
 /**
  * Describes the message musicclub.event.Tracklist.
  * Use `create(TracklistSchema)` to create a new message.
  */
-export const TracklistSchema = /*@__PURE__*/ messageDesc(file_event, 5);
+export const TracklistSchema = /*@__PURE__*/
+  messageDesc(file_event, 5);
 
 /**
  * Describes the message musicclub.event.TrackItem.
  * Use `create(TrackItemSchema)` to create a new message.
  */
-export const TrackItemSchema = /*@__PURE__*/ messageDesc(file_event, 6);
+export const TrackItemSchema = /*@__PURE__*/
+  messageDesc(file_event, 6);
 
 /**
  * Describes the message musicclub.event.CreateEventRequest.
  * Use `create(CreateEventRequestSchema)` to create a new message.
  */
-export const CreateEventRequestSchema =
-  /*@__PURE__*/
+export const CreateEventRequestSchema = /*@__PURE__*/
   messageDesc(file_event, 7);
 
 /**
  * Describes the message musicclub.event.UpdateEventRequest.
  * Use `create(UpdateEventRequestSchema)` to create a new message.
  */
-export const UpdateEventRequestSchema =
-  /*@__PURE__*/
+export const UpdateEventRequestSchema = /*@__PURE__*/
   messageDesc(file_event, 8);
 
 /**
  * Describes the message musicclub.event.SetTracklistRequest.
  * Use `create(SetTracklistRequestSchema)` to create a new message.
  */
-export const SetTracklistRequestSchema =
-  /*@__PURE__*/
+export const SetTracklistRequestSchema = /*@__PURE__*/
   messageDesc(file_event, 9);
 
 /**
@@ -104,4 +89,6 @@ export const SetTracklistRequestSchema =
  *
  * @generated from service musicclub.event.EventService
  */
-export const EventService = /*@__PURE__*/ serviceDesc(file_event, 0);
+export const EventService = /*@__PURE__*/
+  serviceDesc(file_event, 0);
+

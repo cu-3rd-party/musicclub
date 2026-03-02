@@ -7,40 +7,34 @@ import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 /**
  * Describes the file permissions.proto.
  */
-export const file_permissions =
-  /*@__PURE__*/
-  fileDesc(
-    "ChFwZXJtaXNzaW9ucy5wcm90bxIVbXVzaWNjbHViLnBlcm1pc3Npb25zIrUBCg1QZXJtaXNzaW9uU2V0EjQKBGpvaW4YASABKAsyJi5tdXNpY2NsdWIucGVybWlzc2lvbnMuSm9pblBlcm1pc3Npb25zEjUKBXNvbmdzGAIgASgLMiYubXVzaWNjbHViLnBlcm1pc3Npb25zLlNvbmdQZXJtaXNzaW9ucxI3CgZldmVudHMYAyABKAsyJy5tdXNpY2NsdWIucGVybWlzc2lvbnMuRXZlbnRQZXJtaXNzaW9ucyJRCg9Kb2luUGVybWlzc2lvbnMSHgoWZWRpdF9vd25fcGFydGljaXBhdGlvbhgBIAEoCBIeChZlZGl0X2FueV9wYXJ0aWNpcGF0aW9uGAIgASgIIl4KD1NvbmdQZXJtaXNzaW9ucxIWCg5lZGl0X293bl9zb25ncxgBIAEoCBIWCg5lZGl0X2FueV9zb25ncxgCIAEoCBIbChNlZGl0X2ZlYXR1cmVkX3NvbmdzGAMgASgIIkAKEEV2ZW50UGVybWlzc2lvbnMSEwoLZWRpdF9ldmVudHMYASABKAgSFwoPZWRpdF90cmFja2xpc3RzGAIgASgIQhxaGm11c2ljY2x1YmJvdC9iYWNrZW5kL3Byb3RvYgZwcm90bzM",
-  );
+export const file_permissions = /*@__PURE__*/
+  fileDesc("ChFwZXJtaXNzaW9ucy5wcm90bxIVbXVzaWNjbHViLnBlcm1pc3Npb25zIrUBCg1QZXJtaXNzaW9uU2V0EjQKBGpvaW4YASABKAsyJi5tdXNpY2NsdWIucGVybWlzc2lvbnMuSm9pblBlcm1pc3Npb25zEjUKBXNvbmdzGAIgASgLMiYubXVzaWNjbHViLnBlcm1pc3Npb25zLlNvbmdQZXJtaXNzaW9ucxI3CgZldmVudHMYAyABKAsyJy5tdXNpY2NsdWIucGVybWlzc2lvbnMuRXZlbnRQZXJtaXNzaW9ucyJRCg9Kb2luUGVybWlzc2lvbnMSHgoWZWRpdF9vd25fcGFydGljaXBhdGlvbhgBIAEoCBIeChZlZGl0X2FueV9wYXJ0aWNpcGF0aW9uGAIgASgIIl4KD1NvbmdQZXJtaXNzaW9ucxIWCg5lZGl0X293bl9zb25ncxgBIAEoCBIWCg5lZGl0X2FueV9zb25ncxgCIAEoCBIbChNlZGl0X2ZlYXR1cmVkX3NvbmdzGAMgASgIIkAKEEV2ZW50UGVybWlzc2lvbnMSEwoLZWRpdF9ldmVudHMYASABKAgSFwoPZWRpdF90cmFja2xpc3RzGAIgASgIQhxaGm11c2ljY2x1YmJvdC9iYWNrZW5kL3Byb3RvYgZwcm90bzM");
 
 /**
  * Describes the message musicclub.permissions.PermissionSet.
  * Use `create(PermissionSetSchema)` to create a new message.
  */
-export const PermissionSetSchema =
-  /*@__PURE__*/
+export const PermissionSetSchema = /*@__PURE__*/
   messageDesc(file_permissions, 0);
 
 /**
  * Describes the message musicclub.permissions.JoinPermissions.
  * Use `create(JoinPermissionsSchema)` to create a new message.
  */
-export const JoinPermissionsSchema =
-  /*@__PURE__*/
+export const JoinPermissionsSchema = /*@__PURE__*/
   messageDesc(file_permissions, 1);
 
 /**
  * Describes the message musicclub.permissions.SongPermissions.
  * Use `create(SongPermissionsSchema)` to create a new message.
  */
-export const SongPermissionsSchema =
-  /*@__PURE__*/
+export const SongPermissionsSchema = /*@__PURE__*/
   messageDesc(file_permissions, 2);
 
 /**
  * Describes the message musicclub.permissions.EventPermissions.
  * Use `create(EventPermissionsSchema)` to create a new message.
  */
-export const EventPermissionsSchema =
-  /*@__PURE__*/
+export const EventPermissionsSchema = /*@__PURE__*/
   messageDesc(file_permissions, 3);
+
