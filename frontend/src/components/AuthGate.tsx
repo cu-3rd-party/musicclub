@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { Code, ConnectError } from "@connectrpc/connect";
 
 import { getProfile, getTgLoginLink, logout, telegramWebAppAuth } from "../services/api";
@@ -9,6 +8,7 @@ import EventList from "./EventList";
 import type { PermissionSet } from "../proto/permissions_pb";
 import type { User } from "../proto/user_pb";
 import type { ProfileResponse } from "../proto/auth_pb";
+import "../styles/components/auth-gate.css";
 
 const AuthGate = () => {
 	const [authError, setAuthError] = useState<string | null>(null);
@@ -17,10 +17,10 @@ const AuthGate = () => {
 	const [profileData, setProfileData] = useState<ProfileResponse | null>(null);
 	const [profileError, setProfileError] = useState<Error | null>(null);
 	const [isProfileLoading, setIsProfileLoading] = useState(true);
-	const [isProfileOpen, setProfileOpen] = useState(false);
 	const [isGettingTgLink, setIsGettingTgLink] = useState(false);
 	const [needsTgLink, setNeedsTgLink] = useState(false);
 	const hasAutoAuthAttempted = useRef(false);
+	const [activeTab, setActiveTab] = useState<"songs" | "events" | "profile">("songs");
 
 	const loadProfile = useCallback(async () => {
 		setIsProfileLoading(true);
@@ -132,9 +132,9 @@ const AuthGate = () => {
 
 	if (isProfileLoading) {
 		return (
-			<div className="card" style={{ maxWidth: 400, margin: "80px auto" }}>
+			<div className="card auth-gate__center-card">
 				<div className="card-title">Загружаем профиль…</div>
-				<div style={{ textAlign: "center", padding: "40px 0" }}>
+				<div className="auth-gate__spinner-wrap">
 					<div className="spinner" />
 				</div>
 			</div>
@@ -148,25 +148,19 @@ const AuthGate = () => {
 		if (!tg || !tg.initData) {
 			// Not in Telegram - show error message
 			return (
-				<div className="card" style={{ maxWidth: 400, margin: "80px auto" }}>
-					<div className="card-title" style={{ marginBottom: 16 }}>
+				<div className="card auth-gate__center-card">
+					<div className="card-title auth-gate__card-title">
 						<span role="img" aria-label="music">
 							🎸
 						</span>
 						Музыкальный клуб
 					</div>
-					<p style={{ color: "var(--muted)", lineHeight: 1.4, marginBottom: 24 }}>
+					<p className="auth-gate__muted auth-gate__muted--large">
 						Это приложение доступно только через Telegram Mini App.
 					</p>
-					<div style={{
-						padding: "16px",
-						backgroundColor: "var(--accent-bg)",
-						border: "1px solid var(--accent)",
-						borderRadius: "8px",
-						color: "var(--text)"
-					}}>
-						<strong style={{ display: "block", marginBottom: 8 }}>Как открыть приложение:</strong>
-						<ol style={{ margin: 0, paddingLeft: 20, lineHeight: 1.6 }}>
+					<div className="auth-gate__info-box">
+						<strong className="auth-gate__info-title">Как открыть приложение:</strong>
+						<ol className="auth-gate__info-list">
 							<li>Откройте Telegram</li>
 							<li>Найдите бота <a href="https://t.me/cumusicclubbot">@cumusicclubbot</a></li>
 							<li>Нажмите кнопку "Открыть приложение"</li>
@@ -178,43 +172,36 @@ const AuthGate = () => {
 
 		// In Telegram, show authenticating state
 		return (
-			<div className="card" style={{ maxWidth: 400, margin: "80px auto" }}>
-				<div className="card-title" style={{ marginBottom: 16 }}>
+			<div className="card auth-gate__center-card">
+				<div className="card-title auth-gate__card-title">
 					<span role="img" aria-label="music">
 						🎸
 					</span>
 					Музыкальный клуб
 				</div>
 				{authError && (
-					<div style={{
-						padding: "16px",
-						backgroundColor: "var(--danger-bg)",
-						border: "1px solid var(--danger)",
-						borderRadius: "8px",
-						color: "var(--danger)",
-						marginBottom: 16
-					}}>
+					<div className="auth-gate__error-box">
 						{authError}
 					</div>
 				)}
-				<div style={{ textAlign: "center", padding: "28px 0" }}>
+				<div className="auth-gate__auth-panel">
 					{isAuthenticating ? (
 						<>
-							<div className="spinner" style={{ marginBottom: 16 }} />
-							<p style={{ color: "var(--muted)" }}>
+							<div className="spinner auth-gate__spinner" />
+							<p className="auth-gate__muted">
 								Авторизация через Telegram...
 							</p>
 						</>
 					) : (
 						<>
 							{hasAutoAuthAttempted.current ? (
-								<p style={{ color: "var(--muted)", marginBottom: 16 }}>
+								<p className="auth-gate__muted auth-gate__muted--spaced">
 									Нажмите кнопку, чтобы подключиться через Telegram.
 								</p>
 							) : (
 								<>
-									<div className="spinner" style={{ marginBottom: 16 }} />
-									<p style={{ color: "var(--muted)" }}>
+									<div className="spinner auth-gate__spinner" />
+									<p className="auth-gate__muted">
 										Пробуем подключиться автоматически...
 									</p>
 								</>
@@ -232,7 +219,7 @@ const AuthGate = () => {
 						</button>
 					)}
 					{needsTgLink && (
-						<div style={{ marginTop: 12 }}>
+						<div className="auth-gate__tg-actions">
 							<button
 								className="button secondary"
 								type="button"
@@ -242,7 +229,7 @@ const AuthGate = () => {
 								{isGettingTgLink ? "Получаем..." : "Получить ссылку"}
 							</button>
 							{tgLinkError && (
-								<div style={{ color: "var(--danger)", marginTop: 8 }}>{tgLinkError}</div>
+								<div className="auth-gate__error-text">{tgLinkError}</div>
 							)}
 						</div>
 					)}
@@ -253,10 +240,10 @@ const AuthGate = () => {
 
 	if (profileError) {
 		return (
-			<div className="card" style={{ maxWidth: 400, margin: "80px auto" }}>
+			<div className="card auth-gate__center-card">
 				<div className="card-title">Ошибка</div>
-				<div style={{ padding: "20px", textAlign: "center" }}>
-					<p style={{ color: "var(--danger)", marginBottom: 16 }}>
+				<div className="auth-gate__error-content">
+					<p className="auth-gate__error-message">
 						Ошибка загрузки профиля: {profileError.message}
 					</p>
 					<button
@@ -270,112 +257,131 @@ const AuthGate = () => {
 		);
 	}
 
-	const hero = (
-		<div className="card" style={{ marginBottom: 18 }}>
-			<div className="section-header">
-				<div className="card-title">
-					<span role="img" aria-label="music">
-						🎸
-					</span>
-					Музыкальный клуб
-				</div>
-				<button
-					type="button"
-					className="pill"
-					style={{ cursor: "pointer" }}
-					onClick={() => setProfileOpen(true)}
-				>
-					{profile?.avatarUrl ? (
-						<img
-							src={profile.avatarUrl}
-							alt={profile.displayName}
-							className="avatar-small"
-						/>
-					) : (
-						<div
-							className="status-dot"
-							style={{ background: profile ? "var(--accent)" : "var(--muted)" }}
-						/>
-					)}
-					{profile?.displayName}
-				</button>
-			</div>
-			{profile && !profile.telegramId && (
-				<div className="pill" style={{ justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-					<div style={{ flex: 1, minWidth: 0 }}>
-						<div style={{ fontWeight: 600, marginBottom: 4 }}>Привяжите Telegram</div>
-						<small style={{ color: "var(--muted)" }}>Получите ссылку для авторизации в боте</small>
-						{tgLinkError && (
-							<div style={{ color: "var(--danger)", marginTop: 8 }}>{tgLinkError}</div>
-						)}
-					</div>
-					<button
-						className="button"
-						type="button"
-						disabled={isGettingTgLink}
-						onClick={() => requestTgLink(profile?.id)}
-					>
-						{isGettingTgLink ? "Получаем..." : "Получить ссылку"}
-					</button>
-				</div>
-			)}
-		</div>
-	);
-
 	return (
-		<div className="grid">
-			{hero}
-			<SongList permissions={permissions} profile={profile} />
-			<EventList permissions={permissions} />
-			{isProfileOpen && profile && (
-				<ProfileModal profile={profile} onClose={() => setProfileOpen(false)} />
-			)}
-		</div>
-	);
-};
-
-const ProfileModal = ({ profile, onClose }: { profile: User; onClose: () => void }) => {
-	return createPortal(
-		<div className="modal-backdrop" onClick={onClose}>
-			<div className="card modal-window" onClick={(e) => e.stopPropagation()}>
-				<div className="section-header">
-					<div className="card-title">
-						<span role="img" aria-label="user">
-							👤
-						</span>
-						{profile.displayName}
-					</div>
-					<button className="button secondary" onClick={onClose}>
-						Закрыть
-					</button>
-				</div>
-				<div style={{ color: "var(--muted)", marginBottom: 12 }}>
-					Профиль пользователя
-				</div>
-				<div className="grid">
-					<div className="pill" style={{ justifyContent: "space-between" }}>
-						<span>Имя пользователя</span>
-						<strong>{profile.username}</strong>
-					</div>
-					{profile.avatarUrl && (
-						<div className="pill" style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-							<span>Аватар</span>
-							<img
-								src={profile.avatarUrl}
-								alt={profile.displayName}
-								className="avatar-small"
-							/>
+		<div className="tabbed-layout">
+			<div className="tab-content">
+				{activeTab === "songs" && (
+					<SongList permissions={permissions} profile={profile} />
+				)}
+				{activeTab === "events" && (
+					<div className="grid">
+						<div className="card hero-card">
+							<div className="section-header">
+								<div className="card-title">
+									<span role="img" aria-label="calendar">
+										📅
+									</span>
+									Афиша клуба
+								</div>
+								<div className="pill">Выступления и репетиции</div>
+							</div>
+							<div className="subtle">Следите за расписанием и собирайтесь на репетиции.</div>
 						</div>
-					)}
-				</div>
-				<div style={{ marginTop: 18, display: "flex", gap: 10, justifyContent: "flex-end" }}>
-					<button className="button danger" onClick={() => logout()}>
-						Выйти
-					</button>
-				</div>
+						<EventList permissions={permissions} />
+					</div>
+				)}
+				{activeTab === "profile" && (
+					<div className="grid">
+						<div className="card profile-card">
+							<div className="section-header">
+								<div className="card-title">
+									<span role="img" aria-label="user">
+										👤
+									</span>
+									Профиль
+								</div>
+								<button className="button secondary" type="button" onClick={() => loadProfile()}>
+									Обновить
+								</button>
+							</div>
+							<div className="profile-summary">
+								<div className="profile-avatar">
+									{profile?.avatarUrl ? (
+										<img src={profile.avatarUrl} alt={profile.displayName} />
+									) : (
+										<span>MC</span>
+									)}
+								</div>
+								<div>
+									<div className="profile-name">{profile?.displayName ?? "Гость"}</div>
+									<div className="subtle">@{profile?.username || "musicclub"}</div>
+								</div>
+							</div>
+							<div className="grid">
+								<div className="pill auth-gate__pill">
+									<span>Статус</span>
+									<strong>{profile?.telegramId ? "Telegram привязан" : "Нужна привязка Telegram"}</strong>
+								</div>
+								<div className="pill auth-gate__pill">
+									<span>ID</span>
+									<strong>{profile?.id ?? "—"}</strong>
+								</div>
+							</div>
+						</div>
+
+						{profile && !profile.telegramId && (
+							<div className="card">
+								<div className="section-header">
+									<div className="card-title">Привяжите Telegram</div>
+									<button
+										className="button"
+										type="button"
+										disabled={isGettingTgLink}
+										onClick={() => requestTgLink(profile?.id)}
+									>
+										{isGettingTgLink ? "Получаем..." : "Получить ссылку"}
+									</button>
+								</div>
+								<div className="subtle">Получите ссылку и пройдите авторизацию в боте.</div>
+								{tgLinkError && <div className="auth-gate__error-text">{tgLinkError}</div>}
+							</div>
+						)}
+
+						<div className="card">
+							<div className="section-header">
+								<div className="card-title">Аккаунт</div>
+								<button className="button danger" type="button" onClick={() => logout()}>
+									Выйти
+								</button>
+							</div>
+							<div className="subtle">Вы можете выйти и заново авторизоваться через Telegram.</div>
+						</div>
+					</div>
+				)}
 			</div>
-		</div>,
-		document.body,
+			<nav className="tab-bar" role="tablist">
+				<button
+					className={`tab-button ${activeTab === "songs" ? "active" : ""}`}
+					type="button"
+					role="tab"
+					aria-selected={activeTab === "songs"}
+					onClick={() => setActiveTab("songs")}
+				>
+					<span className="tab-icon" aria-hidden="true">🎵</span>
+					<span className="tab-label">Песни</span>
+				</button>
+				<button
+					className={`tab-button ${activeTab === "events" ? "active" : ""}`}
+					type="button"
+					role="tab"
+					aria-selected={activeTab === "events"}
+					onClick={() => setActiveTab("events")}
+				>
+					<span className="tab-icon" aria-hidden="true">📆</span>
+					<span className="tab-label">События</span>
+				</button>
+				<button
+					className={`tab-button ${activeTab === "profile" ? "active" : ""}`}
+					type="button"
+					role="tab"
+					aria-selected={activeTab === "profile"}
+					onClick={() => setActiveTab("profile")}
+				>
+					<span className="tab-icon" aria-hidden="true">👤</span>
+					<span className="tab-label">Профиль</span>
+				</button>
+			</nav>
+		</div>
 	);
 };
 

@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { create } from "@bufbuild/protobuf";
 import { TimestampSchema } from "@bufbuild/protobuf/wkt";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import "../../styles/components/create-event-form.css";
 
 type Props = {
 	onSubmit: (payload: {
@@ -63,7 +64,7 @@ const CreateEventForm = ({ onSubmit }: Props) => {
 	};
 
 	return (
-		<form className="grid" style={{ gap: 10 }} onSubmit={handleSubmit}>
+		<form className="grid create-event-form" onSubmit={handleSubmit}>
 			<div className="card-title">Создать мероприятие</div>
 			<input className="input" placeholder="Название" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
 			<input
@@ -74,11 +75,11 @@ const CreateEventForm = ({ onSubmit }: Props) => {
 				placeholder="Дата/время"
 			/>
 			<input className="input" placeholder="Локация (опционально)" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
-			<label style={{ display: "flex", gap: 8, alignItems: "center" }}>
+			<label className="create-event-form__checkbox">
 				<input type="checkbox" checked={form.notifyDayBefore} onChange={(e) => setForm({ ...form, notifyDayBefore: e.target.checked })} />
 				Напомнить за день
 			</label>
-			<label style={{ display: "flex", gap: 8, alignItems: "center" }}>
+			<label className="create-event-form__checkbox">
 				<input type="checkbox" checked={form.notifyHourBefore} onChange={(e) => setForm({ ...form, notifyHourBefore: e.target.checked })} />
 				Напомнить за час
 			</label>
@@ -92,7 +93,7 @@ const CreateEventForm = ({ onSubmit }: Props) => {
 			<button className="button" type="submit" disabled={isSaving}>
 				{isSaving ? "Создаем…" : "Создать"}
 			</button>
-			{error && <div style={{ color: "var(--danger)" }}>{error}</div>}
+			{error && <div className="create-event-form__error">{error}</div>}
 		</form>
 	);
 };

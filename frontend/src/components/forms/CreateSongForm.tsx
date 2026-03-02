@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import type { SongLinkType } from "../../proto/song_pb";
+import "../../styles/components/create-song-form.css";
 
 type Props = {
 	onSubmit: (payload: {
@@ -54,7 +55,7 @@ const CreateSongForm = ({ onSubmit, canFeature }: Props) => {
 	};
 
 	return (
-		<form className="grid" style={{ gap: 10 }} onSubmit={handleSubmit}>
+		<form className="grid create-song-form" onSubmit={handleSubmit}>
 			<div className="card-title">Добавить песню</div>
 			<input className="input" placeholder="Название" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
 			<input className="input" placeholder="Исполнитель" value={form.artist} onChange={(e) => setForm({ ...form, artist: e.target.value })} required />
@@ -64,7 +65,7 @@ const CreateSongForm = ({ onSubmit, canFeature }: Props) => {
 				value={form.description}
 				onChange={(e) => setForm({ ...form, description: e.target.value })}
 			/>
-			<div style={{ display: "grid", gap: 8, gridTemplateColumns: "1fr 180px" }}>
+			<div className="create-song-form__link-row">
 				<input className="input" placeholder="Ссылка" value={form.linkUrl} onChange={(e) => setForm({ ...form, linkUrl: e.target.value })} required />
 				<select
 					className="select"
@@ -83,7 +84,7 @@ const CreateSongForm = ({ onSubmit, canFeature }: Props) => {
 				onChange={(e) => setForm({ ...form, roles: e.target.value })}
 			/>
 			{canFeature && (
-				<label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
+				<label className="create-song-form__checkbox">
 					<input
 						type="checkbox"
 						checked={form.featured}
@@ -95,7 +96,7 @@ const CreateSongForm = ({ onSubmit, canFeature }: Props) => {
 			<button className="button" type="submit" disabled={isSaving}>
 				{isSaving ? "Сохраняем…" : "Создать"}
 			</button>
-			{error && <div style={{ color: "var(--danger)" }}>{error}</div>}
+			{error && <div className="create-song-form__error">{error}</div>}
 		</form>
 	);
 };

@@ -6,11 +6,15 @@
   --muted: #aaaaaa;
   --accent: #ff6600;
   --accent-2: #9d4edd;
+  --accent-bg: rgba(255, 102, 0, 0.16);
   --featured-bg: rgba(255, 102, 0, 0.18);
   --featured-border: rgba(255, 102, 0, 0.45);
   --danger: #ff3333;
+  --danger-bg: rgba(255, 51, 51, 0.16);
   --border: rgba(255, 255, 255, 0.1);
   --shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+  --tabbar-height: 72px;
+  --song-search-height: 74px;
   font-family: "Manrope", system-ui, -apple-system, sans-serif;
   color: var(--text);
   background: var(--bg);
@@ -65,9 +69,108 @@ a {
   padding: 12px clamp(12px, 3vw, 24px) 24px;
 }
 
-.grid {
+.tabbed-layout {
+  min-height: var(--tg-viewport-height, 100dvh);
+}
+
+.tab-content {
   display: grid;
   gap: 18px;
+  padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom) + 16px);
+}
+
+.tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 10px 16px calc(env(safe-area-inset-bottom) + 12px);
+  background: rgba(8, 8, 8, 0.78);
+  border-top: 1px solid var(--border);
+  backdrop-filter: blur(14px) saturate(140%);
+  box-shadow: 0 -12px 36px rgba(0, 0, 0, 0.45);
+  z-index: 1200;
+}
+
+.tab-button {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 6px;
+  border-radius: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: color 140ms ease, transform 140ms ease, background 140ms ease;
+}
+
+.tab-button .tab-icon {
+  font-size: 18px;
+}
+
+.tab-button .tab-label {
+  font-size: 12px;
+}
+
+.tab-button.active {
+  color: var(--text);
+  background: rgba(255, 102, 0, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(255, 102, 0, 0.4);
+}
+
+.tab-button:active {
+  transform: translateY(1px);
+}
+
+.hero-card {
+  padding: 14px;
+}
+
+.profile-card {
+  padding: 16px;
+}
+
+.profile-summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.profile-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(255, 102, 0, 0.3), rgba(157, 78, 221, 0.4));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  color: #ffffff;
+  overflow: hidden;
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-name {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.grid {
+  display: grid;
+  gap: 8px;
 }
 
 .card {
@@ -77,6 +180,104 @@ a {
   padding: 8px 8px;
   box-shadow: var(--shadow);
   backdrop-filter: blur(8px);
+}
+
+.song-list-screen {
+  position: relative;
+}
+
+.song-list-body {
+  padding-bottom: calc(var(--song-search-height) + 20px);
+}
+
+.song-search-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom));
+  background: rgba(8, 8, 8, 0.86);
+  border-top: 1px solid var(--border);
+  backdrop-filter: blur(12px) saturate(140%);
+  z-index: 1100;
+}
+
+.song-search-bar-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.song-search-bar-inner .input {
+  flex: 1;
+  min-width: 220px;
+}
+
+.song-fab-wrap {
+  position: fixed;
+  right: 10px;
+  bottom: calc(var(--tabbar-height) + var(--song-search-height));
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+  z-index: 1150;
+}
+
+.song-fab-wrap > * {
+  pointer-events: auto;
+}
+
+.song-fab {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #ffffff;
+  font-size: 28px;
+  font-weight: 700;
+  box-shadow: 0 12px 26px rgba(255, 102, 0, 0.35);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+.song-create-dialog {
+  position: absolute;
+  bottom: 64px;
+  right: 0;
+  width: min(420px, calc(100vw - 32px));
+  padding: 14px;
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
+}
+
+.event-fab-wrap {
+  position: fixed;
+  right: 10px;
+  bottom: calc(var(--tabbar-height) + 10px);
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+  z-index: 1150;
+}
+
+.event-fab-wrap > * {
+  pointer-events: auto;
+}
+
+.event-create-dialog {
+  position: absolute;
+  bottom: 64px;
+  right: 0;
+  width: min(420px, calc(100vw - 32px));
+  padding: 14px;
+  max-height: min(70vh, 520px);
+  overflow-y: auto;
 }
 
 .card-title {
@@ -132,7 +333,7 @@ a {
 
 .dropdown-menu {
   position: absolute;
-  top: calc(100% + 8px);
+  bottom: calc(100% + 8px);
   right: 0;
   min-width: min(220px, calc(100vw - 24px));
   max-width: min(320px, calc(100vw - 24px));

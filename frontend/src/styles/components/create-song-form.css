@@ -1,0 +1,20 @@
+.create-song-form {
+  gap: 10px;
+}
+
+.create-song-form__link-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 180px;
+}
+
+.create-song-form__checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.create-song-form__error {
+  color: var(--danger);
+}

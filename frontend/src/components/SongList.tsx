@@ -5,6 +5,7 @@ import type { Song, SongDetails, SongLinkType } from "../proto/song_pb";
 import type { User } from "../proto/user_pb";
 import SongModal from "./SongModal";
 import CreateSongForm from "./forms/CreateSongForm";
+import "../styles/components/song-list.css";
 
 type Props = {
 	permissions?: PermissionSet;
@@ -19,13 +20,13 @@ type ListState = {
 	error?: Error | null;
 };
 
-const MAX_ARTIST_LEN = 24;
+const MAX_STRING_LEN = 36;
 
-const truncateArtist = (value: string) => {
-	if (value.length <= MAX_ARTIST_LEN) {
+const truncateString = (value: string) => {
+	if (value.length <= MAX_STRING_LEN) {
 		return value;
 	}
-	return `${value.slice(0, MAX_ARTIST_LEN - 3)}...`;
+	return `${value.slice(0, MAX_STRING_LEN - 3)}...`;
 };
 
 const SongList = ({ permissions, profile }: Props) => {
@@ -47,6 +48,8 @@ const SongList = ({ permissions, profile }: Props) => {
 	const [detailError, setDetailError] = useState<Error | null>(null);
 	const wasHiddenRef = useRef(false);
 	const filterMenuRef = useRef<HTMLDivElement | null>(null);
+	const loadMoreRef = useRef<HTMLDivElement | null>(null);
+	const [isCreateOpen, setIsCreateOpen] = useState(false);
 
 	const fetchSongs = useCallback(async (reset = false) => {
 		setListState((prev) => ({
@@ -62,9 +65,10 @@ const SongList = ({ permissions, profile }: Props) => {
 		}
 		try {
 			const res = await listSongs(query, pageToken);
+			const incomingSongs = (res.songs ?? []).filter((song): song is Song => Boolean(song));
 			nextPageTokenRef.current = res.nextPageToken || undefined;
 			setListState((prev) => ({
-				items: reset ? res.songs : [...prev.items, ...res.songs],
+				items: reset ? incomingSongs : [...prev.items, ...incomingSongs],
 				nextPageToken: nextPageTokenRef.current,
 				isLoading: false,
 				isFetchingNext: false,
@@ -172,16 +176,65 @@ const SongList = ({ permissions, profile }: Props) => {
 		});
 	}, [listState.items, showFull, showNotFull]);
 
+	useEffect(() => {
+		if (!hasNextPage || listState.isFetchingNext || listState.isLoading) {
+			return;
+		}
+		const node = loadMoreRef.current;
+		if (!node) {
+			return;
+		}
+		const observer = new IntersectionObserver(
+			(entries) => {
+				const [entry] = entries;
+				if (entry?.isIntersecting && !listState.isFetchingNext && hasNextPage) {
+					fetchSongs(false);
+				}
+			},
+			{ root: null, rootMargin: "180px 0px", threshold: 0.1 },
+		);
+		observer.observe(node);
+		return () => observer.disconnect();
+	}, [fetchSongs, hasNextPage, listState.isFetchingNext, listState.isLoading]);
+
 	return (
-		<div className="card">
-			<div className="section-header">
-				<div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", width: "100%" }}>
+		<div className="song-list-screen">
+			<div className="song-list">
+				<div className="song-list-body">
+				{listState.isLoading && listState.items.length === 0 && <div>Загружаем песни…</div>}
+				{listState.error && <div className="song-list__error">Ошибка: {listState.error.message}</div>}
+
+				{filteredItems.length > 0 && (
+					<div className="grid">
+						{filteredItems.map((song: Song) => (
+							<SongRow key={song.id} song={song} onOpen={() => setSelectedId(song.id)} />
+						))}
+					</div>
+				)}
+
+				{hasNextPage && (
+					<div className="song-list__load-more">
+						<button
+							className="button"
+							onClick={() => fetchSongs(false)}
+							disabled={listState.isFetchingNext}
+						>
+							{listState.isFetchingNext ? "Загружаем…" : "Показать еще"}
+						</button>
+					</div>
+				)}
+				<div ref={loadMoreRef} className="song-list__load-sentinel" />
+
+				</div>
+			</div>
+
+			<div className="song-search-bar">
+				<div className="song-search-bar-inner">
 					<input
 						className="input"
 						placeholder="Поиск по названию или исполнителю"
 						value={query}
 						onChange={(e) => setQuery(e.target.value)}
-						style={{ flex: 1, minWidth: 240 }}
 					/>
 					<div className="dropdown" ref={filterMenuRef}>
 						<button
@@ -221,40 +274,30 @@ const SongList = ({ permissions, profile }: Props) => {
 				</div>
 			</div>
 
-			{listState.isLoading && listState.items.length === 0 && <div>Загружаем песни…</div>}
-			{listState.error && <div style={{ color: "var(--danger)" }}>Ошибка: {listState.error.message}</div>}
-
-			{filteredItems.length > 0 && (
-				<div className="grid">
-					{filteredItems.map((song: Song) => (
-						<SongRow key={song.id} song={song} onOpen={() => setSelectedId(song.id)} />
-					))}
-				</div>
-			)}
-
-			{hasNextPage && (
-				<div style={{ marginTop: 12, display: "flex", justifyContent: "center" }}>
-					<button
-						className="button"
-						onClick={() => fetchSongs(false)}
-						disabled={listState.isFetchingNext}
-					>
-						{listState.isFetchingNext ? "Загружаем…" : "Показать еще"}
+			{canCreate && (
+				<div className="song-fab-wrap">
+					{isCreateOpen && (
+						<div className="card song-create-dialog">
+							<div className="section-header">
+								<div className="card-title">Новая песня</div>
+								<button className="button secondary" type="button" onClick={() => setIsCreateOpen(false)}>
+									Закрыть
+								</button>
+							</div>
+							<CreateSongForm
+								canFeature={canFeature}
+								onSubmit={async (payload) => {
+									await createSong(payload);
+									await fetchSongs(true);
+									setIsCreateOpen(false);
+								}}
+							/>
+						</div>
+					)}
+					<button className="song-fab" type="button" onClick={() => setIsCreateOpen((prev) => !prev)}>
+						{isCreateOpen ? "×" : "+"}
 					</button>
 				</div>
-			)}
-
-			{canCreate && (
-				<>
-					<hr style={{ border: "1px solid var(--border)", margin: "16px 0" }} />
-					<CreateSongForm
-						canFeature={canFeature}
-						onSubmit={async (payload) => {
-							await createSong(payload);
-							fetchSongs(true);
-						}}
-					/>
-				</>
 			)}
 
 			{selectedId && details && !isDetailLoading && !detailError && (
@@ -309,48 +352,29 @@ const SongRow = ({ song, onOpen }: { song: Song; onOpen: () => void }) => {
 
 	return (
 		<button
-			className="button secondary"
-			style={{
-				width: "100%",
-				textAlign: "left",
-				background: isFeatured ? "var(--featured-bg)" : undefined,
-				border: isFeatured ? "1px solid var(--featured-border)" : undefined,
-			}}
+			className={`button secondary song-row ${isFeatured ? "is-featured" : ""}`}
 			onClick={onOpen}
 		>
-			<div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+			<div className="song-row__content">
 				{song.thumbnailUrl && (
 					<img
 						src={song.thumbnailUrl}
 						alt={song.title}
-						style={{
-							width: 80,
-							height: 60,
-							objectFit: "cover",
-							borderRadius: 4,
-							flexShrink: 0
-						}}
+						className="song-row__thumb"
 						onError={(e) => {
 							// Fallback: hide image if it fails to load
-							e.currentTarget.style.display = "none";
+							e.currentTarget.classList.add("is-hidden");
 						}}
 					/>
 				)}
-				<div style={{ flex: 1, minWidth: 0 }}>
-					<div style={{ fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{song.title}</div>
-					<div style={{ color: "var(--muted)", fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-						{truncateArtist(song.artist ?? "")}
+				<div className="song-row__text">
+					<div className="song-row__title">{truncateString(song.title ?? "")}</div>
+					<div className="song-row__artist">
+						{truncateString(song.artist ?? "")}
 					</div>
 				</div>
-				<div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
-					<span style={{
-						fontSize: 18,
-						padding: "2px 6px",
-						borderRadius: 4,
-						backgroundColor: isFull ? "var(--danger-bg)" : "var(--accent-bg)",
-						color: isFull ? "var(--danger)" : "var(--accent)",
-						fontWeight: 600
-					}}>
+				<div className="song-row__badge">
+					<span className={`song-row__count ${isFull ? "is-full" : "is-open"}`}>
 						{assignedCount}/{totalRoles}
 					</span>
 				</div>

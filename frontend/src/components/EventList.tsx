@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { createEvent, getEvent, listEvents, setTracklist, updateEvent } from "../services/api";
 import type { PermissionSet } from "../proto/permissions_pb";
 import type { Event, EventDetails } from "../proto/event_pb";
@@ -6,6 +7,7 @@ import CreateEventForm from "./forms/CreateEventForm";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { TimestampSchema } from "@bufbuild/protobuf/wkt";
 import { create } from "@bufbuild/protobuf";
+import "../styles/components/event-list.css";
 
 type Props = {
 	permissions?: PermissionSet;
@@ -23,6 +25,7 @@ const EventList = ({ permissions }: Props) => {
 	const [details, setDetails] = useState<EventDetails | null>(null);
 	const [detailError, setDetailError] = useState<Error | null>(null);
 	const [isDetailLoading, setIsDetailLoading] = useState(false);
+	const [isCreateOpen, setIsCreateOpen] = useState(false);
 
 	const fetchEvents = useCallback(async () => {
 		setListState((prev) => ({ ...prev, isLoading: true, error: null }));
@@ -76,31 +79,46 @@ const EventList = ({ permissions }: Props) => {
 			</div>
 
 			{listState.isLoading && <div>Загружаем мероприятия…</div>}
-			{listState.error && <div style={{ color: "var(--danger)" }}>Ошибка: {listState.error.message}</div>}
+			{listState.error && <div className="event-list__error">Ошибка: {listState.error.message}</div>}
 
 			{listState.items.length > 0 && (
 				<div className="grid">
 					{listState.items.map((evt: Event) => (
-						<button key={evt.id} className="button secondary" style={{ textAlign: "left" }} onClick={() => setSelectedId(evt.id)}>
-							<div style={{ fontWeight: 700 }}>{evt.title}</div>
-							<div style={{ color: "var(--muted)", fontSize: 13 }}>{formatDate(timestampToDate(evt.startAt as Timestamp | undefined))}</div>
-							{evt.location && <div style={{ fontSize: 13 }}>{evt.location}</div>}
+						<button key={evt.id} className="button secondary event-list__item-button" onClick={() => setSelectedId(evt.id)}>
+							<div className="event-list__item-title">{evt.title}</div>
+							<div className="event-list__item-meta">{formatDate(timestampToDate(evt.startAt as Timestamp | undefined))}</div>
+							{evt.location && <div className="event-list__item-location">{evt.location}</div>}
 						</button>
 					))}
 				</div>
 			)}
 
-			{canEditEvents && (
-				<>
-					<hr style={{ border: "1px solid var(--border)", margin: "16px 0" }} />
-					<CreateEventForm
-						onSubmit={async (payload) => {
-							await createEvent(payload);
-							fetchEvents();
-						}}
-					/>
-				</>
-			)}
+			{canEditEvents &&
+				createPortal(
+					<div className="event-fab-wrap">
+						{isCreateOpen && (
+							<div className="card event-create-dialog">
+								<div className="section-header">
+									<div className="card-title">Новое событие</div>
+									<button className="button secondary" type="button" onClick={() => setIsCreateOpen(false)}>
+										Закрыть
+									</button>
+								</div>
+								<CreateEventForm
+									onSubmit={async (payload) => {
+										await createEvent(payload);
+										await fetchEvents();
+										setIsCreateOpen(false);
+									}}
+								/>
+							</div>
+						)}
+						<button className="song-fab" type="button" onClick={() => setIsCreateOpen((prev) => !prev)}>
+							{isCreateOpen ? "×" : "+"}
+						</button>
+					</div>,
+					document.body,
+				)}
 
 			{selectedId && details && !isDetailLoading && !detailError && (
 				<EventDetailsCard
@@ -152,20 +170,8 @@ const EventDetailsCard = ({ data, onClose, onUpdate, onSetTracklist, canEditEven
 	const participants = useMemo(() => data.participants ?? [], [data.participants]);
 
 	return (
-		<div
-			style={{
-				position: "fixed",
-				inset: 0,
-				background: "rgba(0,0,0,0.65)",
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "center",
-				padding: 16,
-				zIndex: 900,
-			}}
-			onClick={onClose}
-		>
-			<div className="card" style={{ maxWidth: 720, width: "100%" }} onClick={(e) => e.stopPropagation()}>
+		<div className="event-details__backdrop" onClick={onClose}>
+			<div className="card event-details__card" onClick={(e) => e.stopPropagation()}>
 				<div className="section-header">
 					<div className="card-title">
 						<span role="img" aria-label="event">
@@ -177,11 +183,11 @@ const EventDetailsCard = ({ data, onClose, onUpdate, onSetTracklist, canEditEven
 						Закрыть
 					</button>
 				</div>
-				<div style={{ color: "var(--muted)", marginBottom: 8 }}>{formatDate(timestampToDate(evt?.startAt as Timestamp | undefined))}</div>
+				<div className="event-details__meta">{formatDate(timestampToDate(evt?.startAt as Timestamp | undefined))}</div>
 				{evt?.location && <div className="pill">{evt.location}</div>}
 
-				<div style={{ marginTop: 12 }}>
-					<div className="card-title" style={{ marginBottom: 6 }}>
+				<div className="event-details__section">
+					<div className="card-title event-details__section-title">
 						Участники
 					</div>
 					<div className="tags">
@@ -190,28 +196,27 @@ const EventDetailsCard = ({ data, onClose, onUpdate, onSetTracklist, canEditEven
 								{p.user?.displayName} — {p.role}
 							</div>
 						))}
-						{participants.length === 0 && <div style={{ color: "var(--muted)" }}>Пока пусто</div>}
+						{participants.length === 0 && <div className="event-details__empty">Пока пусто</div>}
 					</div>
 				</div>
 
-				<div style={{ marginTop: 12 }}>
-					<div className="card-title" style={{ marginBottom: 6 }}>
+				<div className="event-details__section">
+					<div className="card-title event-details__section-title">
 						Треклист
 					</div>
-					<ol style={{ paddingLeft: 18, lineHeight: 1.4 }}>
+					<ol className="event-details__tracklist">
 						{data.tracklist?.items?.map((item) => (
 							<li key={item.order}>
 								{item.customTitle || item.songId || "Трек"} {item.customArtist ? `— ${item.customArtist}` : ""}
 							</li>
 						))}
-						{!data.tracklist?.items?.length && <div style={{ color: "var(--muted)" }}>Не задан</div>}
+						{!data.tracklist?.items?.length && <div className="event-details__empty">Не задан</div>}
 					</ol>
 				</div>
 
 				{canEditEvents && (
 					<form
-						className="grid"
-						style={{ marginTop: 12 }}
+						className="grid event-details__form"
 						onSubmit={(e) => {
 							e.preventDefault();
 							onUpdate({
@@ -232,7 +237,7 @@ const EventDetailsCard = ({ data, onClose, onUpdate, onSetTracklist, canEditEven
 							onChange={(e) => setForm({ ...form, startAt: e.target.value })}
 						/>
 						<input className="input" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Локация" />
-						<label style={{ display: "flex", gap: 8, alignItems: "center" }}>
+						<label className="event-details__checkbox">
 							<input
 								type="checkbox"
 								checked={form.notifyDayBefore}
@@ -240,7 +245,7 @@ const EventDetailsCard = ({ data, onClose, onUpdate, onSetTracklist, canEditEven
 							/>
 							Напомнить за день
 						</label>
-						<label style={{ display: "flex", gap: 8, alignItems: "center" }}>
+						<label className="event-details__checkbox">
 							<input
 								type="checkbox"
 								checked={form.notifyHourBefore}
@@ -255,7 +260,7 @@ const EventDetailsCard = ({ data, onClose, onUpdate, onSetTracklist, canEditEven
 				)}
 
 				{canEditTracklists && onSetTracklist && (
-					<div style={{ marginTop: 12 }}>
+					<div className="event-details__tracklist-edit">
 						<div className="card-title">Обновить треклист</div>
 						<textarea
 							className="textarea"

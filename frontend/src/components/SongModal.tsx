@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { createPortal } from "react-dom";
 import type { SongDetails, SongLinkType } from "../proto/song_pb";
+import "../styles/components/song-modal.css";
 
 type Props = {
 	details: SongDetails;
@@ -43,6 +44,15 @@ const SongModal = ({ details, onClose, onJoin, onLeave, onUpdate, onDelete, canE
 	const filledRoleCount = useMemo(() => new Set(assignments.map((a) => a.role)).size, [assignments]);
 	const totalRoles = song?.availableRoles?.length || 0;
 	const isFull = filledRoleCount >= totalRoles;
+
+	useEffect(() => {
+		const { style } = document.body;
+		const previousOverflow = style.overflow;
+		style.overflow = "hidden";
+		return () => {
+			style.overflow = previousOverflow;
+		};
+	}, []);
 
 	const handleCopyMentions = async () => {
 		const title = song?.title ?? "";
@@ -104,20 +114,14 @@ const SongModal = ({ details, onClose, onJoin, onLeave, onUpdate, onDelete, canE
 					</button>
 				</div>
 				<div className="scroll-area">
-					<div style={{ color: "var(--muted)", marginBottom: 10 }}>{song?.artist}</div>
+					<div className="song-modal__artist">{song?.artist}</div>
 					{song?.thumbnailUrl && (
 						<img
 							src={song.thumbnailUrl}
 							alt={song.title}
-							style={{
-								width: "100%",
-								maxHeight: 240,
-								objectFit: "cover",
-								borderRadius: 8,
-								marginBottom: 12
-							}}
+							className="song-modal__thumbnail"
 							onError={(e) => {
-								e.currentTarget.style.display = "none";
+								e.currentTarget.classList.add("is-hidden");
 							}}
 						/>
 					)}
@@ -126,18 +130,12 @@ const SongModal = ({ details, onClose, onJoin, onLeave, onUpdate, onDelete, canE
 							{linkLabel}
 						</a>
 					)}
-					{song?.description && <p style={{ marginTop: 12, lineHeight: 1.5 }}>{song.description}</p>}
+					{song?.description && <p className="song-modal__description">{song.description}</p>}
 
-					<div style={{ marginTop: 14 }}>
-						<div className="card-title" style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
+					<div className="song-modal__section">
+						<div className="card-title song-modal__section-title">
 							<span>Роли</span>
-							<span style={{
-								fontSize: 12,
-								padding: "2px 8px",
-								borderRadius: 4,
-								backgroundColor: isFull ? "var(--danger-bg)" : "var(--accent-bg)",
-								color: isFull ? "var(--danger)" : "var(--accent)"
-							}}>
+							<span className={`song-modal__role-count ${isFull ? "is-full" : "is-open"}`}>
 								{filledRoleCount}/{totalRoles}
 							</span>
 						</div>
@@ -146,10 +144,10 @@ const SongModal = ({ details, onClose, onJoin, onLeave, onUpdate, onDelete, canE
 								const members = assignments.filter((a) => a.role === role);
 								const isMine = members.some((m) => m.user?.id === currentUserId);
 								return (
-									<div key={`${role}-${index}`} className="pill" style={{ borderColor: isMine ? "var(--accent)" : "var(--border)" }}>
-										<div style={{ flex: 1 }}>
-											<div style={{ fontWeight: 700 }}>{role}</div>
-											<div style={{ fontSize: 12, color: "var(--muted)" }}>
+									<div key={`${role}-${index}`} className={`pill song-modal__role-pill ${isMine ? "is-mine" : ""}`}>
+										<div className="song-modal__role-info">
+											<div className="song-modal__role-title">{role}</div>
+											<div className="song-modal__role-members">
 												{members.length === 0 ? "Свободно" : members.map((m) => m.user?.displayName).join(", ")}
 											</div>
 										</div>
@@ -168,8 +166,8 @@ const SongModal = ({ details, onClose, onJoin, onLeave, onUpdate, onDelete, canE
 						</div>
 					</div>
 
-					<div style={{ marginTop: 14 }}>
-						<div className="card-title" style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
+					<div className="song-modal__section">
+						<div className="card-title song-modal__section-title song-modal__section-title--wide">
 							<span>Участники</span>
 							{canEditAny && (
 								<button className="button secondary" type="button" onClick={handleCopyMentions}>
@@ -183,17 +181,17 @@ const SongModal = ({ details, onClose, onJoin, onLeave, onUpdate, onDelete, canE
 									{a.user?.displayName} — {a.role}
 								</div>
 							))}
-							{assignments.length === 0 && <div style={{ color: "var(--muted)" }}>Пока пусто</div>}
+							{assignments.length === 0 && <div className="song-modal__empty">Пока пусто</div>}
 						</div>
 					</div>
 
 					{canEdit && (
-						<div style={{ marginTop: 16 }}>
+						<div className="song-modal__edit">
 							<button className="button secondary" onClick={() => setIsEditing((v) => !v)}>
 								{isEditing ? "Скрыть форму" : "Редактировать"}
 							</button>
 							{isEditing && (
-								<form onSubmit={handleSubmit} className="grid" style={{ marginTop: 12 }}>
+								<form onSubmit={handleSubmit} className="grid song-modal__edit-form">
 									<input className="input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Название" required />
 									<input className="input" value={form.artist} onChange={(e) => setForm({ ...form, artist: e.target.value })} placeholder="Исполнитель" required />
 									<textarea
@@ -225,7 +223,7 @@ const SongModal = ({ details, onClose, onJoin, onLeave, onUpdate, onDelete, canE
 										placeholder="Роли через запятую"
 									/>
 									{canFeature && (
-										<label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
+										<label className="song-modal__feature-label">
 											<input
 												type="checkbox"
 												checked={form.featured}
@@ -234,7 +232,7 @@ const SongModal = ({ details, onClose, onJoin, onLeave, onUpdate, onDelete, canE
 											Featured
 										</label>
 									)}
-									<div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+									<div className="song-modal__edit-actions">
 										<button className="button" type="submit">
 											Сохранить
 										</button>

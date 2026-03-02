@@ -1,0 +1,86 @@
+.auth-gate__center-card {
+  max-width: 400px;
+  margin: 80px auto;
+}
+
+.auth-gate__card-title {
+  margin-bottom: 16px;
+}
+
+.auth-gate__spinner-wrap {
+  text-align: center;
+  padding: 40px 0;
+}
+
+.auth-gate__auth-panel {
+  text-align: center;
+  padding: 28px 0;
+}
+
+.auth-gate__muted {
+  color: var(--muted);
+}
+
+.auth-gate__muted--spaced {
+  margin-bottom: 16px;
+}
+
+.auth-gate__muted--large {
+  line-height: 1.4;
+  margin-bottom: 24px;
+}
+
+.auth-gate__info-box {
+  padding: 16px;
+  background-color: var(--accent-bg);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  color: var(--text);
+}
+
+.auth-gate__info-title {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.auth-gate__info-list {
+  margin: 0;
+  padding-left: 20px;
+  line-height: 1.6;
+}
+
+.auth-gate__error-box {
+  padding: 16px;
+  background-color: var(--danger-bg);
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  color: var(--danger);
+  margin-bottom: 16px;
+}
+
+.auth-gate__spinner {
+  margin-bottom: 16px;
+}
+
+.auth-gate__tg-actions {
+  margin-top: 12px;
+}
+
+.auth-gate__error-text {
+  color: var(--danger);
+  margin-top: 8px;
+}
+
+.auth-gate__error-content {
+  padding: 20px;
+  text-align: center;
+}
+
+.auth-gate__error-message {
+  color: var(--danger);
+  margin-bottom: 16px;
+}
+
+.auth-gate__pill {
+  justify-content: space-between;
+}
