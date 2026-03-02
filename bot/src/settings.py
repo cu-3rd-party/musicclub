@@ -26,7 +26,7 @@ class Settings(BaseSettings):
 
     BOT_TOKEN: str
     WEBAPP_URL: str = Field(default="http://localhost:5173")
-    SERVER_HOST: str = Field(default="http://localhost")
+    SERVER_HOST: str = Field(default="https://localhost")
     SECRET_TOKEN: str | None
     SECRET_TOKEN_LENGTH: int = 24
 
