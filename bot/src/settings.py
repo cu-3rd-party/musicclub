@@ -25,17 +25,17 @@ class Settings(BaseSettings):
     POSTGRES_PORT: str
 
     BOT_TOKEN: str
-    WEBAPP_URL: str = Field(default="http://localhost:5173")
-    SERVER_HOST: str = Field(default="https://localhost")
     SECRET_TOKEN: str | None
     SECRET_TOKEN_LENGTH: int = 24
+    WEBAPP_URL: str | None = None
+    DEFAULT_WEBAPP_URL: str = "http://localhost:5173"
 
     EMAIL_DOMAIN: str = "edu.centraluniversity.ru"
     EMAIL_RE: str = r"^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
 
     @property
     def webhook_url(self):
-        return self.SERVER_HOST + "/telegram/webhook"
+        return self.WEBAPP_URL + "/telegram/webhook"
 
     @property
     def email_re(self) -> re.Pattern[str]:

@@ -19,6 +19,20 @@ def _setup(dp: Dispatcher):
     dp.message.middleware(MyI18nMiddleware(settings.i18n))
     dp.include_router(router)
 
+async def _resolve_webapp_url(bot: Bot) -> str:
+    try:
+        menu_button = await bot.get_chat_menu_button()
+    except Exception as exc:  # noqa: BLE001 - log and fall back
+        logger.warning("Failed to fetch menu button: %s", exc)
+        return settings.DEFAULT_WEBAPP_URL
+
+    web_app = getattr(menu_button, "web_app", None)
+    if web_app and getattr(web_app, "url", None):
+        return web_app.url
+
+    logger.warning("Menu button is not a WebApp; falling back to default URL")
+    return settings.DEFAULT_WEBAPP_URL
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -34,6 +48,7 @@ async def lifespan(app: FastAPI):
     app.state.bot = bot
     app.state.dp = dp
 
+    settings.WEBAPP_URL = await _resolve_webapp_url(bot)
     logger.info("WebApp URL: %s", settings.WEBAPP_URL)
 
     if settings.webhook_url:
@@ -75,6 +90,7 @@ async def main():
     dp = Dispatcher()
     _setup(dp)
 
+    settings.WEBAPP_URL = await _resolve_webapp_url(bot)
     logger.info("Starting polling for bot")
     logger.info("WebApp URL: %s", settings.WEBAPP_URL)
 
