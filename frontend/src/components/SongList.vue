@@ -308,7 +308,8 @@ watchEffect((onCleanup) => {
         fetchSongs(false);
       }
     },
-    { root: null, rootMargin: "180px 0px", threshold: 0.1 },
+    // Start loading earlier so next block is ready while user is mid-scroll.
+    { root: null, rootMargin: "50% 0px", threshold: 0 },
   );
   observer.observe(node);
   onCleanup(() => observer.disconnect());
