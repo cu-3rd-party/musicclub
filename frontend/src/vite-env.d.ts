@@ -12,9 +12,11 @@ interface TelegramWebApp {
       photo_url?: string;
     };
   };
+  viewportHeight?: number;
   ready: () => void;
   expand: () => void;
   close: () => void;
+  onEvent?: (eventType: "viewportChanged", eventHandler: () => void) => void;
 }
 
 interface Window {

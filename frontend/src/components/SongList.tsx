@@ -19,6 +19,15 @@ type ListState = {
 	error?: Error | null;
 };
 
+const MAX_ARTIST_LEN = 24;
+
+const truncateArtist = (value: string) => {
+	if (value.length <= MAX_ARTIST_LEN) {
+		return value;
+	}
+	return `${value.slice(0, MAX_ARTIST_LEN - 3)}...`;
+};
+
 const SongList = ({ permissions, profile }: Props) => {
 	const [query, setQuery] = useState("");
 	const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -329,7 +338,9 @@ const SongRow = ({ song, onOpen }: { song: Song; onOpen: () => void }) => {
 				)}
 				<div style={{ flex: 1, minWidth: 0 }}>
 					<div style={{ fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{song.title}</div>
-					<div style={{ color: "var(--muted)", fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{song.artist}</div>
+					<div style={{ color: "var(--muted)", fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+						{truncateArtist(song.artist ?? "")}
+					</div>
 				</div>
 				<div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
 					<span style={{
