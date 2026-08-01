@@ -1,10 +1,10 @@
 ﻿using CuMusicClub.Domain.Constants;
-using CuMusicClub.Domain.Entities;
-using CuMusicClub.Domain.ValueObjects;
 using CuMusicClub.Infrastructure.Identity;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace CuMusicClub.Infrastructure.Data;
@@ -28,23 +28,31 @@ public class ApplicationDbContextInitialiser
     private readonly ApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
+    private readonly IHostEnvironment _env;
 
     public ApplicationDbContextInitialiser(ILogger<ApplicationDbContextInitialiser> logger,
-        ApplicationDbContext context, UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager)
+        ApplicationDbContext context, UserManager<ApplicationUser> userManager,
+        RoleManager<IdentityRole> roleManager, IHostEnvironment env)
     {
         _logger = logger;
         _context = context;
         _userManager = userManager;
         _roleManager = roleManager;
+        _env = env;
     }
 
     public async Task InitialiseAsync()
     {
         try
         {
-            // See https://jasontaylor.dev/ef-core-database-initialisation-strategies
-            await _context.Database.EnsureDeletedAsync();
-            await _context.Database.EnsureCreatedAsync();
+            if (_env.IsDevelopment())
+            {
+                // Dev: start from a clean database.
+                await _context.Database.EnsureDeletedAsync();
+            }
+
+            // Apply migrations (recreates the schema in dev, upgrades in place elsewhere).
+            await _context.Database.MigrateAsync();
         }
         catch (Exception ex)
         {
@@ -87,26 +95,6 @@ public class ApplicationDbContextInitialiser
             {
                 await _userManager.AddToRolesAsync(administrator, new[] { administratorRole.Name });
             }
-        }
-
-        // Default data
-        // Seed, if necessary
-        if (!_context.TodoLists.Any())
-        {
-            _context.TodoLists.Add(new TodoList
-            {
-                Title = "Tasks",
-                Colour = Colour.Green,
-                Items =
-                {
-                    new TodoItem { Title = "Make a todo list 📃" },
-                    new TodoItem { Title = "Check off the first item ✅" },
-                    new TodoItem { Title = "Realise you've already done two things on the list! 🤯" },
-                    new TodoItem { Title = "Reward yourself with a nice, long nap 🏆" },
-                }
-            });
-
-            await _context.SaveChangesAsync();
         }
     }
 }

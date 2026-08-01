@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using CuMusicClub.Application.WeatherForecasts;
 using FluentValidation;
 using Microsoft.Extensions.Hosting;
 
@@ -10,6 +9,5 @@ public static class DependencyInjection
     public static void AddApplicationServices(this IHostApplicationBuilder builder)
     {
         builder.Services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
-        builder.Services.AddScoped<WeatherForecastService>();
     }
 }

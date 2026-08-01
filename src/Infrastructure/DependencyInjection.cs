@@ -1,10 +1,8 @@
 ﻿using CuMusicClub.Application.Common.Interfaces;
-using CuMusicClub.Application.TodoItems;
-using CuMusicClub.Application.TodoLists;
+using CuMusicClub.Domain.Enums;
 using CuMusicClub.Infrastructure.Data;
 using CuMusicClub.Infrastructure.Data.Interceptors;
 using CuMusicClub.Infrastructure.Identity;
-using CuMusicClub.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -21,12 +19,11 @@ public static class DependencyInjection
         Guard.Against.Null(connectionString, message: $"Connection string '{Services.Database}' not found.");
 
         builder.Services.AddScoped<ISaveChangesInterceptor, AuditableEntityInterceptor>();
-        builder.Services.AddScoped<ISaveChangesInterceptor, DispatchDomainEventsInterceptor>();
 
         builder.Services.AddDbContext<ApplicationDbContext>((sp, options) =>
         {
             options.AddInterceptors(sp.GetServices<ISaveChangesInterceptor>());
-            options.UseNpgsql(connectionString);
+            options.UseNpgsql(connectionString, npgsql => npgsql.MapEnum<SongLinkType>());
             options.ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
         });
 
@@ -47,8 +44,5 @@ public static class DependencyInjection
             .AddSignInManager()
             .AddDefaultTokenProviders()
             .AddApiEndpoints();
-
-        builder.Services.AddScoped<ITodoItemService, TodoItemService>();
-        builder.Services.AddScoped<ITodoListService, TodoListService>();
     }
 }
