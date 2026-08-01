@@ -1,0 +1,8 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>CuMusicClub.Domain</RootNamespace>
+    <AssemblyName>CuMusicClub.Domain</AssemblyName>
+  </PropertyGroup>
+
+</Project>
