@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace CuMusicClub.Web.Endpoints;
 
-public class Users : IEndpointGroup
+public static class Users
 {
     public static void Map(RouteGroupBuilder group)
     {
@@ -13,7 +13,7 @@ public class Users : IEndpointGroup
     }
 
     [EndpointSummary("Log out")]
-    public static Ok Logout()
+    private static Ok Logout()
     {
         return TypedResults.Ok();
     }

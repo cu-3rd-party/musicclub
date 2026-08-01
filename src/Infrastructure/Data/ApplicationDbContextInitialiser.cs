@@ -1,11 +1,14 @@
 ﻿using CuMusicClub.Domain.Constants;
 using CuMusicClub.Infrastructure.Identity;
+using CuMusicClub.Shared;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace CuMusicClub.Infrastructure.Data;
 
@@ -29,16 +32,19 @@ public class ApplicationDbContextInitialiser
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
     private readonly IHostEnvironment _env;
+    private readonly string _connectionString;
 
     public ApplicationDbContextInitialiser(ILogger<ApplicationDbContextInitialiser> logger,
         ApplicationDbContext context, UserManager<ApplicationUser> userManager,
-        RoleManager<IdentityRole> roleManager, IHostEnvironment env)
+        RoleManager<IdentityRole> roleManager, IHostEnvironment env, IConfiguration configuration)
     {
         _logger = logger;
         _context = context;
         _userManager = userManager;
         _roleManager = roleManager;
         _env = env;
+        _connectionString = configuration.GetConnectionString(Services.Database)
+            ?? throw new InvalidOperationException($"Connection string '{Services.Database}' not found.");
     }
 
     public async Task InitialiseAsync()
@@ -51,6 +57,9 @@ public class ApplicationDbContextInitialiser
                 await _context.Database.EnsureDeletedAsync();
             }
 
+            // MigrateAsync cannot create the database itself, so create it first.
+            await EnsureDatabaseExistsAsync();
+
             // Apply migrations (recreates the schema in dev, upgrades in place elsewhere).
             await _context.Database.MigrateAsync();
         }
@@ -59,6 +68,29 @@ public class ApplicationDbContextInitialiser
             _logger.LogError(ex, "An error occurred while initialising the database.");
             throw;
         }
+    }
+
+    private async Task EnsureDatabaseExistsAsync()
+    {
+        var builder = new NpgsqlConnectionStringBuilder(_connectionString);
+        var databaseName = builder.Database;
+        builder.Database = "postgres";
+
+        await using var connection = new NpgsqlConnection(builder.ConnectionString);
+        await connection.OpenAsync();
+
+        await using var checkCommand = connection.CreateCommand();
+        checkCommand.CommandText = "SELECT 1 FROM pg_database WHERE datname = @name";
+        checkCommand.Parameters.AddWithValue("name", databaseName);
+
+        if (await checkCommand.ExecuteScalarAsync() is not null)
+        {
+            return;
+        }
+
+        await using var createCommand = connection.CreateCommand();
+        createCommand.CommandText = $"CREATE DATABASE \"{databaseName}\"";
+        await createCommand.ExecuteNonQueryAsync();
     }
 
     public async Task SeedAsync()
