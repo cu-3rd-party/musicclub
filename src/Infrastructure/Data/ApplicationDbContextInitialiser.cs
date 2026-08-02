@@ -43,8 +43,8 @@ public class ApplicationDbContextInitialiser
         _userManager = userManager;
         _roleManager = roleManager;
         _env = env;
-        _connectionString = configuration.GetConnectionString(Services.Database)
-            ?? throw new InvalidOperationException($"Connection string '{Services.Database}' not found.");
+        _connectionString = configuration.GetConnectionString(Shared.Services.Database)
+            ?? throw new InvalidOperationException($"Connection string '{Shared.Services.Database}' not found.");
     }
 
     public async Task InitialiseAsync()

@@ -6,8 +6,13 @@ public static class WebApplicationExtensions
 {
     public static WebApplication MapEndpoints(this WebApplication app)
     {
-        var users = app.MapGroup("/api/Users").WithTags("Users");
-        Users.Map(users);
+        var v1 = app.MapGroup("/api/v1");
+
+        var auth = v1.MapGroup("/auth").WithTags("Auth");
+        Auth.Map(auth);
+
+        var songs = v1.MapGroup("/songs").WithTags("Songs");
+        Songs.Map(songs);
 
         return app;
     }
