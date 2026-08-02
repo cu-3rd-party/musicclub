@@ -25,6 +25,7 @@
     <PackageVersion Include="Shouldly" Version="4.3.0" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.16.0" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.1" />
+    <PackageVersion Include="Telegram.Bot" Version="22.10.2" />
     <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.5" />
   </ItemGroup>
 </Project>

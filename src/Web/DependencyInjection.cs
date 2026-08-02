@@ -1,3 +1,4 @@
+using CuMusicClub.Web.Bot;
 using CuMusicClub.Web.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,5 +22,9 @@ public static class DependencyInjection
         builder.Services.AddOpenApi();
 
         builder.Services.AddCors();
+
+        builder.Services.Configure<BotOptions>(builder.Configuration.GetSection(BotOptions.SectionName));
+        builder.Services.AddScoped<BotUpdateHandler>();
+        builder.Services.AddHostedService<TelegramBotHostedService>();
     }
 }
