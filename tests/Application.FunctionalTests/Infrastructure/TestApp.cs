@@ -1,6 +1,6 @@
 using CuMusicClub.Domain.Constants;
+using CuMusicClub.Domain.Entities;
 using CuMusicClub.Infrastructure.Data;
-using CuMusicClub.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -29,7 +29,7 @@ public static class TestApp
         using var scope = FunctionalTestSetup.ScopeFactory.CreateScope();
 
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
 
         var user = new ApplicationUser { UserName = userName, Email = userName };
         var result = await userManager.CreateAsync(user, password);
@@ -38,7 +38,7 @@ public static class TestApp
         {
             foreach (var role in roles)
             {
-                await roleManager.CreateAsync(new IdentityRole(role));
+                await roleManager.CreateAsync(new IdentityRole<Guid>(role));
             }
 
             await userManager.AddToRolesAsync(user, roles);
@@ -46,7 +46,7 @@ public static class TestApp
 
         if (result.Succeeded)
         {
-            _userId = user.Id;
+            _userId = user.Id.ToString();
             _roles = [..roles];
             return _userId;
         }

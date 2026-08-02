@@ -8,7 +8,6 @@ using CuMusicClub.Application.Auth;
 using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Common.Interfaces;
 using CuMusicClub.Domain.Entities;
-using CuMusicClub.Infrastructure.Identity;
 using CuMusicClub.Infrastructure.Options;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.BearerToken;
@@ -56,16 +55,16 @@ public class TelegramAuthService : ITelegramAuthService
 
         var isChatMember = await IsChatMemberAsync(telegramUser.Id, cancellationToken);
 
-        var (legacy, identity) = await SyncUsersAsync(telegramUser, isChatMember, cancellationToken);
+        var user = await SyncUserAsync(telegramUser, isChatMember, cancellationToken);
 
-        var (accessToken, refreshToken, expiresAt) = await IssueTokensAsync(identity, legacy.Id, removeAll: true, cancellationToken);
+        var (accessToken, refreshToken, expiresAt) = await IssueTokensAsync(user, removeAll: true, cancellationToken);
 
         return new AuthSessionDto(
             accessToken,
             refreshToken,
             expiresAt,
             DateTimeOffset.UtcNow,
-            await BuildProfileAsync(legacy, identity, cancellationToken));
+            await BuildProfileAsync(user, cancellationToken));
     }
 
     public async Task<TokenPairDto> RefreshAsync(string refreshToken, CancellationToken cancellationToken)
@@ -83,30 +82,23 @@ public class TelegramAuthService : ITelegramAuthService
             throw new UnauthorizedAccessException("Invalid or expired refresh token");
         }
 
-        var legacy = await _db.AppUsers.FirstOrDefaultAsync(u => u.Id == stored.UserId, cancellationToken)
-            ?? throw new UnauthorizedAccessException("Invalid or expired refresh token");
-
-        var identity = await _userManager.Users
-            .FirstOrDefaultAsync(u => u.TgUserId == legacy.TgUserId, cancellationToken)
+        var user = await _userManager.Users
+            .FirstOrDefaultAsync(u => u.Id == stored.UserId, cancellationToken)
             ?? throw new UnauthorizedAccessException("Invalid or expired refresh token");
 
         _db.Remove(stored);
         await _db.SaveChangesAsync(cancellationToken);
 
         var (accessToken, newRefreshToken, expiresAt) =
-            await IssueTokensAsync(identity, legacy.Id, removeAll: false, cancellationToken);
+            await IssueTokensAsync(user, removeAll: false, cancellationToken);
 
         return new TokenPairDto(accessToken, newRefreshToken, expiresAt);
     }
 
     private async Task<(string AccessToken, string RefreshToken, DateTimeOffset ExpiresAt)> IssueTokensAsync(
-        ApplicationUser identity, Guid appUserId, bool removeAll, CancellationToken cancellationToken)
+        ApplicationUser user, bool removeAll, CancellationToken cancellationToken)
     {
-        var principal = await _claimsFactory.CreateAsync(identity);
-        principal.AddIdentity(new ClaimsIdentity(
-        [
-            new Claim(AppUserClaimTypes.AppUserId, appUserId.ToString()),
-        ]));
+        var principal = await _claimsFactory.CreateAsync(user);
 
         var options = _bearerTokenOptions.Get(IdentityConstants.BearerScheme);
         var expiresAt = DateTimeOffset.UtcNow.Add(AccessTokenExpiration);
@@ -118,7 +110,7 @@ public class TelegramAuthService : ITelegramAuthService
         var refreshToken = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
 
         var stale = removeAll
-            ? await _db.RefreshTokens.Where(t => t.UserId == appUserId).ToListAsync(cancellationToken)
+            ? await _db.RefreshTokens.Where(t => t.UserId == user.Id).ToListAsync(cancellationToken)
             : [];
         foreach (var item in stale)
         {
@@ -128,7 +120,7 @@ public class TelegramAuthService : ITelegramAuthService
         _db.Add(new RefreshToken
         {
             Id = Guid.NewGuid(),
-            UserId = appUserId,
+            UserId = user.Id,
             Token = refreshToken,
             ExpiresAt = DateTimeOffset.UtcNow.Add(RefreshTokenExpiration),
         });
@@ -137,77 +129,76 @@ public class TelegramAuthService : ITelegramAuthService
         return (accessToken, refreshToken, expiresAt);
     }
 
-    private async Task<UserProfileDto> BuildProfileAsync(AppUser legacy, ApplicationUser identity, CancellationToken cancellationToken)
+    private async Task<UserProfileDto> BuildProfileAsync(ApplicationUser user, CancellationToken cancellationToken)
     {
-        var permissions = await _db.UserPermissions.FirstOrDefaultAsync(p => p.UserId == legacy.Id, cancellationToken);
+        var principal = await _claimsFactory.CreateAsync(user);
+
+        var role = principal.HasPermission(Permissions.SongsEditAny) || principal.HasPermission(Permissions.SongsEditFeatured)
+            ? "admin"
+            : "guest";
 
         return new UserProfileDto(
-            legacy.Id,
-            legacy.Email,
-            legacy.DisplayName,
-            permissions is { EditAnySongs: true } or { EditFeaturedSongs: true } ? "admin" : "guest",
-            identity.EmailConfirmed,
-            legacy.AvatarUrl,
+            user.Id,
+            user.Email,
+            user.DisplayName,
+            role,
+            user.EmailConfirmed,
+            user.AvatarUrl,
             null,
-            legacy.CreatedAt,
-            legacy.UpdatedAt);
+            user.CreatedAt,
+            user.UpdatedAt);
     }
 
-    private async Task<(AppUser Legacy, ApplicationUser Identity)> SyncUsersAsync(
+    private async Task<ApplicationUser> SyncUserAsync(
         TelegramUser telegramUser, bool isChatMember, CancellationToken cancellationToken)
     {
         var displayName = string.IsNullOrWhiteSpace(telegramUser.LastName)
             ? telegramUser.FirstName
             : $"{telegramUser.FirstName} {telegramUser.LastName}";
 
-        var legacy = await _db.AppUsers.FirstOrDefaultAsync(u => u.TgUserId == telegramUser.Id, cancellationToken);
+        var user = await _userManager.Users.FirstOrDefaultAsync(u => u.TgUserId == telegramUser.Id, cancellationToken);
 
-        if (legacy is null)
+        if (user is null)
         {
             var username = await ResolveUniqueUsernameAsync(telegramUser, cancellationToken);
 
-            legacy = new AppUser
+            user = new ApplicationUser
             {
-                Username = username,
+                UserName = username,
                 DisplayName = displayName,
                 AvatarUrl = string.IsNullOrWhiteSpace(telegramUser.PhotoUrl) ? null : telegramUser.PhotoUrl,
                 TgUserId = telegramUser.Id,
                 IsChatMember = isChatMember,
             };
-            _db.Add(legacy);
-            await _db.SaveChangesAsync(cancellationToken);
-
-            _db.Add(new UserPermission { UserId = legacy.Id, EditOwnParticipation = true, EditOwnSongs = true });
-            await _db.SaveChangesAsync(cancellationToken);
-        }
-        else
-        {
-            legacy.DisplayName = displayName;
-            if (!string.IsNullOrWhiteSpace(telegramUser.PhotoUrl))
-            {
-                legacy.AvatarUrl = telegramUser.PhotoUrl;
-            }
-            legacy.IsChatMember = isChatMember;
-        }
-
-        var identity = await _userManager.Users.FirstOrDefaultAsync(u => u.TgUserId == telegramUser.Id, cancellationToken);
-
-        if (identity is null)
-        {
-            identity = new ApplicationUser { UserName = legacy.Username, TgUserId = telegramUser.Id };
-            var result = await _userManager.CreateAsync(identity);
+            var result = await _userManager.CreateAsync(user);
             if (!result.Succeeded)
             {
-                identity = new ApplicationUser { UserName = $"tg_{telegramUser.Id}", TgUserId = telegramUser.Id };
-                result = await _userManager.CreateAsync(identity);
+                user.UserName = $"tg_{telegramUser.Id}";
+                result = await _userManager.CreateAsync(user);
             }
             if (!result.Succeeded)
             {
                 throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
             }
+
+            await _userManager.AddClaimsAsync(user,
+            [
+                new Claim(PermissionClaimTypes.Permission, Permissions.SongsEditOwn),
+                new Claim(PermissionClaimTypes.Permission, Permissions.ParticipationEditOwn),
+            ]);
+        }
+        else
+        {
+            user.DisplayName = displayName;
+            if (!string.IsNullOrWhiteSpace(telegramUser.PhotoUrl))
+            {
+                user.AvatarUrl = telegramUser.PhotoUrl;
+            }
+            user.IsChatMember = isChatMember;
+            await _userManager.UpdateAsync(user);
         }
 
-        return (legacy, identity);
+        return user;
     }
 
     private async Task<string> ResolveUniqueUsernameAsync(TelegramUser telegramUser, CancellationToken cancellationToken)
@@ -216,8 +207,8 @@ public class TelegramAuthService : ITelegramAuthService
             ? $"tg_{telegramUser.Id}"
             : telegramUser.Username;
 
-        var clash = await _db.AppUsers.AnyAsync(
-            u => u.Username == preferred && u.TgUserId != telegramUser.Id, cancellationToken);
+        var clash = await _userManager.Users.AnyAsync(
+            u => u.UserName == preferred && u.TgUserId != telegramUser.Id, cancellationToken);
 
         return clash ? $"tg_{telegramUser.Id}" : preferred;
     }

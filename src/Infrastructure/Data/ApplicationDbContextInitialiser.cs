@@ -1,5 +1,7 @@
-﻿using CuMusicClub.Domain.Constants;
-using CuMusicClub.Infrastructure.Identity;
+﻿using System.Security.Claims;
+using CuMusicClub.Application.Common.Auth;
+using CuMusicClub.Domain.Constants;
+using CuMusicClub.Domain.Entities;
 using CuMusicClub.Shared;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Identity;
@@ -30,13 +32,13 @@ public class ApplicationDbContextInitialiser
     private readonly ILogger<ApplicationDbContextInitialiser> _logger;
     private readonly ApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly RoleManager<IdentityRole> _roleManager;
+    private readonly RoleManager<IdentityRole<Guid>> _roleManager;
     private readonly IHostEnvironment _env;
     private readonly string _connectionString;
 
     public ApplicationDbContextInitialiser(ILogger<ApplicationDbContextInitialiser> logger,
         ApplicationDbContext context, UserManager<ApplicationUser> userManager,
-        RoleManager<IdentityRole> roleManager, IHostEnvironment env, IConfiguration configuration)
+        RoleManager<IdentityRole<Guid>> roleManager, IHostEnvironment env, IConfiguration configuration)
     {
         _logger = logger;
         _context = context;
@@ -81,7 +83,7 @@ public class ApplicationDbContextInitialiser
 
         await using var checkCommand = connection.CreateCommand();
         checkCommand.CommandText = "SELECT 1 FROM pg_database WHERE datname = @name";
-        checkCommand.Parameters.AddWithValue("name", databaseName);
+        checkCommand.Parameters.AddWithValue("name", databaseName ?? string.Empty);
 
         if (await checkCommand.ExecuteScalarAsync() is not null)
         {
@@ -109,11 +111,16 @@ public class ApplicationDbContextInitialiser
     public async Task TrySeedAsync()
     {
         // Default roles
-        var administratorRole = new IdentityRole(Roles.Administrator);
+        var administratorRole = new IdentityRole<Guid>(Roles.Administrator);
 
         if (_roleManager.Roles.All(r => r.Name != administratorRole.Name))
         {
             await _roleManager.CreateAsync(administratorRole);
+            foreach (var permission in Permissions.All)
+            {
+                await _roleManager.AddClaimAsync(administratorRole,
+                    new Claim(PermissionClaimTypes.Permission, permission));
+            }
         }
 
         // Default users

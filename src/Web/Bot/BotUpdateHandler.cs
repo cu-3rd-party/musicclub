@@ -1,6 +1,9 @@
+using System.Security.Claims;
 using System.Text.RegularExpressions;
+using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Common.Interfaces;
 using CuMusicClub.Domain.Entities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Telegram.Bot;
@@ -30,15 +33,18 @@ public class BotUpdateHandler
     private static readonly Regex NamePartRegex = new("[^a-zA-Z]", RegexOptions.Compiled);
 
     private readonly IApplicationDbContext _db;
+    private readonly UserManager<ApplicationUser> _userManager;
     private readonly BotOptions _options;
     private readonly ILogger<BotUpdateHandler> _logger;
 
     public BotUpdateHandler(
         IApplicationDbContext db,
+        UserManager<ApplicationUser> userManager,
         IOptions<BotOptions> options,
         ILogger<BotUpdateHandler> logger)
     {
         _db = db;
+        _userManager = userManager;
         _options = options.Value;
         _logger = logger;
     }
@@ -322,22 +328,30 @@ public class BotUpdateHandler
                 return false;
             }
 
-            var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Id == auth.UserId, cancellationToken);
+            var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == auth.UserId, cancellationToken);
             if (user is null)
             {
-                _logger.LogWarning("App user {UserId} for auth token {Token} not found", auth.UserId, token);
+                _logger.LogWarning("User {UserId} for auth token {Token} not found", auth.UserId, token);
                 return false;
             }
 
             auth.TgUserId = telegramUserId;
             auth.Success = true;
             user.TgUserId = telegramUserId;
+            await _userManager.UpdateAsync(user);
 
-            var permissions = await _db.UserPermissions.FirstOrDefaultAsync(p => p.UserId == auth.UserId, cancellationToken);
-            if (permissions is not null)
+            var existing = await _userManager.GetClaimsAsync(user);
+            var granted = existing
+                .Where(c => c.Type == PermissionClaimTypes.Permission)
+                .Select(c => c.Value)
+                .ToHashSet(StringComparer.Ordinal);
+            var toAdd = Permissions.All
+                .Where(p => !granted.Contains(p))
+                .Select(p => new Claim(PermissionClaimTypes.Permission, p))
+                .ToList();
+            if (toAdd.Count > 0)
             {
-                permissions.EditOwnParticipation = true;
-                permissions.EditOwnSongs = true;
+                await _userManager.AddClaimsAsync(user, toAdd);
             }
 
             await _db.SaveChangesAsync(cancellationToken);
@@ -403,7 +417,7 @@ public class BotUpdateHandler
 
     private async Task<UserProfile?> GetUserByTgIdAsync(long tgUserId, CancellationToken cancellationToken)
     {
-        var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.TgUserId == tgUserId, cancellationToken);
+        var user = await _userManager.Users.FirstOrDefaultAsync(u => u.TgUserId == tgUserId, cancellationToken);
         return user is null
             ? null
             : new UserProfile(user.Id, user.DisplayName, user.Email);
@@ -411,9 +425,9 @@ public class BotUpdateHandler
 
     private async Task<Guid?> GetUserIdByTgIdAsync(long tgUserId, CancellationToken cancellationToken)
     {
-        var id = await _db.AppUsers
+        var id = await _userManager.Users
             .Where(u => u.TgUserId == tgUserId)
-            .Select(u => (Guid?)u.Id)
+            .Select(u => u.Id)
             .FirstOrDefaultAsync(cancellationToken);
         return id;
     }
@@ -422,16 +436,14 @@ public class BotUpdateHandler
     {
         try
         {
-            var user = await _db.AppUsers.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+            var user = await _userManager.FindByIdAsync(userId.ToString());
             if (user is null)
             {
                 return false;
             }
 
-            user.Email = email;
-            user.UpdatedAt = DateTimeOffset.UtcNow;
-            await _db.SaveChangesAsync(cancellationToken);
-            return true;
+            var result = await _userManager.SetEmailAsync(user, email);
+            return result.Succeeded;
         }
         catch (Exception ex)
         {

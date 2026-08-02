@@ -1,3 +1,5 @@
+using CuMusicClub.Application.Common.Auth;
+
 namespace CuMusicClub.Application.FunctionalTests.Songs;
 
 public partial class SongServiceTests
@@ -114,7 +116,7 @@ public partial class SongServiceTests
     {
         var owner = await CreateUserAsync("owner", editOwnSongs: true, editOwnParticipation: true);
         var member = await CreateUserAsync("member", editOwnParticipation: true);
-        var songId = await SeedSongAsync(roles: new[] { "Вокал", "Барабаны" }, createdById: owner);
+        var songId = await SeedSongAsync(roles: new[] { "Вокал", "Барабаны" }, createdById: owner.GetUserId());
 
         using (var scope = new SongScope())
         {

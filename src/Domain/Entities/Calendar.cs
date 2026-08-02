@@ -7,5 +7,5 @@ public class Calendar
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 
-    public AppUser? User { get; set; }
+    public ApplicationUser? User { get; set; }
 }

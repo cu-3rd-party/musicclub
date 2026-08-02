@@ -1,3 +1,4 @@
+using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Domain.Entities;
 
 namespace CuMusicClub.Application.FunctionalTests.Songs;
@@ -20,14 +21,14 @@ public partial class SongServiceTests
     {
         var owner = await CreateUserAsync("owner", editOwnSongs: true);
         var member = await CreateUserAsync("member", editOwnParticipation: true);
-        var songId = await SeedSongAsync(roles: new[] { "Вокал" }, createdById: owner);
+        var songId = await SeedSongAsync(roles: new[] { "Вокал" }, createdById: owner.GetUserId());
 
         await TestApp.AddAsync(new SongRoleAssignment
         {
             Id = Guid.NewGuid(),
             SongId = songId,
             Role = "Вокал",
-            UserId = member,
+            UserId = member.GetUserId(),
             JoinedAt = DateTimeOffset.UtcNow,
         });
 
@@ -38,7 +39,7 @@ public partial class SongServiceTests
         details.Song.AvailableRoles.ShouldBe(new[] { "Вокал" });
         details.Assignments.ShouldHaveSingleItem();
         details.Assignments[0].Role.ShouldBe("Вокал");
-        details.Assignments[0].User.Id.ShouldBe(member);
+        details.Assignments[0].User.Id.ShouldBe(member.GetUserId());
         details.Assignments[0].User.DisplayName.ShouldBe("Display member");
         details.Song.AssignmentCount.ShouldBe(1);
     }
@@ -47,7 +48,7 @@ public partial class SongServiceTests
     public async Task Get_Owner_EditableByMeTrue()
     {
         var owner = await CreateUserAsync("owner", editOwnSongs: true);
-        var songId = await SeedSongAsync(createdById: owner);
+        var songId = await SeedSongAsync(createdById: owner.GetUserId());
 
         using var scope = new SongScope();
         var details = await scope.Songs.GetAsync(songId, owner, CancellationToken.None);
@@ -59,7 +60,7 @@ public partial class SongServiceTests
     {
         var owner = await CreateUserAsync("owner", editOwnSongs: true);
         var other = await CreateUserAsync("other", editOwnSongs: true);
-        var songId = await SeedSongAsync(createdById: owner);
+        var songId = await SeedSongAsync(createdById: owner.GetUserId());
 
         using var scope = new SongScope();
         var details = await scope.Songs.GetAsync(songId, other, CancellationToken.None);
@@ -71,7 +72,7 @@ public partial class SongServiceTests
     {
         var owner = await CreateUserAsync("owner", editOwnSongs: true);
         var other = await CreateUserAsync("other", editAnySongs: true);
-        var songId = await SeedSongAsync(createdById: owner);
+        var songId = await SeedSongAsync(createdById: owner.GetUserId());
 
         using var scope = new SongScope();
         var details = await scope.Songs.GetAsync(songId, other, CancellationToken.None);

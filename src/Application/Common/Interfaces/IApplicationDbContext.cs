@@ -4,8 +4,7 @@ namespace CuMusicClub.Application.Common.Interfaces;
 
 public interface IApplicationDbContext
 {
-    IQueryable<AppUser> AppUsers { get; }
-    IQueryable<UserPermission> UserPermissions { get; }
+    IQueryable<ApplicationUser> Users { get; }
     IQueryable<Song> Songs { get; }
     IQueryable<SongRole> SongRoles { get; }
     IQueryable<SongRoleAssignment> SongRoleAssignments { get; }

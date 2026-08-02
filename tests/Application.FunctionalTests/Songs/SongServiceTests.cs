@@ -1,4 +1,5 @@
-using CuMusicClub.Application.Common.Exceptions;
+using System.Security.Claims;
+using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Songs;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Domain.Enums;
@@ -33,7 +34,7 @@ public partial class SongServiceTests : TestBase
         return scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     }
 
-    private static async Task<Guid> CreateUserAsync(
+    private static async Task<ClaimsPrincipal> CreateUserAsync(
         string username,
         bool editOwnParticipation = false,
         bool editAnyParticipation = false,
@@ -42,22 +43,38 @@ public partial class SongServiceTests : TestBase
         bool editFeaturedSongs = false)
     {
         var userId = Guid.NewGuid();
-        await TestApp.AddAsync(new AppUser
+        await TestApp.AddAsync(new ApplicationUser
         {
             Id = userId,
-            Username = username,
+            UserName = username,
             DisplayName = $"Display {username}",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
         });
-        await TestApp.AddAsync(new UserPermission
+
+        var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, userId.ToString()) };
+        if (editOwnParticipation)
         {
-            UserId = userId,
-            EditOwnParticipation = editOwnParticipation,
-            EditAnyParticipation = editAnyParticipation,
-            EditOwnSongs = editOwnSongs,
-            EditAnySongs = editAnySongs,
-            EditFeaturedSongs = editFeaturedSongs,
-        });
-        return userId;
+            claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.ParticipationEditOwn));
+        }
+        if (editAnyParticipation)
+        {
+            claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.ParticipationEditAny));
+        }
+        if (editOwnSongs)
+        {
+            claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.SongsEditOwn));
+        }
+        if (editAnySongs)
+        {
+            claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.SongsEditAny));
+        }
+        if (editFeaturedSongs)
+        {
+            claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.SongsEditFeatured));
+        }
+
+        return new ClaimsPrincipal(new ClaimsIdentity(claims, "test"));
     }
 
     private static async Task<Guid> SeedSongAsync(

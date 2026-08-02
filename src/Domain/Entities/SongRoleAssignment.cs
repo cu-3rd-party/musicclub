@@ -10,5 +10,5 @@ public class SongRoleAssignment
 
     public Song? Song { get; set; }
     public SongRole? SongRole { get; set; }
-    public AppUser? User { get; set; }
+    public ApplicationUser? User { get; set; }
 }

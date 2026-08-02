@@ -9,7 +9,7 @@ public class Song
     public SongLinkType LinkKind { get; set; }
     public string LinkUrl { get; set; } = string.Empty;
     public Guid? CreatedById { get; set; }
-    public AppUser? CreatedBy { get; set; }
+    public ApplicationUser? CreatedBy { get; set; }
     public string? ThumbnailUrl { get; set; }
     public bool IsFeatured { get; set; }
     public DateTimeOffset CreatedAt { get; set; }

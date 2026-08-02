@@ -39,7 +39,7 @@
 
     export const defaultAppSidebarData: SidebarData = {
         user: {
-            name: "Владимир Потанин",
+            name: "",
             email: "potanin@nornickel.ru",
             avatar: undefined,
         },

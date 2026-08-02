@@ -1,3 +1,4 @@
+using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Common.Exceptions;
 using CuMusicClub.Application.Songs;
 using Microsoft.EntityFrameworkCore;
@@ -25,7 +26,7 @@ public partial class SongServiceTests
     public async Task Update_ByOwner_UpdatesFieldsAndRoles()
     {
         var owner = await CreateUserAsync("owner", editOwnSongs: true);
-        var songId = await SeedSongAsync(roles: new[] { "Вокал", "Гитара" }, createdById: owner);
+        var songId = await SeedSongAsync(roles: new[] { "Вокал", "Гитара" }, createdById: owner.GetUserId());
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(
@@ -56,7 +57,7 @@ public partial class SongServiceTests
     {
         var owner = await CreateUserAsync("owner", editOwnSongs: true);
         var other = await CreateUserAsync("other", editOwnSongs: true);
-        var songId = await SeedSongAsync(createdById: owner);
+        var songId = await SeedSongAsync(createdById: owner.GetUserId());
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(
@@ -70,7 +71,7 @@ public partial class SongServiceTests
     {
         var owner = await CreateUserAsync("owner", editOwnSongs: true);
         var editor = await CreateUserAsync("editor", editAnySongs: true);
-        var songId = await SeedSongAsync(createdById: owner);
+        var songId = await SeedSongAsync(createdById: owner.GetUserId());
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(
@@ -85,7 +86,7 @@ public partial class SongServiceTests
     public async Task Update_FeaturedWithoutPermission_ThrowsForbidden()
     {
         var owner = await CreateUserAsync("owner", editOwnSongs: true);
-        var songId = await SeedSongAsync(createdById: owner);
+        var songId = await SeedSongAsync(createdById: owner.GetUserId());
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(
@@ -98,7 +99,7 @@ public partial class SongServiceTests
     public async Task Update_FeaturedWithPermission_UpdatesFeatured()
     {
         var owner = await CreateUserAsync("owner", editOwnSongs: true, editFeaturedSongs: true);
-        var songId = await SeedSongAsync(createdById: owner);
+        var songId = await SeedSongAsync(createdById: owner.GetUserId());
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(
@@ -112,7 +113,7 @@ public partial class SongServiceTests
     public async Task Update_WithoutFeaturedPermission_KeepsFeaturedValue()
     {
         var owner = await CreateUserAsync("owner", editOwnSongs: true);
-        var songId = await SeedSongAsync(featured: true, createdById: owner);
+        var songId = await SeedSongAsync(featured: true, createdById: owner.GetUserId());
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(
@@ -126,7 +127,7 @@ public partial class SongServiceTests
     public async Task Update_RemovingRoles_DeletesThem()
     {
         var owner = await CreateUserAsync("owner", editOwnSongs: true);
-        var songId = await SeedSongAsync(roles: new[] { "Вокал", "Гитара", "Бас" }, createdById: owner);
+        var songId = await SeedSongAsync(roles: new[] { "Вокал", "Гитара", "Бас" }, createdById: owner.GetUserId());
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(
@@ -143,7 +144,7 @@ public partial class SongServiceTests
     public async Task Update_NormalizesRoles_TrimsDedupesAndSorts()
     {
         var owner = await CreateUserAsync("owner", editOwnSongs: true);
-        var songId = await SeedSongAsync(roles: new[] { "Вокал" }, createdById: owner);
+        var songId = await SeedSongAsync(roles: new[] { "Вокал" }, createdById: owner.GetUserId());
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(

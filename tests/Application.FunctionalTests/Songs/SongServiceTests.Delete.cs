@@ -1,3 +1,4 @@
+using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Common.Exceptions;
 using CuMusicClub.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -21,13 +22,13 @@ public partial class SongServiceTests
     {
         var owner = await CreateUserAsync("owner", editOwnSongs: true);
         var member = await CreateUserAsync("member", editOwnParticipation: true);
-        var songId = await SeedSongAsync(roles: new[] { "Вокал" }, createdById: owner);
+        var songId = await SeedSongAsync(roles: new[] { "Вокал" }, createdById: owner.GetUserId());
         await TestApp.AddAsync(new SongRoleAssignment
         {
             Id = Guid.NewGuid(),
             SongId = songId,
             Role = "Вокал",
-            UserId = member,
+            UserId = member.GetUserId(),
             JoinedAt = DateTimeOffset.UtcNow,
         });
 
@@ -47,7 +48,7 @@ public partial class SongServiceTests
     {
         var owner = await CreateUserAsync("owner", editOwnSongs: true);
         var other = await CreateUserAsync("other", editOwnSongs: true);
-        var songId = await SeedSongAsync(createdById: owner);
+        var songId = await SeedSongAsync(createdById: owner.GetUserId());
 
         using var scope = new SongScope();
         await Should.ThrowAsync<ForbiddenAccessException>(
@@ -62,7 +63,7 @@ public partial class SongServiceTests
     {
         var owner = await CreateUserAsync("owner", editOwnSongs: true);
         var editor = await CreateUserAsync("editor", editAnySongs: true);
-        var songId = await SeedSongAsync(createdById: owner);
+        var songId = await SeedSongAsync(createdById: owner.GetUserId());
 
         using (var scope = new SongScope())
         {

@@ -9,7 +9,7 @@ public class Event
     public bool NotifyDayBefore { get; set; }
     public bool NotifyHourBefore { get; set; }
     public Guid? CreatedById { get; set; }
-    public AppUser? CreatedBy { get; set; }
+    public ApplicationUser? CreatedBy { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 

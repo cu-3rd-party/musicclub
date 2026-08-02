@@ -1,12 +1,14 @@
+using System.Security.Claims;
+
 namespace CuMusicClub.Application.Songs;
 
 public interface ISongService
 {
-    Task<ListSongsResultDto> ListAsync(string? query, int pageSize, string? pageToken, Guid currentUserId, CancellationToken cancellationToken);
-    Task<SongDetailsDto> GetAsync(Guid songId, Guid currentUserId, CancellationToken cancellationToken);
-    Task<SongDetailsDto> CreateAsync(CreateSongRequest request, Guid currentUserId, CancellationToken cancellationToken);
-    Task<SongDetailsDto> UpdateAsync(Guid songId, UpdateSongRequest request, Guid currentUserId, CancellationToken cancellationToken);
-    Task DeleteAsync(Guid songId, Guid currentUserId, CancellationToken cancellationToken);
-    Task<SongDetailsDto> JoinRoleAsync(Guid songId, string role, Guid currentUserId, CancellationToken cancellationToken);
-    Task<SongDetailsDto> LeaveRoleAsync(Guid songId, string role, Guid currentUserId, CancellationToken cancellationToken);
+    Task<ListSongsResultDto> ListAsync(string? query, int pageSize, string? pageToken, ClaimsPrincipal currentUser, CancellationToken cancellationToken);
+    Task<SongDetailsDto> GetAsync(Guid songId, ClaimsPrincipal currentUser, CancellationToken cancellationToken);
+    Task<SongDetailsDto> CreateAsync(CreateSongRequest request, ClaimsPrincipal currentUser, CancellationToken cancellationToken);
+    Task<SongDetailsDto> UpdateAsync(Guid songId, UpdateSongRequest request, ClaimsPrincipal currentUser, CancellationToken cancellationToken);
+    Task DeleteAsync(Guid songId, ClaimsPrincipal currentUser, CancellationToken cancellationToken);
+    Task<SongDetailsDto> JoinRoleAsync(Guid songId, string role, ClaimsPrincipal currentUser, CancellationToken cancellationToken);
+    Task<SongDetailsDto> LeaveRoleAsync(Guid songId, string role, ClaimsPrincipal currentUser, CancellationToken cancellationToken);
 }

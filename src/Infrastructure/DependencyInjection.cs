@@ -1,10 +1,10 @@
 ﻿using CuMusicClub.Application.Auth;
 using CuMusicClub.Application.Common.Interfaces;
 using CuMusicClub.Application.Songs;
+using CuMusicClub.Domain.Entities;
 using CuMusicClub.Domain.Enums;
 using CuMusicClub.Infrastructure.Data;
 using CuMusicClub.Infrastructure.Data.Interceptors;
-using CuMusicClub.Infrastructure.Identity;
 using CuMusicClub.Infrastructure.Options;
 using CuMusicClub.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
@@ -50,7 +50,7 @@ public static class DependencyInjection
 
         builder.Services
             .AddIdentityCore<ApplicationUser>()
-            .AddRoles<IdentityRole>()
+            .AddRoles<IdentityRole<Guid>>()
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddSignInManager()
             .AddDefaultTokenProviders();

@@ -1,3 +1,4 @@
+using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Common.Exceptions;
 using Microsoft.EntityFrameworkCore;
 
@@ -31,7 +32,7 @@ public partial class SongServiceTests
             details.Song.Artist.ShouldBe("Queen");
             details.Song.Link.Kind.ShouldBe("youtube");
             details.Song.Link.Url.ShouldBe(YoutubeUrl);
-            details.Song.CreatedById.ShouldBe(user);
+            details.Song.CreatedById.ShouldBe(user.GetUserId());
             details.Song.AvailableRoles.ShouldBe(new[] { "Вокал", "Гитара" });
             details.Song.EditableByMe.ShouldBeTrue();
             details.Song.AssignmentCount.ShouldBe(0);

@@ -13,36 +13,14 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.Sql("CREATE EXTENSION IF NOT EXISTS pgcrypto");
-
             migrationBuilder.AlterDatabase()
-                .Annotation("Npgsql:Enum:song_link_type", "youtube,yandex_music,soundcloud");
-
-            migrationBuilder.CreateTable(
-                name: "app_user",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
-                    username = table.Column<string>(type: "text", nullable: false),
-                    password_hash = table.Column<string>(type: "text", nullable: true),
-                    tg_user_id = table.Column<long>(type: "bigint", nullable: true),
-                    is_chat_member = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    display_name = table.Column<string>(type: "text", nullable: false),
-                    email = table.Column<string>(type: "text", nullable: true),
-                    avatar_url = table.Column<string>(type: "text", nullable: true),
-                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
-                    updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_app_user", x => x.id);
-                });
+                .Annotation("Npgsql:Enum:song_link_type", "soundcloud,yandex_music,youtube");
 
             migrationBuilder.CreateTable(
                 name: "AspNetRoles",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "text", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     NormalizedName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     ConcurrencyStamp = table.Column<string>(type: "text", nullable: true)
@@ -56,8 +34,13 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                 name: "AspNetUsers",
                 columns: table => new
                 {
-                    Id = table.Column<string>(type: "text", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
                     TgUserId = table.Column<long>(type: "bigint", nullable: true),
+                    IsChatMember = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    DisplayName = table.Column<string>(type: "text", nullable: false),
+                    AvatarUrl = table.Column<string>(type: "text", nullable: true),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
+                    UpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
                     UserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
@@ -94,6 +77,112 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "AspNetRoleClaims",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    RoleId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ClaimType = table.Column<string>(type: "text", nullable: true),
+                    ClaimValue = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetRoleClaims", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_AspNetRoleClaims_AspNetRoles_RoleId",
+                        column: x => x.RoleId,
+                        principalTable: "AspNetRoles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AspNetUserClaims",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ClaimType = table.Column<string>(type: "text", nullable: true),
+                    ClaimValue = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetUserClaims", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_AspNetUserClaims_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AspNetUserLogins",
+                columns: table => new
+                {
+                    LoginProvider = table.Column<string>(type: "text", nullable: false),
+                    ProviderKey = table.Column<string>(type: "text", nullable: false),
+                    ProviderDisplayName = table.Column<string>(type: "text", nullable: true),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetUserLogins", x => new { x.LoginProvider, x.ProviderKey });
+                    table.ForeignKey(
+                        name: "FK_AspNetUserLogins_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AspNetUserRoles",
+                columns: table => new
+                {
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    RoleId = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetUserRoles", x => new { x.UserId, x.RoleId });
+                    table.ForeignKey(
+                        name: "FK_AspNetUserRoles_AspNetRoles_RoleId",
+                        column: x => x.RoleId,
+                        principalTable: "AspNetRoles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_AspNetUserRoles_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AspNetUserTokens",
+                columns: table => new
+                {
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    LoginProvider = table.Column<string>(type: "text", nullable: false),
+                    Name = table.Column<string>(type: "text", nullable: false),
+                    Value = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetUserTokens", x => new { x.UserId, x.LoginProvider, x.Name });
+                    table.ForeignKey(
+                        name: "FK_AspNetUserTokens_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "calendar",
                 columns: table => new
                 {
@@ -106,10 +195,10 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                 {
                     table.PrimaryKey("PK_calendar", x => x.user_id);
                     table.ForeignKey(
-                        name: "FK_calendar_app_user_user_id",
+                        name: "FK_calendar_AspNetUsers_user_id",
                         column: x => x.user_id,
-                        principalTable: "app_user",
-                        principalColumn: "id",
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -131,10 +220,10 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                 {
                     table.PrimaryKey("PK_event", x => x.id);
                     table.ForeignKey(
-                        name: "FK_event_app_user_created_by",
+                        name: "FK_event_AspNetUsers_created_by",
                         column: x => x.created_by,
-                        principalTable: "app_user",
-                        principalColumn: "id",
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                 });
 
@@ -152,10 +241,10 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                 {
                     table.PrimaryKey("PK_refresh_tokens", x => x.id);
                     table.ForeignKey(
-                        name: "FK_refresh_tokens_app_user_user_id",
+                        name: "FK_refresh_tokens_AspNetUsers_user_id",
                         column: x => x.user_id,
-                        principalTable: "app_user",
-                        principalColumn: "id",
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -179,10 +268,10 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                 {
                     table.PrimaryKey("PK_song", x => x.id);
                     table.ForeignKey(
-                        name: "FK_song_app_user_created_by",
+                        name: "FK_song_AspNetUsers_created_by",
                         column: x => x.created_by,
-                        principalTable: "app_user",
-                        principalColumn: "id",
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                 });
 
@@ -199,138 +288,8 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                 {
                     table.PrimaryKey("PK_tg_auth_user", x => x.id);
                     table.ForeignKey(
-                        name: "FK_tg_auth_user_app_user_user_id",
+                        name: "FK_tg_auth_user_AspNetUsers_user_id",
                         column: x => x.user_id,
-                        principalTable: "app_user",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "user_permissions",
-                columns: table => new
-                {
-                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    edit_own_participation = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    edit_any_participation = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    edit_own_songs = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    edit_any_songs = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    edit_events = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    edit_tracklists = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
-                    edit_featured_songs = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_user_permissions", x => x.user_id);
-                    table.ForeignKey(
-                        name: "FK_user_permissions_app_user_user_id",
-                        column: x => x.user_id,
-                        principalTable: "app_user",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "AspNetRoleClaims",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    RoleId = table.Column<string>(type: "text", nullable: false),
-                    ClaimType = table.Column<string>(type: "text", nullable: true),
-                    ClaimValue = table.Column<string>(type: "text", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AspNetRoleClaims", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_AspNetRoleClaims_AspNetRoles_RoleId",
-                        column: x => x.RoleId,
-                        principalTable: "AspNetRoles",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "AspNetUserClaims",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    UserId = table.Column<string>(type: "text", nullable: false),
-                    ClaimType = table.Column<string>(type: "text", nullable: true),
-                    ClaimValue = table.Column<string>(type: "text", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AspNetUserClaims", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_AspNetUserClaims_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "AspNetUserLogins",
-                columns: table => new
-                {
-                    LoginProvider = table.Column<string>(type: "text", nullable: false),
-                    ProviderKey = table.Column<string>(type: "text", nullable: false),
-                    ProviderDisplayName = table.Column<string>(type: "text", nullable: true),
-                    UserId = table.Column<string>(type: "text", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AspNetUserLogins", x => new { x.LoginProvider, x.ProviderKey });
-                    table.ForeignKey(
-                        name: "FK_AspNetUserLogins_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "AspNetUserRoles",
-                columns: table => new
-                {
-                    UserId = table.Column<string>(type: "text", nullable: false),
-                    RoleId = table.Column<string>(type: "text", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AspNetUserRoles", x => new { x.UserId, x.RoleId });
-                    table.ForeignKey(
-                        name: "FK_AspNetUserRoles_AspNetRoles_RoleId",
-                        column: x => x.RoleId,
-                        principalTable: "AspNetRoles",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_AspNetUserRoles_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "AspNetUserTokens",
-                columns: table => new
-                {
-                    UserId = table.Column<string>(type: "text", nullable: false),
-                    LoginProvider = table.Column<string>(type: "text", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: false),
-                    Value = table.Column<string>(type: "text", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AspNetUserTokens", x => new { x.UserId, x.LoginProvider, x.Name });
-                    table.ForeignKey(
-                        name: "FK_AspNetUserTokens_AspNetUsers_UserId",
-                        column: x => x.UserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -419,10 +378,10 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                 {
                     table.PrimaryKey("PK_event_participant", x => x.id);
                     table.ForeignKey(
-                        name: "FK_event_participant_app_user_user_id",
+                        name: "FK_event_participant_AspNetUsers_user_id",
                         column: x => x.user_id,
-                        principalTable: "app_user",
-                        principalColumn: "id",
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "fk_event_participant_event",
@@ -452,10 +411,10 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                 {
                     table.PrimaryKey("PK_song_role_assignment", x => x.id);
                     table.ForeignKey(
-                        name: "FK_song_role_assignment_app_user_user_id",
+                        name: "FK_song_role_assignment_AspNetUsers_user_id",
                         column: x => x.user_id,
-                        principalTable: "app_user",
-                        principalColumn: "id",
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_song_role_assignment_song_song_id",
@@ -470,24 +429,6 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                         principalColumns: new[] { "song_id", "role" },
                         onDelete: ReferentialAction.Cascade);
                 });
-
-            migrationBuilder.CreateIndex(
-                name: "idx_app_user_email",
-                table: "app_user",
-                column: "email",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_app_user_tg_user_id",
-                table: "app_user",
-                column: "tg_user_id",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_app_user_username",
-                table: "app_user",
-                column: "username",
-                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
@@ -519,6 +460,12 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                 name: "EmailIndex",
                 table: "AspNetUsers",
                 column: "NormalizedEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "idx_application_user_tg_user_id",
+                table: "AspNetUsers",
+                column: "TgUserId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "UserNameIndex",
@@ -611,8 +558,10 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                 column: "tg_user_id",
                 unique: true);
 
-            migrationBuilder.Sql(
-                "CREATE UNIQUE INDEX idx_tg_auth_user_tg_user ON tg_auth_user (tg_user_id)");
+            migrationBuilder.CreateIndex(
+                name: "IX_tg_auth_user_user_id",
+                table: "tg_auth_user",
+                column: "user_id");
         }
 
         /// <inheritdoc />
@@ -651,20 +600,11 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
             migrationBuilder.DropTable(
                 name: "song_topic");
 
-            migrationBuilder.Sql(
-                "DROP INDEX IF EXISTS idx_tg_auth_user_tg_user");
-
             migrationBuilder.DropTable(
                 name: "tg_auth_user");
 
             migrationBuilder.DropTable(
-                name: "user_permissions");
-
-            migrationBuilder.DropTable(
                 name: "AspNetRoles");
-
-            migrationBuilder.DropTable(
-                name: "AspNetUsers");
 
             migrationBuilder.DropTable(
                 name: "event_track_item");
@@ -679,7 +619,7 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                 name: "song");
 
             migrationBuilder.DropTable(
-                name: "app_user");
+                name: "AspNetUsers");
         }
     }
 }

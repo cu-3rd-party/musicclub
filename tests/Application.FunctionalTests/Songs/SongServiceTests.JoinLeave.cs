@@ -1,3 +1,4 @@
+using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Common.Exceptions;
 using CuMusicClub.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -29,11 +30,11 @@ public partial class SongServiceTests
         details.Song.AssignmentCount.ShouldBe(1);
         details.Assignments.ShouldHaveSingleItem();
         details.Assignments[0].Role.ShouldBe("Вокал");
-        details.Assignments[0].User.Id.ShouldBe(user);
+        details.Assignments[0].User.Id.ShouldBe(user.GetUserId());
 
         using var db = Db();
         (await db.SongRoleAssignments.CountAsync(
-            a => a.SongId == songId && a.Role == "Вокал" && a.UserId == user)).ShouldBe(1);
+            a => a.SongId == songId && a.Role == "Вокал" && a.UserId == user.GetUserId())).ShouldBe(1);
     }
 
     [Test]
@@ -48,7 +49,7 @@ public partial class SongServiceTests
 
         details.Assignments.ShouldHaveSingleItem();
         using var db = Db();
-        (await db.SongRoleAssignments.CountAsync(a => a.SongId == songId && a.UserId == user)).ShouldBe(1);
+        (await db.SongRoleAssignments.CountAsync(a => a.SongId == songId && a.UserId == user.GetUserId())).ShouldBe(1);
     }
 
     [Test]
@@ -82,7 +83,7 @@ public partial class SongServiceTests
             Id = Guid.NewGuid(),
             SongId = songId,
             Role = "Вокал",
-            UserId = user,
+            UserId = user.GetUserId(),
             JoinedAt = DateTimeOffset.UtcNow,
         });
 
@@ -94,7 +95,7 @@ public partial class SongServiceTests
         }
 
         using var db = Db();
-        (await db.SongRoleAssignments.CountAsync(a => a.SongId == songId && a.UserId == user)).ShouldBe(0);
+        (await db.SongRoleAssignments.CountAsync(a => a.SongId == songId && a.UserId == user.GetUserId())).ShouldBe(0);
     }
 
     [Test]

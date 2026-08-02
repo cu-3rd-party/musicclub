@@ -11,5 +11,5 @@ public class EventParticipant
 
     public Event? Event { get; set; }
     public EventTrackItem? TrackItem { get; set; }
-    public AppUser? User { get; set; }
+    public ApplicationUser? User { get; set; }
 }

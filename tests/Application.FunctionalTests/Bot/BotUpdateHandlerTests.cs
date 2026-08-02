@@ -1,7 +1,9 @@
+using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.FunctionalTests.Infrastructure;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Infrastructure.Data;
 using CuMusicClub.Web.Bot;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Telegram.Bot.Types;
@@ -26,6 +28,26 @@ public class BotUpdateHandlerTests : TestBase
     private static Update MessageUpdate(Message message) => new() { Message = message };
 
     private static Update CallbackUpdate(CallbackQuery callback) => new() { CallbackQuery = callback };
+
+    private static async Task<ApplicationUser> CreateUserAsync(
+        string displayName = "Test User", long? tgUserId = null)
+    {
+        using var scope = FunctionalTestSetup.ScopeFactory.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+        var user = new ApplicationUser
+        {
+            UserName = $"user-{Guid.NewGuid():N}",
+            DisplayName = displayName,
+            TgUserId = tgUserId,
+        };
+        var result = await userManager.CreateAsync(user);
+        if (!result.Succeeded)
+        {
+            throw new InvalidOperationException(
+                string.Join("; ", result.Errors.Select(e => e.Description)));
+        }
+        return user;
+    }
 
     private sealed class HandlerScope : IDisposable
     {
@@ -71,15 +93,8 @@ public class BotUpdateHandlerTests : TestBase
     public async Task Start_WithAuthToken_ConfirmsAuthAndLinksUser()
     {
         var token = Guid.NewGuid();
-        var userId = Guid.NewGuid();
-        await TestApp.AddAsync(new AppUser
-        {
-            Id = userId,
-            Username = "user",
-            DisplayName = "Test User",
-        });
-        await TestApp.AddAsync(new UserPermission { UserId = userId });
-        await TestApp.AddAsync(new TgAuthUser { Id = token, UserId = userId, Success = false });
+        var user = await CreateUserAsync();
+        await TestApp.AddAsync(new TgAuthUser { Id = token, UserId = user.Id, Success = false });
 
         var bot = new FakeTelegramBotClient();
         var update = MessageUpdate(TextMessage(ChatId, BotUser(777), $"/start auth_{token}"));
@@ -94,21 +109,23 @@ public class BotUpdateHandlerTests : TestBase
         auth.Success.ShouldBeTrue();
         auth.TgUserId.ShouldBe(777);
 
-        var appUser = await db.AppUsers.SingleAsync(u => u.Id == userId);
+        var appUser = await db.Users.SingleAsync(u => u.Id == user.Id);
         appUser.TgUserId.ShouldBe(777);
 
-        var permissions = await db.UserPermissions.SingleAsync(p => p.UserId == userId);
-        permissions.EditOwnParticipation.ShouldBeTrue();
-        permissions.EditOwnSongs.ShouldBeTrue();
+        var permissionClaims = await db.UserClaims
+            .Where(c => c.UserId == user.Id && c.ClaimType == PermissionClaimTypes.Permission)
+            .Select(c => c.ClaimValue)
+            .ToListAsync();
+        permissionClaims.ShouldContain(Permissions.ParticipationEditOwn);
+        permissionClaims.ShouldContain(Permissions.SongsEditOwn);
     }
 
     [Test]
     public async Task Start_WithAlreadyUsedToken_Fails()
     {
         var token = Guid.NewGuid();
-        var userId = Guid.NewGuid();
-        await TestApp.AddAsync(new AppUser { Id = userId, Username = "user", DisplayName = "Test User" });
-        await TestApp.AddAsync(new TgAuthUser { Id = token, UserId = userId, Success = true, TgUserId = 999 });
+        var user = await CreateUserAsync();
+        await TestApp.AddAsync(new TgAuthUser { Id = token, UserId = user.Id, Success = true, TgUserId = 999 });
 
         var bot = new FakeTelegramBotClient();
         var update = MessageUpdate(TextMessage(ChatId, BotUser(777), $"/start auth_{token}"));
@@ -175,21 +192,20 @@ public class BotUpdateHandlerTests : TestBase
     [Test]
     public async Task CalendarAttach_FullFlow_GuessesEmailAndSavesCalendar()
     {
-        var userId = Guid.NewGuid();
-        await TestApp.AddAsync(new AppUser { Id = userId, Username = "user", DisplayName = "", TgUserId = 777 });
+        var user = await CreateUserAsync(displayName: "", tgUserId: 777);
 
         var bot = new FakeTelegramBotClient();
-        var user = BotUser(777, firstName: "Test", lastName: "User");
+        var botUser = BotUser(777, firstName: "Test", lastName: "User");
         using var handler = new HandlerScope();
 
         await handler.Handler.HandleUpdateAsync(
-            bot, CallbackUpdate(Callback("cq1", user, "calendar_attach")), WebAppUrl, CancellationToken.None);
+            bot, CallbackUpdate(Callback("cq1", botUser, "calendar_attach")), WebAppUrl, CancellationToken.None);
 
         await using (var db = Db())
         {
             var state = await db.CalendarAttachStates.SingleAsync(s => s.TgUserId == 777);
             state.State.ShouldBe((short)2);
-            state.PendingUserId.ShouldBe(userId);
+            state.PendingUserId.ShouldBe(user.Id);
             state.PendingEmail.ShouldBe("t.user@edu.centraluniversity.ru");
         }
 
@@ -199,22 +215,22 @@ public class BotUpdateHandlerTests : TestBase
             .ShouldBe(new[] { "email_confirm_yes", "email_confirm_no" });
 
         await handler.Handler.HandleUpdateAsync(
-            bot, CallbackUpdate(Callback("cq2", user, "email_confirm_yes")), WebAppUrl, CancellationToken.None);
+            bot, CallbackUpdate(Callback("cq2", botUser, "email_confirm_yes")), WebAppUrl, CancellationToken.None);
 
         await using (var db = Db())
         {
-            var appUser = await db.AppUsers.SingleAsync(u => u.Id == userId);
+            var appUser = await db.Users.SingleAsync(u => u.Id == user.Id);
             appUser.Email.ShouldBe("t.user@edu.centraluniversity.ru");
             var state = await db.CalendarAttachStates.SingleAsync(s => s.TgUserId == 777);
             state.State.ShouldBe((short)1);
         }
 
         await handler.Handler.HandleUpdateAsync(
-            bot, MessageUpdate(TextMessage(ChatId, user, "https://example.com/calendar.ics")), WebAppUrl, CancellationToken.None);
+            bot, MessageUpdate(TextMessage(ChatId, botUser, "https://example.com/calendar.ics")), WebAppUrl, CancellationToken.None);
 
         await using (var db = Db())
         {
-            var calendar = await db.Calendars.SingleAsync(c => c.UserId == userId);
+            var calendar = await db.Calendars.SingleAsync(c => c.UserId == user.Id);
             calendar.CalendarUrl.ShouldBe("https://example.com/calendar.ics");
             (await db.CalendarAttachStates.AnyAsync(s => s.TgUserId == 777)).ShouldBeFalse();
         }
@@ -225,13 +241,12 @@ public class BotUpdateHandlerTests : TestBase
     [Test]
     public async Task CalendarAttach_InvalidIcsUrl_RepliesInvalid()
     {
-        var userId = Guid.NewGuid();
-        await TestApp.AddAsync(new AppUser { Id = userId, Username = "user", DisplayName = "", TgUserId = 777 });
+        var user = await CreateUserAsync(displayName: "", tgUserId: 777);
         await TestApp.AddAsync(new CalendarAttachState { TgUserId = 777, State = 1 });
 
         var bot = new FakeTelegramBotClient();
-        var user = BotUser(777, firstName: "Test", lastName: "User");
-        var update = MessageUpdate(TextMessage(ChatId, user, "https://example.com/no-ics"));
+        var botUser = BotUser(777, firstName: "Test", lastName: "User");
+        var update = MessageUpdate(TextMessage(ChatId, botUser, "https://example.com/no-ics"));
 
         using var handler = new HandlerScope();
         await handler.Handler.HandleUpdateAsync(bot, update, WebAppUrl, CancellationToken.None);
@@ -244,8 +259,8 @@ public class BotUpdateHandlerTests : TestBase
     public async Task CalendarAttach_WithoutProfile_RepliesNotLinked()
     {
         var bot = new FakeTelegramBotClient();
-        var user = BotUser(999, firstName: "Test", lastName: "User");
-        var update = CallbackUpdate(Callback("cq1", user, "calendar_attach"));
+        var botUser = BotUser(999, firstName: "Test", lastName: "User");
+        var update = CallbackUpdate(Callback("cq1", botUser, "calendar_attach"));
 
         using var handler = new HandlerScope();
         await handler.Handler.HandleUpdateAsync(bot, update, WebAppUrl, CancellationToken.None);
@@ -258,28 +273,27 @@ public class BotUpdateHandlerTests : TestBase
     [Test]
     public async Task EmailInput_Flow_SavesTypedEmailThenCalendar()
     {
-        var userId = Guid.NewGuid();
-        await TestApp.AddAsync(new AppUser { Id = userId, Username = "user", DisplayName = "X", TgUserId = 777 });
+        var user = await CreateUserAsync(displayName: "X", tgUserId: 777);
 
         var bot = new FakeTelegramBotClient();
-        var user = BotUser(777, firstName: null, lastName: null);
+        var botUser = BotUser(777, firstName: null, lastName: null);
         using var handler = new HandlerScope();
 
         await handler.Handler.HandleUpdateAsync(
-            bot, CallbackUpdate(Callback("cq1", user, "calendar_attach")), WebAppUrl, CancellationToken.None);
+            bot, CallbackUpdate(Callback("cq1", botUser, "calendar_attach")), WebAppUrl, CancellationToken.None);
 
         bot.SentMessages.Single().Text.ShouldBe("Please enter your email address.");
 
         await handler.Handler.HandleUpdateAsync(
-            bot, MessageUpdate(TextMessage(ChatId, user, "not-an-email")), WebAppUrl, CancellationToken.None);
+            bot, MessageUpdate(TextMessage(ChatId, botUser, "not-an-email")), WebAppUrl, CancellationToken.None);
         bot.SentMessages[^1].Text.ShouldBe("That does not look like a valid email address. Please try again.");
 
         await handler.Handler.HandleUpdateAsync(
-            bot, MessageUpdate(TextMessage(ChatId, user, "typed@example.com")), WebAppUrl, CancellationToken.None);
+            bot, MessageUpdate(TextMessage(ChatId, botUser, "typed@example.com")), WebAppUrl, CancellationToken.None);
 
         await using (var db = Db())
         {
-            var appUser = await db.AppUsers.SingleAsync(u => u.Id == userId);
+            var appUser = await db.Users.SingleAsync(u => u.Id == user.Id);
             appUser.Email.ShouldBe("typed@example.com");
         }
 
@@ -287,11 +301,11 @@ public class BotUpdateHandlerTests : TestBase
         bot.SentMessages[^1].Text.ShouldBe("Send your calendar ICS URL.");
 
         await handler.Handler.HandleUpdateAsync(
-            bot, MessageUpdate(TextMessage(ChatId, user, "https://example.com/me.ics")), WebAppUrl, CancellationToken.None);
+            bot, MessageUpdate(TextMessage(ChatId, botUser, "https://example.com/me.ics")), WebAppUrl, CancellationToken.None);
 
         await using (var db = Db())
         {
-            var calendar = await db.Calendars.SingleAsync(c => c.UserId == userId);
+            var calendar = await db.Calendars.SingleAsync(c => c.UserId == user.Id);
             calendar.CalendarUrl.ShouldBe("https://example.com/me.ics");
         }
 
@@ -301,18 +315,17 @@ public class BotUpdateHandlerTests : TestBase
     [Test]
     public async Task EmailConfirmNo_AsksForEmailInput()
     {
-        var userId = Guid.NewGuid();
-        await TestApp.AddAsync(new AppUser { Id = userId, Username = "user", DisplayName = "", TgUserId = 777 });
+        var user = await CreateUserAsync(displayName: "", tgUserId: 777);
 
         var bot = new FakeTelegramBotClient();
-        var user = BotUser(777, firstName: "Test", lastName: "User");
+        var botUser = BotUser(777, firstName: "Test", lastName: "User");
         using var handler = new HandlerScope();
 
         await handler.Handler.HandleUpdateAsync(
-            bot, CallbackUpdate(Callback("cq1", user, "calendar_attach")), WebAppUrl, CancellationToken.None);
+            bot, CallbackUpdate(Callback("cq1", botUser, "calendar_attach")), WebAppUrl, CancellationToken.None);
 
         await handler.Handler.HandleUpdateAsync(
-            bot, CallbackUpdate(Callback("cq2", user, "email_confirm_no")), WebAppUrl, CancellationToken.None);
+            bot, CallbackUpdate(Callback("cq2", botUser, "email_confirm_no")), WebAppUrl, CancellationToken.None);
 
         bot.SentMessages[^1].Text.ShouldBe("Please enter your email address.");
 

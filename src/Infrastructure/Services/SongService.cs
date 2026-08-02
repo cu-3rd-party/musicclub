@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Common.Exceptions;
 using CuMusicClub.Application.Songs;
 using CuMusicClub.Domain.Entities;
@@ -20,7 +22,8 @@ public class SongService : ISongService
         _db = db;
     }
 
-    public async Task<ListSongsResultDto> ListAsync(string? query, int pageSize, string? pageToken, Guid currentUserId, CancellationToken cancellationToken)
+    public async Task<ListSongsResultDto> ListAsync(
+        string? query, int pageSize, string? pageToken, ClaimsPrincipal currentUser, CancellationToken cancellationToken)
     {
         var limit = pageSize <= 0 || pageSize > MaxPageSize ? DefaultPageSize : pageSize;
         var offset = int.TryParse(pageToken, out var parsed) && parsed >= 0 ? parsed : 0;
@@ -40,12 +43,12 @@ public class SongService : ISongService
             .Take(limit)
             .ToListAsync(cancellationToken);
 
-        var permissions = await LoadPermissionsAsync(currentUserId, cancellationToken);
+        var permissions = PermissionsFrom(currentUser);
 
         var result = new List<SongDto>(songs.Count);
         foreach (var song in songs)
         {
-            result.Add(await ToSongDtoAsync(song, permissions, currentUserId, cancellationToken));
+            result.Add(await ToSongDtoAsync(song, permissions, currentUser, cancellationToken));
         }
 
         var nextPageToken = result.Count == limit ? (offset + limit).ToString() : null;
@@ -53,21 +56,21 @@ public class SongService : ISongService
         return new ListSongsResultDto(result, nextPageToken);
     }
 
-    public async Task<SongDetailsDto> GetAsync(Guid songId, Guid currentUserId, CancellationToken cancellationToken)
+    public async Task<SongDetailsDto> GetAsync(Guid songId, ClaimsPrincipal currentUser, CancellationToken cancellationToken)
     {
         var song = await _db.Songs.FirstOrDefaultAsync(s => s.Id == songId, cancellationToken)
             ?? throw new NotFoundException(songId.ToString(), nameof(Song));
 
-        var permissions = await LoadPermissionsAsync(currentUserId, cancellationToken);
+        var permissions = PermissionsFrom(currentUser);
 
         var assignments = await (
             from assignment in _db.SongRoleAssignments
-            join user in _db.AppUsers on assignment.UserId equals user.Id
+            join user in _db.Users on assignment.UserId equals user.Id
             where assignment.SongId == songId
             orderby assignment.JoinedAt
             select new RoleAssignmentDto(
                 assignment.Role,
-                new SongUserDto(user.Id, user.DisplayName, user.Username, user.AvatarUrl),
+                new SongUserDto(user.Id, user.DisplayName, user.UserName ?? string.Empty, user.AvatarUrl),
                 assignment.JoinedAt))
             .ToListAsync(cancellationToken);
 
@@ -77,14 +80,15 @@ public class SongService : ISongService
             .Select(r => r.Role)
             .ToListAsync(cancellationToken);
 
-        var songDto = ToSongDto(song, permissions, currentUserId, roles, assignments.Count);
+        var songDto = ToSongDto(song, permissions, currentUser, roles, assignments.Count);
 
         return new SongDetailsDto(songDto, assignments, permissions);
     }
 
-    public async Task<SongDetailsDto> CreateAsync(CreateSongRequest request, Guid currentUserId, CancellationToken cancellationToken)
+    public async Task<SongDetailsDto> CreateAsync(
+        CreateSongRequest request, ClaimsPrincipal currentUser, CancellationToken cancellationToken)
     {
-        var permissions = await LoadPermissionsAsync(currentUserId, cancellationToken);
+        var permissions = PermissionsFrom(currentUser);
 
         if (!permissions.EditOwnSongs && !permissions.EditAnySongs)
         {
@@ -108,7 +112,7 @@ public class SongService : ISongService
             Description = request.Description,
             LinkKind = linkKind,
             LinkUrl = request.Link?.Url ?? string.Empty,
-            CreatedById = currentUserId,
+            CreatedById = currentUser.GetUserId(),
             ThumbnailUrl = thumbnailUrl,
             IsFeatured = request.Featured,
         };
@@ -120,17 +124,18 @@ public class SongService : ISongService
 
         await transaction.CommitAsync(cancellationToken);
 
-        return await GetAsync(song.Id, currentUserId, cancellationToken);
+        return await GetAsync(song.Id, currentUser, cancellationToken);
     }
 
-    public async Task<SongDetailsDto> UpdateAsync(Guid songId, UpdateSongRequest request, Guid currentUserId, CancellationToken cancellationToken)
+    public async Task<SongDetailsDto> UpdateAsync(
+        Guid songId, UpdateSongRequest request, ClaimsPrincipal currentUser, CancellationToken cancellationToken)
     {
         var song = await _db.Songs.FirstOrDefaultAsync(s => s.Id == songId, cancellationToken)
             ?? throw new NotFoundException(songId.ToString(), nameof(Song));
 
-        var permissions = await LoadPermissionsAsync(currentUserId, cancellationToken);
+        var permissions = PermissionsFrom(currentUser);
 
-        if (!PermissionAllowsSongEdit(permissions, song.CreatedById, currentUserId))
+        if (!PermissionAllowsSongEdit(permissions, song.CreatedById, currentUser))
         {
             throw new ForbiddenAccessException();
         }
@@ -174,17 +179,17 @@ public class SongService : ISongService
 
         await transaction.CommitAsync(cancellationToken);
 
-        return await GetAsync(songId, currentUserId, cancellationToken);
+        return await GetAsync(songId, currentUser, cancellationToken);
     }
 
-    public async Task DeleteAsync(Guid songId, Guid currentUserId, CancellationToken cancellationToken)
+    public async Task DeleteAsync(Guid songId, ClaimsPrincipal currentUser, CancellationToken cancellationToken)
     {
         var song = await _db.Songs.FirstOrDefaultAsync(s => s.Id == songId, cancellationToken)
             ?? throw new NotFoundException(songId.ToString(), nameof(Song));
 
-        var permissions = await LoadPermissionsAsync(currentUserId, cancellationToken);
+        var permissions = PermissionsFrom(currentUser);
 
-        if (!PermissionAllowsSongEdit(permissions, song.CreatedById, currentUserId))
+        if (!PermissionAllowsSongEdit(permissions, song.CreatedById, currentUser))
         {
             throw new ForbiddenAccessException();
         }
@@ -193,9 +198,10 @@ public class SongService : ISongService
         await _db.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<SongDetailsDto> JoinRoleAsync(Guid songId, string role, Guid currentUserId, CancellationToken cancellationToken)
+    public async Task<SongDetailsDto> JoinRoleAsync(
+        Guid songId, string role, ClaimsPrincipal currentUser, CancellationToken cancellationToken)
     {
-        var permissions = await LoadPermissionsAsync(currentUserId, cancellationToken);
+        var permissions = PermissionsFrom(currentUser);
 
         if (!permissions.EditAnyParticipation && !permissions.EditOwnParticipation)
         {
@@ -208,8 +214,9 @@ public class SongService : ISongService
             throw new NotFoundException(songId.ToString(), nameof(Song));
         }
 
+        var userId = currentUser.GetUserId();
         var alreadyJoined = await _db.SongRoleAssignments.AnyAsync(
-            a => a.SongId == songId && a.Role == role && a.UserId == currentUserId, cancellationToken);
+            a => a.SongId == songId && a.Role == role && a.UserId == userId, cancellationToken);
 
         if (!alreadyJoined)
         {
@@ -217,18 +224,19 @@ public class SongService : ISongService
             {
                 SongId = songId,
                 Role = role,
-                UserId = currentUserId,
+                UserId = userId,
                 JoinedAt = DateTimeOffset.UtcNow,
             });
             await _db.SaveChangesAsync(cancellationToken);
         }
 
-        return await GetAsync(songId, currentUserId, cancellationToken);
+        return await GetAsync(songId, currentUser, cancellationToken);
     }
 
-    public async Task<SongDetailsDto> LeaveRoleAsync(Guid songId, string role, Guid currentUserId, CancellationToken cancellationToken)
+    public async Task<SongDetailsDto> LeaveRoleAsync(
+        Guid songId, string role, ClaimsPrincipal currentUser, CancellationToken cancellationToken)
     {
-        var permissions = await LoadPermissionsAsync(currentUserId, cancellationToken);
+        var permissions = PermissionsFrom(currentUser);
 
         if (!permissions.EditAnyParticipation && !permissions.EditOwnParticipation)
         {
@@ -241,14 +249,17 @@ public class SongService : ISongService
             throw new NotFoundException(songId.ToString(), nameof(Song));
         }
 
+        var userId = currentUser.GetUserId();
+
         await _db.SongRoleAssignments
-            .Where(a => a.SongId == songId && a.Role == role && a.UserId == currentUserId)
+            .Where(a => a.SongId == songId && a.Role == role && a.UserId == userId)
             .ExecuteDeleteAsync(cancellationToken);
 
-        return await GetAsync(songId, currentUserId, cancellationToken);
+        return await GetAsync(songId, currentUser, cancellationToken);
     }
 
-    private async Task<SongDto> ToSongDtoAsync(Song song, PermissionsDto permissions, Guid currentUserId, CancellationToken cancellationToken)
+    private async Task<SongDto> ToSongDtoAsync(
+        Song song, PermissionsDto permissions, ClaimsPrincipal currentUser, CancellationToken cancellationToken)
     {
         var roles = await _db.SongRoles
             .Where(r => r.SongId == song.Id)
@@ -262,10 +273,11 @@ public class SongService : ISongService
             where assignment.SongId == song.Id
             select assignment.Role).Distinct().CountAsync(cancellationToken);
 
-        return ToSongDto(song, permissions, currentUserId, roles, assignmentCount);
+        return ToSongDto(song, permissions, currentUser, roles, assignmentCount);
     }
 
-    private static SongDto ToSongDto(Song song, PermissionsDto permissions, Guid currentUserId, IReadOnlyList<string> roles, int assignmentCount)
+    private static SongDto ToSongDto(
+        Song song, PermissionsDto permissions, ClaimsPrincipal currentUser, IReadOnlyList<string> roles, int assignmentCount)
     {
         return new SongDto(
             song.Id,
@@ -277,26 +289,22 @@ public class SongService : ISongService
             song.IsFeatured,
             song.CreatedById,
             roles,
-            PermissionAllowsSongEdit(permissions, song.CreatedById, currentUserId),
+            PermissionAllowsSongEdit(permissions, song.CreatedById, currentUser),
             assignmentCount,
             song.CreatedAt,
             song.UpdatedAt);
     }
 
-    private async Task<PermissionsDto> LoadPermissionsAsync(Guid userId, CancellationToken cancellationToken)
+    private static PermissionsDto PermissionsFrom(ClaimsPrincipal user)
     {
-        var permissions = await _db.UserPermissions.FirstOrDefaultAsync(p => p.UserId == userId, cancellationToken);
-
-        return permissions is null
-            ? new PermissionsDto(false, false, false, false, false, false, false)
-            : new PermissionsDto(
-                permissions.EditOwnParticipation,
-                permissions.EditAnyParticipation,
-                permissions.EditOwnSongs,
-                permissions.EditAnySongs,
-                permissions.EditFeaturedSongs,
-                permissions.EditEvents,
-                permissions.EditTracklists);
+        return new PermissionsDto(
+            user.HasPermission(Permissions.ParticipationEditOwn),
+            user.HasPermission(Permissions.ParticipationEditAny),
+            user.HasPermission(Permissions.SongsEditOwn),
+            user.HasPermission(Permissions.SongsEditAny),
+            user.HasPermission(Permissions.SongsEditFeatured),
+            user.HasPermission(Permissions.EventsEdit),
+            user.HasPermission(Permissions.TracklistsEdit));
     }
 
     private async Task ReplaceRolesAsync(Guid songId, IReadOnlyCollection<string> desiredRoles, CancellationToken cancellationToken)
@@ -354,8 +362,8 @@ public class SongService : ISongService
         };
     }
 
-    private static bool PermissionAllowsSongEdit(PermissionsDto permissions, Guid? ownerId, Guid currentUserId)
+    private static bool PermissionAllowsSongEdit(PermissionsDto permissions, Guid? ownerId, ClaimsPrincipal currentUser)
     {
-        return permissions.EditAnySongs || (permissions.EditOwnSongs && ownerId == currentUserId);
+        return permissions.EditAnySongs || (permissions.EditOwnSongs && ownerId == currentUser.GetUserId());
     }
 }
