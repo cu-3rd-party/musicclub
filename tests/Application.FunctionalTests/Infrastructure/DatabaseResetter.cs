@@ -15,10 +15,8 @@ internal sealed class DatabaseResetter : IAsyncDisposable
         _respawner = respawner;
     }
 
-    public static async Task<DatabaseResetter> CreateAsync()
+    public static async Task<DatabaseResetter> CreateAsync(string connectionString)
     {
-        var connectionString = Environment.GetEnvironmentVariable("TEST_CONNECTION_STRING")
-                               ?? "Host=localhost;Database=CuMusicClubTest;Username=postgres;Password=postgres";
         var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync();
         var respawner = await Respawner.CreateAsync(connection);

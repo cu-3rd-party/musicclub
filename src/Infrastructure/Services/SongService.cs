@@ -115,7 +115,7 @@ public class SongService : ISongService
         _db.Songs.Add(song);
         await _db.SaveChangesAsync(cancellationToken);
 
-        await ReplaceRolesAsync(song.Id, request.AvailableRoles ?? [], cancellationToken);
+        await ReplaceRolesAsync(song.Id, NormalizeRoles(request.AvailableRoles), cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
