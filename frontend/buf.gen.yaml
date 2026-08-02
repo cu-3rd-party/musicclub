@@ -1,9 +1,0 @@
-version: v2
-inputs:
-  - directory: ../proto
-plugins:
-  - local: protoc-gen-es
-    out: src/proto
-    opt:
-      - target=js
-      - import_extension=js
