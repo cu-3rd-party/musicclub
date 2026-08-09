@@ -2,10 +2,8 @@ import {writable} from "svelte/store";
 
 import {
     getCurrentUser,
-    loginUser,
     logoutCurrentSession,
     refreshAuthTokens,
-    registerUser,
     telegramAuth,
     updateUserProfile,
     isUnauthorizedError,
@@ -49,21 +47,6 @@ export function hydrateAuthState(): void {
     } else {
         stopAccessTokenRefreshLoop();
     }
-}
-
-export async function login(payload: LoginPayload): Promise<AuthSession> {
-    const session = await loginUser(payload);
-    const persistedSession: AuthSession = {
-        ...session,
-        accessTokenAcquiredAt: new Date().toISOString(),
-    };
-    persistSession(persistedSession);
-    return persistedSession;
-}
-
-export async function signUp(payload: RegisterPayload): Promise<AuthSession> {
-    await registerUser(payload);
-    return login({email: payload.email, password: payload.password});
 }
 
 export async function telegramLogin(

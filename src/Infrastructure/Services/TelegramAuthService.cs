@@ -84,11 +84,21 @@ public class TelegramAuthService(IOptions<TelegramOptions> options) : ITelegramA
 
     public Task<AuthSessionDto> AuthenticateAsync(string initData, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException("AuthenticateAsync is not yet implemented.");
+        throw new NotImplementedException();
     }
 
     public Task<TokenPairDto> RefreshAsync(string refreshToken, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException("RefreshAsync is not yet implemented.");
+        throw new NotImplementedException();
+    }
+
+    public Task<TelegramDeeplink> CreateDeeplink(CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<AuthSessionDto?> GetDeeplink(Guid linkUid, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
     }
 }

@@ -17,6 +17,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<SongRole> SongRoles => Set<SongRole>();
     public DbSet<SongRoleAssignment> SongRoleAssignments => Set<SongRoleAssignment>();
     public DbSet<UserSession> UserSessions => Set<UserSession>();
+    public DbSet<TgAuthLink> TgAuthLinks => Set<TgAuthLink>();
 
     IQueryable<ApplicationUser> IApplicationDbContext.Users => Users;
     IQueryable<Calendar> IApplicationDbContext.Calendars => Calendars;
@@ -25,6 +26,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     IQueryable<SongRole> IApplicationDbContext.SongRoles => SongRoles;
     IQueryable<SongRoleAssignment> IApplicationDbContext.SongRoleAssignments => SongRoleAssignments;
     IQueryable<UserSession> IApplicationDbContext.UserSessions => UserSessions;
+    IQueryable<TgAuthLink> IApplicationDbContext.TgAuthLinks => TgAuthLinks;
 
     void IApplicationDbContext.Add(object entity) => Add(entity);
     void IApplicationDbContext.Remove(object entity) => Remove(entity);

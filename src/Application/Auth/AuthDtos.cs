@@ -21,3 +21,5 @@ public sealed record AuthSessionDto(
     DateTimeOffset ExpiresAt,
     DateTimeOffset AccessTokenAcquiredAt,
     UserProfileDto User);
+
+public sealed record TelegramDeeplink(string Url, Guid Uid);

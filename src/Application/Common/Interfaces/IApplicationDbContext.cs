@@ -11,6 +11,7 @@ public interface IApplicationDbContext
     IQueryable<SongRole> SongRoles { get; }
     IQueryable<SongRoleAssignment> SongRoleAssignments { get; }
     IQueryable<UserSession> UserSessions { get; }
+    IQueryable<TgAuthLink> TgAuthLinks { get; }
 
     void Add(object entity);
     void Remove(object entity);

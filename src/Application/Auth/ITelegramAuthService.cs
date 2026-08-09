@@ -26,4 +26,19 @@ public interface ITelegramAuthService
     /// Exchanges a refresh token for a new token pair.
     /// </summary>
     Task<TokenPairDto> RefreshAsync(string refreshToken, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Create a deeplink to auth the user
+    /// </summary>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    Task<TelegramDeeplink> CreateDeeplink(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Получить статус по диплинку
+    /// </summary>
+    /// <param name="linkUid"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    Task<AuthSessionDto?> GetDeeplink(Guid linkUid, CancellationToken cancellationToken);
 }

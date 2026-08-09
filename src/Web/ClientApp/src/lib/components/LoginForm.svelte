@@ -9,7 +9,6 @@
         FieldSeparator,
     } from "$lib/components/ui/field/index.js";
     import * as Alert from "$lib/components/ui/alert/index.js";
-    import {login} from "$lib/auth/store";
     import {getApiErrorMessage} from "$lib/api/auth";
     import {Input} from "$lib/components/ui/input/index.js";
     import {Button} from "$lib/components/ui/button/index.js";
@@ -40,7 +39,6 @@
         isSubmitting = true;
 
         try {
-            await login({email, password});
             await goto(resolve("/"));
         } catch (error) {
             errorMessage = getApiErrorMessage(error, "Не удалось выполнить вход.");

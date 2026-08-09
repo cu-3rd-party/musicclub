@@ -4,7 +4,8 @@ public static partial class Auth
 {
     public static void Map(RouteGroupBuilder group)
     {
-        group.MapPost("/telegram", Telegram);
+        group.MapPost("/telegram", TelegramInitData);
+        group.MapGet("/telegram/link", TelegramDeeplink);
         group.MapPost("/refresh", Refresh);
     }
 }

@@ -24,21 +24,6 @@ export async function telegramAuth(
     return response.data;
 }
 
-export async function registerUser(
-    payload: RegisterPayload,
-): Promise<UserProfile> {
-    const response = await api.post<UserProfile>(
-        "/api/v1/auth/register",
-        payload,
-    );
-    return response.data;
-}
-
-export async function loginUser(payload: LoginPayload): Promise<AuthSession> {
-    const response = await api.post<AuthSession>("/api/v1/auth", payload);
-    return response.data;
-}
-
 export async function refreshAuthTokens(
     refreshToken: string,
 ): Promise<TokenPair> {
