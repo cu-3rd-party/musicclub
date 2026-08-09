@@ -43,7 +43,7 @@ public class TelegramBotHostedService : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to resolve WebApp URL; falling back to the default URL.");
-            webAppUrl = _options.DefaultWebAppUrl;
+            webAppUrl = _options.WebAppUrl;
         }
 
         try
@@ -112,6 +112,6 @@ public class TelegramBotHostedService : BackgroundService
             _logger.LogWarning(ex, "Failed to fetch menu button: {Message}", ex.Message);
         }
 
-        return _options.DefaultWebAppUrl;
+        return _options.WebAppUrl;
     }
 }

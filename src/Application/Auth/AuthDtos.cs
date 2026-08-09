@@ -6,10 +6,8 @@ public sealed record RefreshTokenRequest(string RefreshToken);
 
 public sealed record UserProfileDto(
     Guid Id,
-    string? Email,
-    string Name,
-    string Role,
-    bool EmailVerified,
+    string DisplayName,
+    string Username,
     string? AvatarUrl,
     DateTimeOffset? LastLoginAt,
     DateTimeOffset CreatedAt,

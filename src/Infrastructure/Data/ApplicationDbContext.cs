@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using CuMusicClub.Application.Common.Interfaces;
 using CuMusicClub.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
@@ -11,30 +11,20 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
+    public DbSet<Calendar> Calendars => Set<Calendar>();
+    public DbSet<CalendarAttachState> CalendarAttachStates => Set<CalendarAttachState>();
     public DbSet<Song> Songs => Set<Song>();
     public DbSet<SongRole> SongRoles => Set<SongRole>();
     public DbSet<SongRoleAssignment> SongRoleAssignments => Set<SongRoleAssignment>();
-    public DbSet<Event> Events => Set<Event>();
-    public DbSet<EventTrackItem> EventTrackItems => Set<EventTrackItem>();
-    public DbSet<EventParticipant> EventParticipants => Set<EventParticipant>();
-    public DbSet<TgAuthUser> TgAuthUsers => Set<TgAuthUser>();
-    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
-    public DbSet<SongTopic> SongTopics => Set<SongTopic>();
-    public DbSet<Calendar> Calendars => Set<Calendar>();
-    public DbSet<CalendarAttachState> CalendarAttachStates => Set<CalendarAttachState>();
+    public DbSet<UserSession> UserSessions => Set<UserSession>();
 
     IQueryable<ApplicationUser> IApplicationDbContext.Users => Users;
+    IQueryable<Calendar> IApplicationDbContext.Calendars => Calendars;
+    IQueryable<CalendarAttachState> IApplicationDbContext.CalendarAttachStates => CalendarAttachStates;
     IQueryable<Song> IApplicationDbContext.Songs => Songs;
     IQueryable<SongRole> IApplicationDbContext.SongRoles => SongRoles;
     IQueryable<SongRoleAssignment> IApplicationDbContext.SongRoleAssignments => SongRoleAssignments;
-    IQueryable<Event> IApplicationDbContext.Events => Events;
-    IQueryable<EventTrackItem> IApplicationDbContext.EventTrackItems => EventTrackItems;
-    IQueryable<EventParticipant> IApplicationDbContext.EventParticipants => EventParticipants;
-    IQueryable<TgAuthUser> IApplicationDbContext.TgAuthUsers => TgAuthUsers;
-    IQueryable<RefreshToken> IApplicationDbContext.RefreshTokens => RefreshTokens;
-    IQueryable<SongTopic> IApplicationDbContext.SongTopics => SongTopics;
-    IQueryable<Calendar> IApplicationDbContext.Calendars => Calendars;
-    IQueryable<CalendarAttachState> IApplicationDbContext.CalendarAttachStates => CalendarAttachStates;
+    IQueryable<UserSession> IApplicationDbContext.UserSessions => UserSessions;
 
     void IApplicationDbContext.Add(object entity) => Add(entity);
     void IApplicationDbContext.Remove(object entity) => Remove(entity);
@@ -42,6 +32,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
+        builder.HasPostgresEnum<CuMusicClub.Domain.Enums.SongLinkType>();
         builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
     }
 }

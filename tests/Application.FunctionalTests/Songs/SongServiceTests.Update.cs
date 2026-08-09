@@ -1,13 +1,13 @@
 using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Common.Exceptions;
-using CuMusicClub.Application.Songs;
+using CuMusicClub.Application.Song;
 using Microsoft.EntityFrameworkCore;
 
 namespace CuMusicClub.Application.FunctionalTests.Songs;
 
 public partial class SongServiceTests
 {
-    
+
     #region Update
 
     [Test]
@@ -17,7 +17,7 @@ public partial class SongServiceTests
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(
-            "New Title", "New Artist", null, new SongLinkDto("youtube", YoutubeUrl), null, false, null);
+            "New Title", "New Artist", null, YoutubeUrl, null, false, null);
         await Should.ThrowAsync<NotFoundException>(
             () => scope.Songs.UpdateAsync(Guid.NewGuid(), request, user, CancellationToken.None));
     }
@@ -33,7 +33,7 @@ public partial class SongServiceTests
             "Stairway to Heaven",
             "Led Zeppelin",
             "epic solo",
-            new SongLinkDto("yandex_music", "https://music.yandex.ru/album/1"),
+            "https://music.yandex.ru/album/1",
             "https://cdn.example.com/stairs.jpg",
             false,
             new[] { "Вокал", "Соло" });
@@ -43,9 +43,9 @@ public partial class SongServiceTests
         details.Song.Title.ShouldBe("Stairway to Heaven");
         details.Song.Artist.ShouldBe("Led Zeppelin");
         details.Song.Description.ShouldBe("epic solo");
-        details.Song.Link.Kind.ShouldBe("yandex_music");
+        details.Song.Url.ShouldBe("https://music.yandex.ru/album/1");
         details.Song.ThumbnailUrl.ShouldBe("https://cdn.example.com/stairs.jpg");
-        details.Song.AvailableRoles.ShouldBe(new[] { "Вокал", "Соло" });
+        details.Song.Roles.Select(r => r.Title).ShouldBe(new[] { "Вокал", "Соло" });
 
         using var db = Db();
         (await db.SongRoles.CountAsync(r => r.SongId == songId)).ShouldBe(2);
@@ -61,7 +61,7 @@ public partial class SongServiceTests
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(
-            "New Title", "New Artist", null, new SongLinkDto("youtube", YoutubeUrl), null, false, null);
+            "New Title", "New Artist", null, YoutubeUrl, null, false, null);
         await Should.ThrowAsync<ForbiddenAccessException>(
             () => scope.Songs.UpdateAsync(songId, request, other, CancellationToken.None));
     }
@@ -75,7 +75,7 @@ public partial class SongServiceTests
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(
-            "New Title", "New Artist", null, new SongLinkDto("youtube", YoutubeUrl), null, false, null);
+            "New Title", "New Artist", null, YoutubeUrl, null, false, null);
         var details = await scope.Songs.UpdateAsync(songId, request, editor, CancellationToken.None);
 
         details.Song.Title.ShouldBe("New Title");
@@ -90,7 +90,7 @@ public partial class SongServiceTests
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(
-            "New Title", "New Artist", null, new SongLinkDto("youtube", YoutubeUrl), null, true, null);
+            "New Title", "New Artist", null, YoutubeUrl, null, true, null);
         await Should.ThrowAsync<ForbiddenAccessException>(
             () => scope.Songs.UpdateAsync(songId, request, owner, CancellationToken.None));
     }
@@ -103,7 +103,7 @@ public partial class SongServiceTests
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(
-            "New Title", "New Artist", null, new SongLinkDto("youtube", YoutubeUrl), null, true, null);
+            "New Title", "New Artist", null, YoutubeUrl, null, true, null);
         var details = await scope.Songs.UpdateAsync(songId, request, owner, CancellationToken.None);
 
         details.Song.Featured.ShouldBeTrue();
@@ -117,7 +117,7 @@ public partial class SongServiceTests
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(
-            "New Title", "New Artist", null, new SongLinkDto("youtube", YoutubeUrl), null, false, null);
+            "New Title", "New Artist", null, YoutubeUrl, null, false, null);
         var details = await scope.Songs.UpdateAsync(songId, request, owner, CancellationToken.None);
 
         details.Song.Featured.ShouldBeTrue();
@@ -131,10 +131,10 @@ public partial class SongServiceTests
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(
-            "New Title", "New Artist", null, new SongLinkDto("youtube", YoutubeUrl), null, false, new[] { "Вокал" });
+            "New Title", "New Artist", null, YoutubeUrl, null, false, new[] { "Вокал" });
         var details = await scope.Songs.UpdateAsync(songId, request, owner, CancellationToken.None);
 
-        details.Song.AvailableRoles.ShouldBe(new[] { "Вокал" });
+        details.Song.Roles.Select(r => r.Title).ShouldBe(new[] { "Вокал" });
 
         using var db = Db();
         (await db.SongRoles.CountAsync(r => r.SongId == songId)).ShouldBe(1);
@@ -148,11 +148,11 @@ public partial class SongServiceTests
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(
-            "New Title", "New Artist", null, new SongLinkDto("youtube", YoutubeUrl), null, false,
+            "New Title", "New Artist", null, YoutubeUrl, null, false,
             new[] { "  Вокал ", "", "гитара", "Гитара", "Вокал" });
         var details = await scope.Songs.UpdateAsync(songId, request, owner, CancellationToken.None);
 
-        details.Song.AvailableRoles.ShouldBe(new[] { "Вокал", "Гитара", "гитара" });
+        details.Song.Roles.Select(r => r.Title).ShouldBe(new[] { "Вокал", "Гитара", "гитара" });
     }
 
     #endregion

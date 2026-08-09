@@ -35,7 +35,7 @@ export async function registerUser(
 }
 
 export async function loginUser(payload: LoginPayload): Promise<AuthSession> {
-    const response = await api.post<AuthSession>("/api/v1/auth/login", payload);
+    const response = await api.post<AuthSession>("/api/v1/auth", payload);
     return response.data;
 }
 

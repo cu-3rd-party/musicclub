@@ -29,7 +29,6 @@ public partial class SongServiceTests
 
         details.Song.AssignmentCount.ShouldBe(1);
         details.Assignments.ShouldHaveSingleItem();
-        details.Assignments[0].Role.ShouldBe("Вокал");
         details.Assignments[0].User.Id.ShouldBe(user.GetUserId());
 
         using var db = Db();
@@ -121,5 +120,5 @@ public partial class SongServiceTests
         await Should.ThrowAsync<NotFoundException>(
             () => scope.Songs.LeaveRoleAsync(Guid.NewGuid(), "Вокал", user, CancellationToken.None));
     }
-    
+
 }

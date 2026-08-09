@@ -36,9 +36,8 @@ public partial class SongServiceTests
         var details = await scope.Songs.GetAsync(songId, owner, CancellationToken.None);
 
         details.Song.Id.ShouldBe(songId);
-        details.Song.AvailableRoles.ShouldBe(new[] { "Вокал" });
+        details.Song.Roles.Select(r => r.Title).ShouldBe(new[] { "Вокал" });
         details.Assignments.ShouldHaveSingleItem();
-        details.Assignments[0].Role.ShouldBe("Вокал");
         details.Assignments[0].User.Id.ShouldBe(member.GetUserId());
         details.Assignments[0].User.DisplayName.ShouldBe("Display member");
         details.Song.AssignmentCount.ShouldBe(1);

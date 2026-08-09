@@ -86,7 +86,7 @@
         //    login/register stay reachable for manual navigation.
         checkingAuth = false;
         if (!isAuthRoute(pathname)) {
-            await goto(resolve("/auth/register"));
+            await goto(resolve("/auth"));
         }
     }
 

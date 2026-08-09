@@ -14,7 +14,7 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AlterDatabase()
-                .Annotation("Npgsql:Enum:song_link_type", "soundcloud,yandex_music,youtube");
+                .Annotation("Npgsql:Enum:song_link_type", "youtube,yandex_music,soundcloud");
 
             migrationBuilder.CreateTable(
                 name: "AspNetRoles",
@@ -66,7 +66,7 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                 columns: table => new
                 {
                     tg_user_id = table.Column<long>(type: "bigint", nullable: false),
-                    state = table.Column<short>(type: "smallint", nullable: false),
+                    state = table.Column<string>(type: "text", nullable: false),
                     pending_user_id = table.Column<Guid>(type: "uuid", nullable: true),
                     pending_email = table.Column<string>(type: "text", nullable: true),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
@@ -228,27 +228,6 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "refresh_tokens",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
-                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    token = table.Column<string>(type: "text", nullable: false),
-                    expires_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_refresh_tokens", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_refresh_tokens_AspNetUsers_user_id",
-                        column: x => x.user_id,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "song",
                 columns: table => new
                 {
@@ -276,19 +255,22 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "tg_auth_user",
+                name: "user_session",
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
                     user_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    tg_user_id = table.Column<long>(type: "bigint", nullable: true),
-                    success = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false)
+                    ip_address = table.Column<string>(type: "character varying(45)", maxLength: 45, nullable: true),
+                    user_agent = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
+                    screen_resolution = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: true),
+                    created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
+                    last_activity_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_tg_auth_user", x => x.id);
+                    table.PrimaryKey("PK_user_session", x => x.id);
                     table.ForeignKey(
-                        name: "FK_tg_auth_user_AspNetUsers_user_id",
+                        name: "FK_user_session_AspNetUsers_user_id",
                         column: x => x.user_id,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
@@ -348,7 +330,7 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                 columns: table => new
                 {
                     song_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    topic_id = table.Column<long>(type: "bigint", nullable: true),
+                    topic_id = table.Column<long>(type: "bigint", nullable: false),
                     created_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
                     updated_at = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
                 },
@@ -516,17 +498,6 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "idx_refresh_tokens_token",
-                table: "refresh_tokens",
-                column: "token",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "idx_refresh_tokens_user_id",
-                table: "refresh_tokens",
-                column: "user_id");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_song_created_by",
                 table: "song",
                 column: "created_by");
@@ -553,14 +524,8 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                 column: "topic_id");
 
             migrationBuilder.CreateIndex(
-                name: "idx_tg_auth_session_user",
-                table: "tg_auth_user",
-                column: "tg_user_id",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_tg_auth_user_user_id",
-                table: "tg_auth_user",
+                name: "idx_user_session_user_id",
+                table: "user_session",
                 column: "user_id");
         }
 
@@ -592,16 +557,13 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                 name: "event_participant");
 
             migrationBuilder.DropTable(
-                name: "refresh_tokens");
-
-            migrationBuilder.DropTable(
                 name: "song_role_assignment");
 
             migrationBuilder.DropTable(
                 name: "song_topic");
 
             migrationBuilder.DropTable(
-                name: "tg_auth_user");
+                name: "user_session");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");

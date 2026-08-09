@@ -6,6 +6,7 @@
     <SpaRoot>ClientApp\</SpaRoot>
     <OpenApiDocumentsDirectory>./wwwroot/openapi/</OpenApiDocumentsDirectory>
     <OpenApiGenerateDocumentsOptions>--file-name v1</OpenApiGenerateDocumentsOptions>
+    <UserSecretsId>a23eb711-3d7c-49a8-a6c6-409a4e03fd21</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -44,7 +45,7 @@
     <Exec WorkingDirectory="$(SpaRoot)" Command="npm run build -- --configuration production" />
     <ItemGroup>
       <DistFiles Include="$(SpaRoot)dist\browser\**;" />
-      <ResolvedFileToPublish Include="@(DistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
+      <ResolvedFileToPublish Include="@(DistFiles-&gt;'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
         <RelativePath>wwwroot\%(RecursiveDir)%(FileName)%(Extension)</RelativePath>
         <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
         <ExcludeFromSingleFile>true</ExcludeFromSingleFile>

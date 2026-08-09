@@ -1,4 +1,6 @@
 using CuMusicClub.Web.Endpoints;
+using CuMusicClub.Web.Endpoints.v1.Auth;
+using CuMusicClub.Web.Endpoints.v1.Songs;
 
 namespace CuMusicClub.Web.Infrastructure;
 

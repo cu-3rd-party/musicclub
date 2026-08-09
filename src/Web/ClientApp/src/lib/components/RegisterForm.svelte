@@ -78,7 +78,7 @@
         <Field.Separator>Или продолжить через</Field.Separator>
         <Field.Field>
             <Field.Description class="px-6 text-center">
-                Уже есть аккаунт? <a href={resolve('/auth/login')}>Войти</a>
+                Уже есть аккаунт? <a href={resolve('/auth')}>Войти</a>
             </Field.Description>
         </Field.Field>
     </Field.Group>

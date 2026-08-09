@@ -37,7 +37,7 @@
 
         isLoggingOut = true;
         await logout();
-        await goto(resolve("/auth/login"));
+        await goto(resolve("/auth"));
         isLoggingOut = false;
     }
 </script>
@@ -84,7 +84,7 @@
                 </DropdownMenu.Label>
                 <DropdownMenu.Separator/>
                 <DropdownMenu.Group>
-                    <DropdownMenu.Item onclick={() => goto(resolve("/data/account"))}>
+                    <DropdownMenu.Item onclick={() => goto(resolve("/app/account"))}>
                         <BadgeCheckIcon/>
                         Аккаунт
                     </DropdownMenu.Item>

@@ -1,8 +1,7 @@
 ﻿using CuMusicClub.Application.Auth;
 using CuMusicClub.Application.Common.Interfaces;
-using CuMusicClub.Application.Songs;
+using CuMusicClub.Application.Song;
 using CuMusicClub.Domain.Entities;
-using CuMusicClub.Domain.Enums;
 using CuMusicClub.Infrastructure.Data;
 using CuMusicClub.Infrastructure.Data.Interceptors;
 using CuMusicClub.Infrastructure.Options;
@@ -29,8 +28,8 @@ public static class DependencyInjection
         builder.Services.AddDbContext<ApplicationDbContext>((sp, options) =>
         {
             options.AddInterceptors(sp.GetServices<ISaveChangesInterceptor>());
-            options.UseNpgsql(connectionString, npgsql => npgsql.MapEnum<SongLinkType>());
             options.ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
+            options.UseNpgsql(connectionString, npgOptions => npgOptions.MapEnum<CuMusicClub.Domain.Enums.SongLinkType>());
         });
 
         builder.Services.AddScoped<IApplicationDbContext>(provider =>
@@ -39,7 +38,7 @@ public static class DependencyInjection
         builder.Services.AddScoped<ApplicationDbContextInitialiser>();
 
         builder.Services.AddScoped<ISongService, SongService>();
-        builder.Services.AddHttpClient<ITelegramAuthService, TelegramAuthService>();
+        builder.Services.AddSingleton<ITelegramAuthService, TelegramAuthService>();
 
         builder.Services.AddDataProtection();
 

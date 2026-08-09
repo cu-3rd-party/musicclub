@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CuMusicClub.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260802221712_InitialCreate")]
+    [Migration("20260808065440_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -24,7 +24,7 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                 .HasAnnotation("ProductVersion", "10.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "song_link_type", new[] { "soundcloud", "yandex_music", "youtube" });
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "song_link_type", new[] { "youtube", "yandex_music", "soundcloud" });
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("CuMusicClub.Domain.Entities.ApplicationUser", b =>
@@ -169,8 +169,9 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("pending_user_id");
 
-                    b.Property<short>("State")
-                        .HasColumnType("smallint")
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasColumnType("text")
                         .HasColumnName("state");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
@@ -336,45 +337,6 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                         });
                 });
 
-            modelBuilder.Entity("CuMusicClub.Domain.Entities.RefreshToken", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("NOW()");
-
-                    b.Property<DateTimeOffset>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("expires_at");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("token");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Token")
-                        .IsUnique()
-                        .HasDatabaseName("idx_refresh_tokens_token");
-
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("idx_refresh_tokens_user_id");
-
-                    b.ToTable("refresh_tokens", (string)null);
-                });
-
             modelBuilder.Entity("CuMusicClub.Domain.Entities.Song", b =>
                 {
                     b.Property<Guid>("Id")
@@ -508,7 +470,7 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("NOW()");
 
-                    b.Property<long?>("TopicId")
+                    b.Property<long>("TopicId")
                         .HasColumnType("bigint")
                         .HasColumnName("topic_id");
 
@@ -526,7 +488,7 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                     b.ToTable("song_topic", (string)null);
                 });
 
-            modelBuilder.Entity("CuMusicClub.Domain.Entities.TgAuthUser", b =>
+            modelBuilder.Entity("CuMusicClub.Domain.Entities.UserSession", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -534,15 +496,32 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                         .HasColumnName("id")
                         .HasDefaultValueSql("gen_random_uuid()");
 
-                    b.Property<bool>("Success")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(false)
-                        .HasColumnName("success");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
 
-                    b.Property<long?>("TgUserId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("tg_user_id");
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)")
+                        .HasColumnName("ip_address");
+
+                    b.Property<DateTimeOffset>("LastActivityAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_activity_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<string>("ScreenResolution")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("screen_resolution");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("user_agent");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid")
@@ -550,13 +529,10 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TgUserId")
-                        .IsUnique()
-                        .HasDatabaseName("idx_tg_auth_session_user");
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("idx_user_session_user_id");
 
-                    b.HasIndex("UserId");
-
-                    b.ToTable("tg_auth_user", (string)null);
+                    b.ToTable("user_session", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
@@ -757,17 +733,6 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                     b.Navigation("Song");
                 });
 
-            modelBuilder.Entity("CuMusicClub.Domain.Entities.RefreshToken", b =>
-                {
-                    b.HasOne("CuMusicClub.Domain.Entities.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("CuMusicClub.Domain.Entities.Song", b =>
                 {
                     b.HasOne("CuMusicClub.Domain.Entities.ApplicationUser", "CreatedBy")
@@ -828,7 +793,7 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                     b.Navigation("Song");
                 });
 
-            modelBuilder.Entity("CuMusicClub.Domain.Entities.TgAuthUser", b =>
+            modelBuilder.Entity("CuMusicClub.Domain.Entities.UserSession", b =>
                 {
                     b.HasOne("CuMusicClub.Domain.Entities.ApplicationUser", "User")
                         .WithMany()

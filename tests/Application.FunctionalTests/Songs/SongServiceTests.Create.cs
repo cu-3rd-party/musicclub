@@ -1,5 +1,6 @@
 using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Common.Exceptions;
+using CuMusicClub.Application.Song;
 using Microsoft.EntityFrameworkCore;
 
 namespace CuMusicClub.Application.FunctionalTests.Songs;
@@ -30,10 +31,9 @@ public partial class SongServiceTests
 
             details.Song.Title.ShouldBe("Bohemian Rhapsody");
             details.Song.Artist.ShouldBe("Queen");
-            details.Song.Link.Kind.ShouldBe("youtube");
-            details.Song.Link.Url.ShouldBe(YoutubeUrl);
-            details.Song.CreatedById.ShouldBe(user.GetUserId());
-            details.Song.AvailableRoles.ShouldBe(new[] { "Вокал", "Гитара" });
+            details.Song.Url.ShouldBe(YoutubeUrl);
+            details.Song.CreatedBy.Id.ShouldBe(user.GetUserId());
+            details.Song.Roles.Select(r => r.Title).ShouldBe(new[] { "Вокал", "Гитара" });
             details.Song.EditableByMe.ShouldBeTrue();
             details.Song.AssignmentCount.ShouldBe(0);
             details.Permissions.EditOwnSongs.ShouldBeTrue();
@@ -81,7 +81,7 @@ public partial class SongServiceTests
 
         using var scope = new SongScope();
         var details = await scope.Songs.CreateAsync(CreateRequest(), user, CancellationToken.None);
-        details.Song.ThumbnailUrl.ShouldBe("https://img.youtube.com/vi/fJ9rUzIMcZQ/maxresdefault.jpg");
+        details.Song.ThumbnailUrl.ShouldBe("https://img.youtube.com/vi/fJ9rUzIMcZQ/hqdefault.jpg");
     }
 
     [Test]
@@ -102,18 +102,18 @@ public partial class SongServiceTests
 
         using var scope = new SongScope();
         var details = await scope.Songs.CreateAsync(
-            CreateRequest(kind: "soundcloud", url: "https://soundcloud.com/foo"), user, CancellationToken.None);
+            CreateRequest(url: "https://soundcloud.com/foo"), user, CancellationToken.None);
         details.Song.ThumbnailUrl.ShouldBeNull();
     }
 
     [Test]
-    public async Task Create_InvalidLinkKind_ThrowsValidation()
+    public async Task Create_UnsupportedLinkUrl_ThrowsValidation()
     {
         var user = await CreateUserAsync("owner", editOwnSongs: true);
 
         using var scope = new SongScope();
         await Should.ThrowAsync<ValidationException>(() =>
-            scope.Songs.CreateAsync(CreateRequest(kind: "vimeo"), user, CancellationToken.None));
+            scope.Songs.CreateAsync(CreateRequest(url: "https://vimeo.com/123"), user, CancellationToken.None));
     }
 
     [Test]
@@ -127,7 +127,7 @@ public partial class SongServiceTests
             user,
             CancellationToken.None);
 
-        details.Song.AvailableRoles.ShouldBe(new[] { "Вокал", "Гитара", "гитара" });
+        details.Song.Roles.Select(r => r.Title).ShouldBe(new[] { "Вокал", "Гитара", "гитара" });
 
         using var db = Db();
         var stored = await db.SongRoles
@@ -145,6 +145,6 @@ public partial class SongServiceTests
 
         using var scope = new SongScope();
         var details = await scope.Songs.CreateAsync(CreateRequest(roles: []), user, CancellationToken.None);
-        details.Song.AvailableRoles.ShouldBeEmpty();
+        details.Song.Roles.ShouldBeEmpty();
     }
 }

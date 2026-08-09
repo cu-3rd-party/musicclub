@@ -1,6 +1,6 @@
 using System.Security.Claims;
 
-namespace CuMusicClub.Application.Songs;
+namespace CuMusicClub.Application.Song;
 
 public interface ISongService
 {

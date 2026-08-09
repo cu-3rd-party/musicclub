@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CuMusicClub.Application.Common.Auth;
-using CuMusicClub.Application.Songs;
+using SongEntity = CuMusicClub.Domain.Entities.Song;
+using CuMusicClub.Application.Song;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Domain.Enums;
 using CuMusicClub.Infrastructure.Data;
@@ -87,7 +88,7 @@ public partial class SongServiceTests : TestBase
     {
         var songId = Guid.NewGuid();
         var now = createdAt ?? DateTimeOffset.UtcNow;
-        await TestApp.AddAsync(new Song
+        await TestApp.AddAsync(new SongEntity
         {
             Id = songId,
             Title = title,
@@ -116,11 +117,10 @@ public partial class SongServiceTests : TestBase
     private static CreateSongRequest CreateRequest(
         string title = "Bohemian Rhapsody",
         string artist = "Queen",
-        string kind = "youtube",
-        string? url = YoutubeUrl,
+        string? url = null,
         bool featured = false,
         string? thumbnailUrl = null,
         string? description = null,
         string[]? roles = null)
-        => new(title, artist, description, new SongLinkDto(kind, url), thumbnailUrl, featured, roles);
+        => new(title, artist, description, url ?? YoutubeUrl, thumbnailUrl, featured, roles);
 }

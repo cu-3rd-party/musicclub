@@ -1,3 +1,5 @@
+using CuMusicClub.Domain.Enums;
+
 namespace CuMusicClub.Domain.Entities;
 
 public class Song

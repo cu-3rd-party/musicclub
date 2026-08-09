@@ -1,25 +1,25 @@
-namespace CuMusicClub.Application.Songs;
-
-public sealed record SongLinkDto(string Kind, string Url);
+namespace CuMusicClub.Application.Song;
 
 public sealed record SongDto(
     Guid Id,
     string Title,
     string Artist,
     string? Description,
-    SongLinkDto Link,
+    string Url,
     string? ThumbnailUrl,
     bool Featured,
-    Guid? CreatedById,
-    IReadOnlyList<string> AvailableRoles,
+    SongUserDto CreatedBy,
+    IReadOnlyList<RoleDto> Roles,
     bool EditableByMe,
     int AssignmentCount,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 
+
 public sealed record SongUserDto(Guid Id, string DisplayName, string Username, string? AvatarUrl);
 
-public sealed record RoleAssignmentDto(string Role, SongUserDto User, DateTimeOffset JoinedAt);
+public sealed record RoleAssignmentDto(SongUserDto User, DateTimeOffset JoinedAt);
+public sealed record RoleDto(Guid Id, string Title, RoleAssignmentDto? Assignment);
 
 public sealed record PermissionsDto(
     bool EditOwnParticipation,
@@ -38,7 +38,7 @@ public sealed record CreateSongRequest(
     string Title,
     string Artist,
     string? Description,
-    SongLinkDto? Link,
+    string Url,
     string? ThumbnailUrl,
     bool Featured,
     IReadOnlyList<string>? AvailableRoles);
@@ -47,7 +47,7 @@ public sealed record UpdateSongRequest(
     string Title,
     string Artist,
     string? Description,
-    SongLinkDto? Link,
+    string Url,
     string? ThumbnailUrl,
     bool Featured,
     IReadOnlyList<string>? AvailableRoles);

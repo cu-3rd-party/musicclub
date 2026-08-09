@@ -1,5 +1,4 @@
 using CuMusicClub.Web.Bot;
-using CuMusicClub.Web.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Microsoft.Extensions.DependencyInjection;
