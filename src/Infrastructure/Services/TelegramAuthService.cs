@@ -2,17 +2,23 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using CuMusicClub.Application.Auth;
+using CuMusicClub.Application.Security;
+using CuMusicClub.Domain.Entities;
+using CuMusicClub.Infrastructure.Data;
 using CuMusicClub.Infrastructure.Options;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace CuMusicClub.Infrastructure.Services;
 
-public class TelegramAuthService(IOptions<TelegramOptions> options) : ITelegramAuthService
+public class TelegramAuthService(
+    IOptions<TelegramOptions> telegramOptions,
+    ApplicationDbContext db,
+    IAuthService authService) : ITelegramAuthService
 {
     private static readonly TimeSpan TokenTtl = TimeSpan.FromHours(1);
-    private readonly string _botToken = options.Value.BotToken;
 
     public void Validate(string initData)
     {
@@ -33,7 +39,7 @@ public class TelegramAuthService(IOptions<TelegramOptions> options) : ITelegramA
         byte[] secretKey;
         using (var hmac = new HMACSHA256("WebAppData"u8.ToArray()))
         {
-            secretKey = hmac.ComputeHash(Encoding.UTF8.GetBytes(_botToken));
+            secretKey = hmac.ComputeHash(Encoding.UTF8.GetBytes(telegramOptions.Value.BotToken));
         }
 
         byte[] calculatedHash;
@@ -82,23 +88,62 @@ public class TelegramAuthService(IOptions<TelegramOptions> options) : ITelegramA
         return user;
     }
 
-    public Task<AuthSessionDto> AuthenticateAsync(string initData, CancellationToken cancellationToken)
+    public async Task<AuthSessionDto> AuthenticateAsync(string initData, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        Validate(initData);
+        var tgUser = ExtractTgUser(initData);
+        if (tgUser == null)
+        {
+            throw new BadHttpRequestException("no user extracted");
+        }
+
+        var user = await UpsertUserAsync(tgUser, cancellationToken);
+        return await authService.CreateAuthSession(user, cancellationToken);
     }
 
-    public Task<TokenPairDto> RefreshAsync(string refreshToken, CancellationToken cancellationToken)
+    public async Task<TokenPairDto> RefreshAsync(string refreshToken, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        return await authService.RefreshSession(refreshToken, cancellationToken);
     }
 
-    public Task<TelegramDeeplink> CreateDeeplink(CancellationToken cancellationToken)
+    public async Task<TgAuthLink> CreateDeeplink(CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var link = new TgAuthLink();
+        db.TgAuthLinks.Add(link);
+        await db.SaveChangesAsync(cancellationToken);
+        return link;
     }
 
-    public Task<AuthSessionDto?> GetDeeplink(Guid linkUid, CancellationToken cancellationToken)
+    public async Task<AuthSessionDto?> GetDeeplink(Guid linkUid, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var link = await db.TgAuthLinks.FirstOrDefaultAsync(l => l.Id == linkUid, cancellationToken);
+        if (link == null || link.TgUserId == null)
+            return null;
+
+        var user = await db.Users.FirstOrDefaultAsync(u => u.TgUserId == link.TgUserId, cancellationToken);
+        if (user == null)
+            return null;
+
+        db.TgAuthLinks.Remove(link);
+        await db.SaveChangesAsync(cancellationToken);
+
+        return await authService.CreateAuthSession(user, cancellationToken);
+    }
+
+    private async Task<ApplicationUser> UpsertUserAsync(Telegram.Bot.Types.User tgUser, CancellationToken cancellationToken)
+    {
+        var user = await db.Users.FirstOrDefaultAsync(u => u.TgUserId == tgUser.Id, cancellationToken);
+        if (user != null)
+            return user;
+
+        user = new ApplicationUser
+        {
+            TgUserId = tgUser.Id,
+            UserName = tgUser.Username,
+            DisplayName = tgUser.FirstName,
+        };
+        db.Users.Add(user);
+        await db.SaveChangesAsync(cancellationToken);
+        return user;
     }
 }

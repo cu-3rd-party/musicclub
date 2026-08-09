@@ -23,7 +23,8 @@ public static partial class Auth
     private static async Task<Results<Ok<TelegramDeeplink>, BadRequest>> TelegramDeeplink(
         ITelegramAuthService service, CancellationToken cancellationToken)
     {
-        return TypedResults.Ok(await service.CreateDeeplink(cancellationToken));
+        var link = await service.CreateDeeplink(cancellationToken);
+        return TypedResults.Ok(new TelegramDeeplink($"auth_{link.Id}", link.Id));
     }
 
     [EndpointSummary("Get auth session from deeplink. One time use")]

@@ -1,3 +1,5 @@
+using CuMusicClub.Domain.Entities;
+
 namespace CuMusicClub.Application.Auth;
 
 public interface ITelegramAuthService
@@ -32,7 +34,7 @@ public interface ITelegramAuthService
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    Task<TelegramDeeplink> CreateDeeplink(CancellationToken cancellationToken);
+    Task<TgAuthLink> CreateDeeplink(CancellationToken cancellationToken);
 
     /// <summary>
     /// Получить статус по диплинку

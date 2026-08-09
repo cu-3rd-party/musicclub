@@ -14,6 +14,7 @@ public static partial class Auth
             return TypedResults.BadRequest();
         }
 
-        throw new NotImplementedException();
+        var tokenPair = await service.RefreshAsync(request.RefreshToken, cancellationToken);
+        return TypedResults.Ok(tokenPair);
     }
 }
