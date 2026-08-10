@@ -1,8 +1,11 @@
 using System.Security.Claims;
 using System.Text.RegularExpressions;
+using CuMusicClub.Application.Auth;
 using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Common.Interfaces;
 using CuMusicClub.Domain.Entities;
+using CuMusicClub.Infrastructure.Data;
+using CuMusicClub.Infrastructure.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -12,7 +15,7 @@ using Telegram.Bot.Types.ReplyMarkups;
 
 namespace CuMusicClub.Web.Bot;
 
-public class BotUpdateHandler
+public class BotUpdateHandler(IApplicationDbContext db, ITelegramAuthService tgAuthService, UserManager<ApplicationUser> userManager, IOptions<BotOptions> options, ILogger<BotUpdateHandler> logger)
 {
     private static readonly Regex CommandRegex = new(
         @"^\/(?<command>[a-z0-9_]+)(?:@(?<botusername>[a-zA-Z0-9_]+))?(?:\s+(?<args>.*))?$",
@@ -23,23 +26,6 @@ public class BotUpdateHandler
         RegexOptions.Compiled);
 
     private static readonly Regex NamePartRegex = new("[^a-zA-Z]", RegexOptions.Compiled);
-
-    private readonly IApplicationDbContext _db;
-    private readonly UserManager<ApplicationUser> _userManager;
-    private readonly BotOptions _options;
-    private readonly ILogger<BotUpdateHandler> _logger;
-
-    public BotUpdateHandler(
-        IApplicationDbContext db,
-        UserManager<ApplicationUser> userManager,
-        IOptions<BotOptions> options,
-        ILogger<BotUpdateHandler> logger)
-    {
-        _db = db;
-        _userManager = userManager;
-        _options = options.Value;
-        _logger = logger;
-    }
 
     public async Task HandleUpdateAsync(
         ITelegramBotClient bot, Update update, string webAppUrl, CancellationToken cancellationToken)
@@ -96,7 +82,7 @@ public class BotUpdateHandler
     private async Task HandleStartAsync(
         ITelegramBotClient bot, Message message, User user, string webAppUrl, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Received command /start without args");
+        logger.LogInformation("Received command /start without args");
 
         var keyboard = new InlineKeyboardMarkup(new[]
         {
@@ -118,7 +104,7 @@ public class BotUpdateHandler
     private async Task HandleStartWithArgsAsync(
         ITelegramBotClient bot, Message message, User user, string args, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Received command start with {Args}", args);
+        logger.LogInformation("Received command start with {Args}", args);
 
         if (!args.StartsWith("auth_", StringComparison.Ordinal))
         {
@@ -133,7 +119,18 @@ public class BotUpdateHandler
             return;
         }
 
-        // TODO: временно все принимаем по дефолту
+        var link = await db.TgAuthLinks.FirstOrDefaultAsync(l => l.Id == token, cancellationToken);
+        if (link is not { TgUserId: null })
+        {
+            await SendTextAsync(bot, message.Chat, BotTexts.Get("start.invalid_token", user.LanguageCode), cancellationToken);
+            return;
+        }
+
+        link.TgUserId = user.Id;
+        await db.SaveChangesAsync(cancellationToken);
+
+        await tgAuthService.UpsertUserAsync(user, cancellationToken);
+
         await SendTextAsync(bot, message.Chat, BotTexts.Get("auth.ok", user.LanguageCode), cancellationToken);
     }
 

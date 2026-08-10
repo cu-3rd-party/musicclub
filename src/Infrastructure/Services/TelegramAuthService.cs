@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Telegram.Bot.Types;
 
 namespace CuMusicClub.Infrastructure.Services;
 
@@ -106,12 +107,12 @@ public class TelegramAuthService(
         return await authService.RefreshSession(refreshToken, cancellationToken);
     }
 
-    public async Task<TgAuthLink> CreateDeeplink(CancellationToken cancellationToken)
+    public async Task<TelegramDeeplink> CreateDeeplink(CancellationToken cancellationToken)
     {
         var link = new TgAuthLink();
         db.TgAuthLinks.Add(link);
         await db.SaveChangesAsync(cancellationToken);
-        return link;
+        return new TelegramDeeplink($"https://t.me/{telegramOptions.Value.BotUsername}?start=auth_{link.Id}", link.Id);
     }
 
     public async Task<AuthSessionDto?> GetDeeplink(Guid linkUid, CancellationToken cancellationToken)
@@ -130,7 +131,7 @@ public class TelegramAuthService(
         return await authService.CreateAuthSession(user, cancellationToken);
     }
 
-    private async Task<ApplicationUser> UpsertUserAsync(Telegram.Bot.Types.User tgUser, CancellationToken cancellationToken)
+    public async Task<ApplicationUser> UpsertUserAsync(Telegram.Bot.Types.User tgUser, CancellationToken cancellationToken)
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.TgUserId == tgUser.Id, cancellationToken);
         if (user != null)

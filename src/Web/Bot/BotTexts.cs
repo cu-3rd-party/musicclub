@@ -8,7 +8,7 @@ public static class BotTexts
         ["start.welcome"] = "Welcome to Music Club! 🎸\n\nTap the button below to open the app:",
         ["help.start"] = "Send /start to get the web app link.",
         ["start.invalid_param"] = "Invalid start parameter.",
-        ["start.invalid_token"] = "Invalid authentication token.",
+        ["start.invalid_token"] = "Invalid or used authentication token.",
         ["auth.ok"] = "✅ Authentication successful! You may return to the web app.",
         ["auth.fail"] = "❌ Authentication failed or expired.",
         ["calendar.attach.ask"] = "Send your calendar ICS URL.",

@@ -16,11 +16,7 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
-                    TgUserId = table.Column<long>(type: "bigint", nullable: true, comment: "Айди кто использовал ссылку"),
-                    Created = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    CreatedBy = table.Column<Guid>(type: "uuid", nullable: true),
-                    LastModified = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    LastModifiedBy = table.Column<Guid>(type: "uuid", nullable: true)
+                    TgUserId = table.Column<long>(type: "bigint", nullable: true, comment: "Айди кто использовал ссылку")
                 },
                 constraints: table =>
                 {
