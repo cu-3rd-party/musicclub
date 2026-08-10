@@ -9,7 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace CuMusicClub.Infrastructure.Services;
 
-public class JwtService(IOptions<SecurityOptions> securityOptions) : IAuthService
+public class AuthService(IOptions<SecurityOptions> securityOptions) : IAuthService
 {
     private static readonly TimeSpan AccessTokenTtl = TimeSpan.FromHours(1);
     private static readonly TimeSpan RefreshTokenTtl = TimeSpan.FromDays(7);
@@ -38,6 +38,7 @@ public class JwtService(IOptions<SecurityOptions> securityOptions) : IAuthServic
             user.UpdatedAt);
 
         var session = new AuthSessionDto(accessToken, refreshToken, now + AccessTokenTtl, now, profile);
+        // TODO: это надо добавлять в user_session и в дальнейшем сделать апи менеджмента сессиями
         return Task.FromResult(session);
     }
 

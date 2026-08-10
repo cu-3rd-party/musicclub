@@ -1,3 +1,5 @@
+import type {UUID} from "node:crypto";
+
 export type UserProfile = {
     id: string;
     email: string;
@@ -20,6 +22,11 @@ export type AuthSession = TokenPair & {
     accessTokenAcquiredAt: string;
     user: UserProfile;
 };
+
+export type Deeplink = {
+    url: string;
+    uid: UUID;
+}
 
 export type LoginPayload = {
     email: string;

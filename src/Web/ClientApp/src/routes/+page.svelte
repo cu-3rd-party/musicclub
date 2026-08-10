@@ -14,7 +14,7 @@
                 return;
             }
 
-            void goto(state.user ? resolve("/") : resolve("/auth"));
+            void goto(state.user ? resolve("/app") : resolve("/auth"));
         });
     });
 </script>

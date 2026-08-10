@@ -7,7 +7,7 @@ import type {
     RegisterPayload,
     TokenPair,
     UserProfile,
-    TelegramInitDataPayload,
+    TelegramInitDataPayload, Deeplink,
 } from "$lib/auth/types";
 
 type ApiErrorPayload = {
@@ -21,6 +21,23 @@ export async function telegramAuth(
         "/api/v1/auth/telegram",
         payload,
     );
+    return response.data;
+}
+
+export async function createDeeplink(): Promise<Deeplink> {
+    const response = await api.get<Deeplink>(
+        "/api/v1/auth/telegram/link"
+    );
+    return response.data;
+}
+
+export async function getDeeplink(link: Deeplink): Promise<AuthSession | null> {
+    const response = await api.get<AuthSession>(
+        `/api/v1/auth/telegram/link/${link.uid}`
+    );
+    if (response.status != 200) {
+        return null;
+    }
     return response.data;
 }
 
@@ -79,5 +96,5 @@ export function getApiErrorMessage(
 }
 
 export function isUnauthorizedError(error: unknown): boolean {
-    return axios.isAxiosError(error) && error.response?.status === 401;
+    return axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 404);
 }

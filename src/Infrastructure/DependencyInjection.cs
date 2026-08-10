@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -50,7 +51,24 @@ public static class DependencyInjection
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer();
 
-        builder.Services.AddSingleton<IConfigureOptions<JwtBearerOptions>, ConfigureJwtBearerOptions>();
+        builder.Services
+            .AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+            .Configure<IOptions<SecurityOptions>>((options, securityOptions) =>
+            {
+                options.MapInboundClaims = false;
+
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = securityOptions.Value.SigningKey,
+
+                    ValidateIssuer = false,
+                    ValidateAudience = false,
+                    ValidateLifetime = true,
+
+                    ClockSkew = TimeSpan.Zero,
+                };
+            });
 
         builder.Services.AddAuthorizationBuilder();
 
@@ -71,7 +89,7 @@ public static class DependencyInjection
 
         builder.Services.AddScoped<ISongService, SongService>();
         builder.Services.AddScoped<ITelegramAuthService, TelegramAuthService>();
-        builder.Services.AddSingleton<IAuthService, JwtService>();
+        builder.Services.AddSingleton<IAuthService, AuthService>();
 
         builder.Services
             .AddIdentityCore<ApplicationUser>()
@@ -81,19 +99,30 @@ public static class DependencyInjection
             .AddDefaultTokenProviders();
     }
 
-    private sealed class ConfigureJwtBearerOptions(IOptions<SecurityOptions> securityOptions)
+    private sealed class ConfigureJwtBearerOptions(
+        IOptions<SecurityOptions> securityOptions,
+        ILogger<ConfigureJwtBearerOptions> logger)
         : IConfigureOptions<JwtBearerOptions>
     {
         public void Configure(JwtBearerOptions options)
         {
+            var key = securityOptions.Value.SigningKey;
+
+            logger.LogInformation(
+                "Configuring JWT. Signing key present: {HasKey}, key length: {KeyLength}",
+                key is not null,
+                key?.KeySize);
+
             options.MapInboundClaims = false;
+
             options.TokenValidationParameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
-                IssuerSigningKey = securityOptions.Value.SigningKey,
+                IssuerSigningKey = key,
                 ValidateIssuer = false,
                 ValidateAudience = false,
                 ValidateLifetime = true,
+                ClockSkew = TimeSpan.Zero,
             };
         }
     }
