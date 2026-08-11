@@ -9,6 +9,7 @@ public sealed record UserProfileDto(
     string DisplayName,
     string Username,
     string? AvatarUrl,
+    IEnumerable<string> Permissions,
     DateTimeOffset? LastLoginAt,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);

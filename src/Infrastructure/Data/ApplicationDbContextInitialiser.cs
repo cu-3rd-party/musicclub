@@ -30,8 +30,6 @@ public static class InitialiserExtensions
 public class ApplicationDbContextInitialiser(
     ILogger<ApplicationDbContextInitialiser> logger,
     ApplicationDbContext db,
-    UserManager<ApplicationUser> userManager,
-    RoleManager<IdentityRole<Guid>> roleManager,
     IHostEnvironment env,
     IConfiguration configuration)
 {

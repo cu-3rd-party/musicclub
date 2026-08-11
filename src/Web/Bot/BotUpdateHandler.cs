@@ -18,8 +18,6 @@ namespace CuMusicClub.Web.Bot;
 public class BotUpdateHandler(
     IApplicationDbContext db,
     ITelegramAuthService tgAuthService,
-    UserManager<ApplicationUser> userManager,
-    IOptions<BotOptions> options,
     ILogger<BotUpdateHandler> logger)
 {
     private static readonly Regex CommandRegex = new(

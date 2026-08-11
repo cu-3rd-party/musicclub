@@ -89,38 +89,12 @@ public static class DependencyInjection
         builder.Services.AddScoped<ISongService, SongService>();
         builder.Services.AddScoped<ITelegramAuthService, TelegramAuthService>();
         builder.Services.AddScoped<IPermissionService, PermissionService>();
-        builder.Services.AddSingleton<IAuthService, AuthService>();
+        builder.Services.AddScoped<IAuthService, AuthService>();
 
         builder.Services.AddIdentityCore<ApplicationUser>()
             .AddRoles<IdentityRole<Guid>>()
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddSignInManager()
             .AddDefaultTokenProviders();
-    }
-
-    private sealed class ConfigureJwtBearerOptions(
-        IOptions<SecurityOptions> securityOptions,
-        ILogger<ConfigureJwtBearerOptions> logger) : IConfigureOptions<JwtBearerOptions>
-    {
-        public void Configure(JwtBearerOptions options)
-        {
-            var key = securityOptions.Value.SigningKey;
-
-            logger.LogInformation("Configuring JWT. Signing key present: {HasKey}, key length: {KeyLength}",
-                key is not null,
-                key?.KeySize);
-
-            options.MapInboundClaims = false;
-
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = key,
-                ValidateIssuer = false,
-                ValidateAudience = false,
-                ValidateLifetime = true,
-                ClockSkew = TimeSpan.Zero,
-            };
-        }
     }
 }

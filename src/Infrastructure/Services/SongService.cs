@@ -15,11 +15,9 @@ using Microsoft.Extensions.Logging;
 namespace CuMusicClub.Infrastructure.Services;
 
 public class SongService(
-    ILogger<SongService> logger,
     IPermissionService permissionService,
     ApplicationDbContext db,
-    UserManager<ApplicationUser> userManager,
-    RoleManager<IdentityRole<Guid>> roleManager) : ISongService
+    UserManager<ApplicationUser> userManager) : ISongService
 {
     private const int DefaultPageSize = 20;
     private const int MaxPageSize = 100;

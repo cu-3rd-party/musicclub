@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using CuMusicClub.Application.Auth;
+using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Security;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Infrastructure.Options;
@@ -9,14 +10,14 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace CuMusicClub.Infrastructure.Services;
 
-public class AuthService(IOptions<SecurityOptions> securityOptions) : IAuthService
+public class AuthService(IOptions<SecurityOptions> securityOptions, IPermissionService permissionService) : IAuthService
 {
     private static readonly TimeSpan AccessTokenTtl = TimeSpan.FromHours(1);
     private static readonly TimeSpan RefreshTokenTtl = TimeSpan.FromDays(7);
 
     private readonly SymmetricSecurityKey _signingKey = securityOptions.Value.SigningKey;
 
-    public Task<AuthSessionDto> CreateAuthSession(ApplicationUser user, CancellationToken cancellationToken)
+    public async Task<AuthSessionDto> CreateAuthSession(ApplicationUser user, CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.UtcNow;
         var claims = new[]
@@ -30,17 +31,18 @@ public class AuthService(IOptions<SecurityOptions> securityOptions) : IAuthServi
         var accessToken = CreateToken(claims, now, AccessTokenTtl);
         var refreshToken = CreateToken(claims, now, RefreshTokenTtl);
 
-        var profile = new UserProfileDto(user.Id,
-            user.DisplayName,
-            user.UserName ?? string.Empty,
-            user.AvatarUrl,
-            null,
-            user.CreatedAt,
-            user.UpdatedAt);
+        var profile = new UserProfileDto(Id: user.Id,
+            DisplayName: user.DisplayName,
+            Username: user.UserName ?? string.Empty,
+            AvatarUrl: user.AvatarUrl,
+            Permissions: await permissionService.GetPermissionValuesAsync(user, cancellationToken),
+            LastLoginAt: null,
+            CreatedAt: user.CreatedAt,
+            UpdatedAt: user.UpdatedAt);
 
         var session = new AuthSessionDto(accessToken, refreshToken, now + AccessTokenTtl, now, profile);
         // TODO: это надо добавлять в user_session и в дальнейшем сделать апи менеджмента сессиями
-        return Task.FromResult(session);
+        return session;
     }
 
     public Task<TokenPairDto> RefreshSession(string refreshToken, CancellationToken cancellationToken)
