@@ -16,7 +16,7 @@ public class FunctionalTestSetup
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
     {
-        _container = new PostgreSqlBuilder()
+        _container = new PostgreSqlBuilder("postgres:16-alpine")
             .WithDatabase("musicclub_test")
             .WithUsername("postgres")
             .WithPassword("postgres")
