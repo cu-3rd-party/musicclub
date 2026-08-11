@@ -94,7 +94,11 @@ public static class DependencyInjection
         builder.Services.AddScoped<IAuthService, AuthService>();
 
         builder
-            .Services.AddIdentityCore<ApplicationUser>()
+            .Services
+            .AddIdentityCore<ApplicationUser>(options =>
+            {
+                options.ClaimsIdentity.UserIdClaimType = "sub";
+            })
             .AddRoles<IdentityRole<Guid>>()
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddSignInManager()

@@ -2,21 +2,27 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using CuMusicClub.Application.Auth;
+using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Security;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Infrastructure.Data;
 using CuMusicClub.Infrastructure.Options;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Telegram.Bot.Types;
 
 namespace CuMusicClub.Infrastructure.Services;
 
 public class TelegramAuthService(
+    ILogger<TelegramAuthService> logger,
     IOptions<TelegramOptions> telegramOptions,
     ApplicationDbContext db,
+    IPermissionService permissionService,
+    UserManager<ApplicationUser> userManager,
     IAuthService authService) : ITelegramAuthService
 {
     private static readonly TimeSpan TokenTtl = TimeSpan.FromHours(1);
@@ -116,8 +122,10 @@ public class TelegramAuthService(
             UserName = tgUser.Username,
             DisplayName = tgUser.FirstName,
         };
-        db.Users.Add(user);
-        await db.SaveChangesAsync(cancellationToken);
+        var result = await userManager.CreateAsync(user);
+        logger.LogDebug($"result is {result.Succeeded.ToString()}"); // says result is True, i see the user in the database
+        await permissionService.GrantDefaultAsync(user, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken); // unneccessary, but doesn't harm
         return user;
     }
 }
