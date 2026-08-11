@@ -44,9 +44,7 @@ public class BotUpdateHandler(
         if (update.CallbackQuery is
             {
             } callback)
-        {
             await HandleCallbackQueryAsync(bot, callback, cancellationToken);
-        }
     }
 
     private async Task HandleMessageAsync(ITelegramBotClient bot,
@@ -55,33 +53,27 @@ public class BotUpdateHandler(
         CancellationToken cancellationToken)
     {
         var user = message.From;
-        if (user is null || string.IsNullOrWhiteSpace(message.Text))
-        {
-            return;
-        }
+        if (user is null || string.IsNullOrWhiteSpace(message.Text)) return;
 
         var text = message.Text.Trim();
 
         var command = CommandRegex.Match(text);
         if (command.Success)
-        {
-            switch (command.Groups["command"]
+            switch (command
+                        .Groups["command"]
                         .Value.ToLowerInvariant())
             {
                 // может и есть получше способ для задания обработки команд, но я хз
                 case "start":
                     var args = command.Groups["args"].Success
-                        ? command.Groups["args"]
+                        ? command
+                            .Groups["args"]
                             .Value.Trim()
                         : string.Empty;
                     if (args.Length > 0)
-                    {
                         await HandleStartWithArgsAsync(bot, message, user, args, cancellationToken);
-                    }
                     else
-                    {
                         await HandleStartAsync(bot, message, user, webAppUrl, cancellationToken);
-                    }
 
                     return;
                 case "help":
@@ -91,7 +83,6 @@ public class BotUpdateHandler(
                         cancellationToken);
                     return;
             }
-        }
     }
 
     private async Task HandleStartAsync(ITelegramBotClient bot,
@@ -147,7 +138,7 @@ public class BotUpdateHandler(
         var link = await db.TgAuthLinks.FirstOrDefaultAsync(l => l.Id == token, cancellationToken);
         if (link is not
             {
-                TgUserId: null
+                TgUserId: null,
             })
         {
             await SendTextAsync(bot,
@@ -179,7 +170,8 @@ public class BotUpdateHandler(
 
     private static string NormalizeNamePart(string value)
     {
-        return NamePartRegex.Replace(value, string.Empty)
+        return NamePartRegex
+            .Replace(value, string.Empty)
             .ToLowerInvariant();
     }
 

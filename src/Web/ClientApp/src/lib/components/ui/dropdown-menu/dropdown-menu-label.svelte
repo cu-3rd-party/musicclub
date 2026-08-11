@@ -14,11 +14,11 @@
 </script>
 
 <div
-        bind:this={ref}
-        data-slot="dropdown-menu-label"
-        data-inset={inset}
-        class={cn("text-muted-foreground px-1.5 py-1 text-xs font-medium data-inset:pl-7 data-[inset]:pl-8", className)}
-        {...restProps}
+    bind:this={ref}
+    data-slot="dropdown-menu-label"
+    data-inset={inset}
+    class={cn("text-muted-foreground px-1.5 py-1 text-xs font-medium data-inset:pl-7 data-[inset]:pl-8", className)}
+    {...restProps}
 >
     {@render children?.()}
 </div>

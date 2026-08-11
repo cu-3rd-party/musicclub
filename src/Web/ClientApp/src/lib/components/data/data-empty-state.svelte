@@ -15,7 +15,8 @@
     } = $props();
 </script>
 
-<div class="bg-card/90 flex flex-col items-center justify-center rounded-[1.75rem] border border-border/60 px-6 py-16 text-center shadow-[0_18px_60px_-36px_rgba(0,0,0,0.35)]">
+<div
+    class="bg-card/90 flex flex-col items-center justify-center rounded-[1.75rem] border border-border/60 px-6 py-16 text-center shadow-[0_18px_60px_-36px_rgba(0,0,0,0.35)]">
     <div class="bg-muted text-muted-foreground mb-5 flex size-14 items-center justify-center rounded-2xl">
         <FileSearchIcon class="size-6"/>
     </div>

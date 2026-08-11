@@ -31,7 +31,10 @@ public partial class SongServiceTests : TestBase
             UserManager = _scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         }
 
-        public void Dispose() => _scope.Dispose();
+        public void Dispose()
+        {
+            _scope.Dispose();
+        }
     }
 
     private static ApplicationDbContext Db()
@@ -70,10 +73,7 @@ public partial class SongServiceTests : TestBase
         if (editAnySongs) claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.SongsEditAny));
         if (editFeaturedSongs) claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.SongsEditFeatured));
 
-        foreach (var claim in claims)
-        {
-            await userManager.AddClaimAsync(user, claim);
-        }
+        foreach (var claim in claims) await userManager.AddClaimAsync(user, claim);
 
         var identity = new ClaimsIdentity([
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
@@ -117,14 +117,12 @@ public partial class SongServiceTests : TestBase
         if (roles is not null)
         {
             foreach (var role in roles)
-            {
                 db.SongRoles.Add(new SongRole
                 {
                     SongId = songId,
                     Song = song,
                     RoleTitle = role,
                 });
-            }
 
             await db.SaveChangesAsync();
         }
@@ -165,6 +163,8 @@ public partial class SongServiceTests : TestBase
         bool featured = false,
         string? thumbnailUrl = null,
         string? description = null,
-        string[]? roles = null) =>
-        new(title, artist, description, url ?? YoutubeUrl, thumbnailUrl, featured, roles);
+        string[]? roles = null)
+    {
+        return new CreateSongRequest(title, artist, description, url ?? YoutubeUrl, thumbnailUrl, featured, roles);
+    }
 }

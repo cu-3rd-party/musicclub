@@ -73,7 +73,8 @@
                 {@render renderBlocks(item.tokens ?? [])}
             </blockquote>
         {:else if item.type === "code"}
-            <pre class="bg-background overflow-x-auto rounded-xl border border-border/60 p-4"><code>{item.text}</code></pre>
+            <pre
+                class="bg-background overflow-x-auto rounded-xl border border-border/60 p-4"><code>{item.text}</code></pre>
         {:else if item.type === "hr"}
             <hr class="border-border/60"/>
         {:else if item.type !== "space"}

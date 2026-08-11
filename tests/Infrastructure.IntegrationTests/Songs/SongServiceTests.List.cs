@@ -30,12 +30,13 @@ public partial class SongServiceTests
         using var scope = new SongScope();
         var result = await scope.Songs.ListAsync(null, 20, null, principal, CancellationToken.None);
 
-        result.Songs.Select(s => s.Id)
+        result
+            .Songs.Select(s => s.Id)
             .ShouldBe(new[]
             {
                 featuredId,
                 newestId,
-                oldId
+                oldId,
             });
         result.NextPageToken.ShouldBeNull();
     }
@@ -56,14 +57,16 @@ public partial class SongServiceTests
         using var scope = new SongScope();
         var result = await scope.Songs.ListAsync("avenged", 20, null, principal, CancellationToken.None);
 
-        result.Songs.Select(s => s.Id)
+        result
+            .Songs.Select(s => s.Id)
             .ShouldBe(new[]
             {
                 featuredMatch,
                 match2,
-                match1
+                match1,
             });
-        result.Songs.All(s => s.Artist == "Avenged Sevenfold")
+        result
+            .Songs.All(s => s.Artist == "Avenged Sevenfold")
             .ShouldBeTrue();
     }
 
@@ -90,19 +93,21 @@ public partial class SongServiceTests
 
         using var scope = new SongScope();
         var page1 = await scope.Songs.ListAsync(null, 2, null, principal, CancellationToken.None);
-        page1.Songs.Select(s => s.Id)
+        page1
+            .Songs.Select(s => s.Id)
             .ShouldBe(new[]
             {
                 newestId,
-                middleId
+                middleId,
             });
         page1.NextPageToken.ShouldBe("2");
 
         var page2 = await scope.Songs.ListAsync(null, 2, page1.NextPageToken, principal, CancellationToken.None);
-        page2.Songs.Select(s => s.Id)
+        page2
+            .Songs.Select(s => s.Id)
             .ShouldBe(new[]
             {
-                oldestId
+                oldestId,
             });
         page2.NextPageToken.ShouldBeNull();
     }
@@ -112,10 +117,7 @@ public partial class SongServiceTests
     {
         var (_, principal) = await CreateUserAsync("reader");
         var now = DateTimeOffset.UtcNow;
-        for (var i = 0; i < 5; i++)
-        {
-            await SeedSongAsync($"Song{i}", "A", createdAt: now.AddMinutes(-i));
-        }
+        for (var i = 0; i < 5; i++) await SeedSongAsync($"Song{i}", "A", createdAt: now.AddMinutes(-i));
 
         using var scope = new SongScope();
         var result = await scope.Songs.ListAsync(null, 0, null, principal, CancellationToken.None);
@@ -135,10 +137,11 @@ public partial class SongServiceTests
 
         using var scope = new SongScope();
         var result = await scope.Songs.ListAsync(null, 1, "not-a-number", principal, CancellationToken.None);
-        result.Songs.Select(s => s.Id)
+        result
+            .Songs.Select(s => s.Id)
             .ShouldBe(new[]
             {
-                newestId
+                newestId,
             });
     }
 
@@ -146,11 +149,11 @@ public partial class SongServiceTests
     public async Task List_AssignmentCount_CountsDistinctRoles()
     {
         var (owner, ownerPrincipal) = await CreateUserAsync("owner", editOwnSongs: true, editOwnParticipation: true);
-        var (member, memberPrincipal) = await CreateUserAsync("member", editOwnParticipation: true);
+        var (member, memberPrincipal) = await CreateUserAsync("member", true);
         var songId = await SeedSongAsync(roles: new[]
             {
                 "Вокал",
-                "Барабаны"
+                "Барабаны",
             },
             createdById: owner.Id);
 
@@ -169,7 +172,8 @@ public partial class SongServiceTests
         using (var scope = new SongScope())
         {
             var result = await scope.Songs.ListAsync(null, 20, null, ownerPrincipal, CancellationToken.None);
-            result.Songs.Single()
+            result
+                .Songs.Single()
                 .Roles.Count(r => r.Assignment != null)
                 .ShouldBe(2);
         }

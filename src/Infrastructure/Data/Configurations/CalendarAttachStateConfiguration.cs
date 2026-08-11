@@ -11,18 +11,23 @@ public class CalendarAttachStateConfiguration : IEntityTypeConfiguration<Calenda
         builder.ToTable("calendar_attach_state");
 
         builder.HasKey(s => s.TgUserId);
-        builder.Property(s => s.TgUserId)
+        builder
+            .Property(s => s.TgUserId)
             .HasColumnName("tg_user_id")
             .ValueGeneratedNever();
 
-        builder.Property(s => s.State)
+        builder
+            .Property(s => s.State)
             .HasColumnName("state")
             .IsRequired();
-        builder.Property(s => s.PendingUserId)
+        builder
+            .Property(s => s.PendingUserId)
             .HasColumnName("pending_user_id");
-        builder.Property(s => s.PendingEmail)
+        builder
+            .Property(s => s.PendingEmail)
             .HasColumnName("pending_email");
-        builder.Property(s => s.UpdatedAt)
+        builder
+            .Property(s => s.UpdatedAt)
             .HasColumnName("updated_at")
             .HasDefaultValueSql("NOW()");
     }

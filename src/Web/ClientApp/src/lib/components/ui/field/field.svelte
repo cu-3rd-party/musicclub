@@ -36,12 +36,12 @@
 </script>
 
 <div
-        bind:this={ref}
-        role="group"
-        data-slot="field"
-        data-orientation={orientation}
-        class={cn(fieldVariants({ orientation }), className)}
-        {...restProps}
+    bind:this={ref}
+    role="group"
+    data-slot="field"
+    data-orientation={orientation}
+    class={cn(fieldVariants({ orientation }), className)}
+    {...restProps}
 >
     {@render children?.()}
 </div>

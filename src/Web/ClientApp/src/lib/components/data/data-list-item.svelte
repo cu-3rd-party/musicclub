@@ -10,7 +10,7 @@
 </script>
 
 <article
-        class="bg-card/90 rounded-[1.5rem] border border-border/60 px-5 py-5 shadow-[0_16px_40px_-32px_rgba(0,0,0,0.45)] transition-colors hover:border-border">
+    class="bg-card/90 rounded-[1.5rem] border border-border/60 px-5 py-5 shadow-[0_16px_40px_-32px_rgba(0,0,0,0.45)] transition-colors hover:border-border">
     <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div class="min-w-0 space-y-3">
             <div class="flex flex-wrap items-center gap-2">

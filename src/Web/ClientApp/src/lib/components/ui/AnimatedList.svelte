@@ -137,36 +137,36 @@
 
 <div class="relative w-125 {className}">
     <div
-            bind:this={listRef}
-            class="al-scroll overflow-y-auto {listClass} {displayScrollbar ? 'al-scrollbar' : 'al-scrollbar-hide'}"
-            onscroll={handleScroll}
+        bind:this={listRef}
+        class="al-scroll overflow-y-auto {listClass} {displayScrollbar ? 'al-scrollbar' : 'al-scrollbar-hide'}"
+        onscroll={handleScroll}
     >
         {#each items as item, index (index)}
             <div
-                    use:inViewAction={index}
-                    data-index={index}
-                    class="mb-4 cursor-pointer al-item"
-                    style:transform={inView[index] ? 'scale(1)' : 'scale(0.7)'}
-                    style:opacity={inView[index] ? 1 : 0}
-                    style:transition="transform 0.2s ease 0.1s, opacity 0.2s ease 0.1s"
-                    onmouseenter={() => (selectedIndex = index)}
-                    onclick={() => {
+                use:inViewAction={index}
+                data-index={index}
+                class="mb-4 cursor-pointer al-item"
+                style:transform={inView[index] ? 'scale(1)' : 'scale(0.7)'}
+                style:opacity={inView[index] ? 1 : 0}
+                style:transition="transform 0.2s ease 0.1s, opacity 0.2s ease 0.1s"
+                onmouseenter={() => (selectedIndex = index)}
+                onclick={() => {
 					selectedIndex = index;
 					onItemSelect?.(item, index);
 				}}
-                    onkeydown={(e) => {
+                onkeydown={(e) => {
 					if (e.key === 'Enter' || e.key === ' ') {
 						e.preventDefault();
 						selectedIndex = index;
 						onItemSelect?.(item, index);
 					}
 				}}
-                    role="option"
-                    aria-selected={selectedIndex === index}
-                    tabindex="-1"
+                role="option"
+                aria-selected={selectedIndex === index}
+                tabindex="-1"
             >
                 <div
-                        class="flex items-center gap-3 p-4 bg-[#222] rounded-lg {selectedIndex === index ? 'al-selected' : ''} {itemClass}"
+                    class="flex items-center gap-3 p-4 bg-[#222] rounded-lg {selectedIndex === index ? 'al-selected' : ''} {itemClass}"
                 >
                     <p class="text-white m-0 min-w-0 flex-1 truncate">{getDisplayItem(item)}</p>
                     {#if itemProgresses[index] !== undefined}
@@ -176,30 +176,31 @@
                             {/if}
                             <div class="mt-1 h-1.5 overflow-hidden rounded-full bg-white/10">
                                 <div
-                                        class="h-full rounded-full transition-[width] {itemProgressClasses[index] || 'bg-primary'}"
-                                        style:width={`${itemProgresses[index]}%`}
+                                    class="h-full rounded-full transition-[width] {itemProgressClasses[index] || 'bg-primary'}"
+                                    style:width={`${itemProgresses[index]}%`}
                                 ></div>
                             </div>
                         </div>
                     {/if}
                     {#if itemBadges && itemBadges[index]}
                         {#each itemBadges[index] as badge (badge)}
-                            <span class="shrink-0 rounded-md bg-white/10 px-2 py-0.5 text-xs text-white/70">{badge}</span>
+                            <span
+                                class="shrink-0 rounded-md bg-white/10 px-2 py-0.5 text-xs text-white/70">{badge}</span>
                         {/each}
                     {/if}
                     {#if itemSucceeded[index]}
                         <span
-                                class="flex size-7 shrink-0 items-center justify-center rounded-md bg-emerald-400/15 text-emerald-400"
-                                aria-label="Файл загружен"
+                            class="flex size-7 shrink-0 items-center justify-center rounded-md bg-emerald-400/15 text-emerald-400"
+                            aria-label="Файл загружен"
                         >
                             <CheckIcon class="size-4"/>
                         </span>
                     {:else if onRemove}
                         <button
-                                type="button"
-                                class="flex size-7 shrink-0 items-center justify-center rounded-md text-white/40 transition-colors hover:bg-white/10 hover:text-white/80 disabled:pointer-events-none disabled:opacity-40"
-                                onclick={(e) => { e.stopPropagation(); onRemove(index); }}
-                                disabled={removeDisabled}
+                            type="button"
+                            class="flex size-7 shrink-0 items-center justify-center rounded-md text-white/40 transition-colors hover:bg-white/10 hover:text-white/80 disabled:pointer-events-none disabled:opacity-40"
+                            onclick={(e) => { e.stopPropagation(); onRemove(index); }}
+                            disabled={removeDisabled}
                         >
                             <Trash2Icon class="size-3.5"/>
                         </button>
@@ -213,12 +214,12 @@
     </div>
     {#if showGradients}
         <div
-                class="absolute top-0 left-0 right-0 h-12.5 pointer-events-none"
-                style="background: linear-gradient(to bottom, #14110E, transparent); opacity: {topGradientOpacity}; transition: opacity 0.3s ease;"
+            class="absolute top-0 left-0 right-0 h-12.5 pointer-events-none"
+            style="background: linear-gradient(to bottom, #14110E, transparent); opacity: {topGradientOpacity}; transition: opacity 0.3s ease;"
         ></div>
         <div
-                class="absolute bottom-0 left-0 right-0 h-25 pointer-events-none"
-                style="background: linear-gradient(to top, #14110E, transparent); opacity: {bottomGradientOpacity}; transition: opacity 0.3s ease;"
+            class="absolute bottom-0 left-0 right-0 h-25 pointer-events-none"
+            style="background: linear-gradient(to top, #14110E, transparent); opacity: {bottomGradientOpacity}; transition: opacity 0.3s ease;"
         ></div>
     {/if}
 </div>

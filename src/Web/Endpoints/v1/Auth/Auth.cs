@@ -15,7 +15,8 @@ public static partial class Auth
         group.MapGet("/telegram/link/{deeplinkUid:guid}", LoginDeeplink);
         group.MapPost("/refresh", Refresh);
 
-        var authed = group.MapGroup("/")
+        var authed = group
+            .MapGroup("/")
             .RequireAuthorization();
         authed.MapGet("/me", Me);
     }

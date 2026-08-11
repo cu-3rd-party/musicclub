@@ -16,28 +16,28 @@ public class ProblemDetailsExceptionHandler : IExceptionHandler
                 (ProblemDetails) new ValidationProblemDetails(ve.Errors)
                 {
                     Status = StatusCodes.Status400BadRequest,
-                    Type = "https://tools.ietf.org/html/rfc9110#section-15.5.1"
+                    Type = "https://tools.ietf.org/html/rfc9110#section-15.5.1",
                 }),
             NotFoundException ne => (StatusCodes.Status404NotFound, new ProblemDetails
             {
                 Status = StatusCodes.Status404NotFound,
                 Type = "https://tools.ietf.org/html/rfc9110#section-15.5.5",
                 Title = "The specified resource was not found.",
-                Detail = ne.Message
+                Detail = ne.Message,
             }),
             UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, new ProblemDetails
             {
                 Status = StatusCodes.Status401Unauthorized,
                 Title = "Unauthorized",
-                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.2"
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.2",
             }),
             ForbiddenAccessException => (StatusCodes.Status403Forbidden, new ProblemDetails
             {
                 Status = StatusCodes.Status403Forbidden,
                 Title = "Forbidden",
-                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.4"
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.4",
             }),
-            _ => (-1, null)
+            _ => (-1, null),
         };
 
         if (problemDetails is null) return false;

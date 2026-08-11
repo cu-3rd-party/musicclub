@@ -21,7 +21,7 @@ public partial class SongServiceTests
     [Test]
     public async Task Create_WithEditOwnSongs_CreatesSongWithRoles()
     {
-        var (appUser, principal) = await CreateUserAsync("owner", editOwnParticipation: true, editOwnSongs: true);
+        var (appUser, principal) = await CreateUserAsync("owner", true, editOwnSongs: true);
 
         SongDto result;
         using (var scope = new SongScope())
@@ -29,7 +29,7 @@ public partial class SongServiceTests
             result = await scope.Songs.CreateAsync(CreateRequest(roles: new[]
                 {
                     "Гитара",
-                    "Вокал"
+                    "Вокал",
                 }),
                 principal,
                 CancellationToken.None);
@@ -38,14 +38,16 @@ public partial class SongServiceTests
             result.Artist.ShouldBe("Queen");
             result.Url.ShouldBe(YoutubeUrl);
             result.CreatedBy.Id.ShouldBe(appUser.Id);
-            result.Roles.Select(r => r.Title)
+            result
+                .Roles.Select(r => r.Title)
                 .OrderBy(x => x)
                 .ShouldBe(new[]
                 {
                     "Вокал",
-                    "Гитара"
+                    "Гитара",
                 });
-            result.Roles.Count(r => r.Assignment != null)
+            result
+                .Roles.Count(r => r.Assignment != null)
                 .ShouldBe(0);
         }
 
@@ -57,7 +59,7 @@ public partial class SongServiceTests
     [Test]
     public async Task Create_WithEditAnySongs_IsAllowed()
     {
-        var (_, principal) = await CreateUserAsync("editor", editOwnParticipation: true, editAnySongs: true);
+        var (_, principal) = await CreateUserAsync("editor", true, editAnySongs: true);
 
         using var scope = new SongScope();
         var result = await scope.Songs.CreateAsync(CreateRequest(), principal, CancellationToken.None);
@@ -67,7 +69,7 @@ public partial class SongServiceTests
     [Test]
     public async Task Create_FeaturedWithoutPermission_ThrowsForbidden()
     {
-        var (_, principal) = await CreateUserAsync("owner", editOwnParticipation: true, editOwnSongs: true);
+        var (_, principal) = await CreateUserAsync("owner", true, editOwnSongs: true);
 
         using var scope = new SongScope();
         await Should.ThrowAsync<ForbiddenAccessException>(() =>
@@ -77,10 +79,7 @@ public partial class SongServiceTests
     [Test]
     public async Task Create_FeaturedWithPermission_SetsFeatured()
     {
-        var (_, principal) = await CreateUserAsync("editor",
-            editOwnParticipation: true,
-            editAnySongs: true,
-            editFeaturedSongs: true);
+        var (_, principal) = await CreateUserAsync("editor", true, editAnySongs: true, editFeaturedSongs: true);
 
         using var scope = new SongScope();
         var result = await scope.Songs.CreateAsync(CreateRequest(featured: true), principal, CancellationToken.None);
@@ -90,7 +89,7 @@ public partial class SongServiceTests
     [Test]
     public async Task Create_YoutubeLink_ExtractsThumbnail()
     {
-        var (_, principal) = await CreateUserAsync("owner", editOwnParticipation: true, editOwnSongs: true);
+        var (_, principal) = await CreateUserAsync("owner", true, editOwnSongs: true);
 
         using var scope = new SongScope();
         var result = await scope.Songs.CreateAsync(CreateRequest(), principal, CancellationToken.None);
@@ -100,7 +99,7 @@ public partial class SongServiceTests
     [Test]
     public async Task Create_CustomThumbnail_OverridesExtracted()
     {
-        var (_, principal) = await CreateUserAsync("owner", editOwnParticipation: true, editOwnSongs: true);
+        var (_, principal) = await CreateUserAsync("owner", true, editOwnSongs: true);
 
         using var scope = new SongScope();
         var result = await scope.Songs.CreateAsync(CreateRequest(thumbnailUrl: "https://cdn.example.com/thumb.jpg"),
@@ -112,7 +111,7 @@ public partial class SongServiceTests
     [Test]
     public async Task Create_NonYoutubeLink_NoAutoThumbnail()
     {
-        var (_, principal) = await CreateUserAsync("owner", editOwnParticipation: true, editOwnSongs: true);
+        var (_, principal) = await CreateUserAsync("owner", true, editOwnSongs: true);
 
         using var scope = new SongScope();
         var result = await scope.Songs.CreateAsync(CreateRequest(url: "https://soundcloud.com/foo"),
@@ -124,7 +123,7 @@ public partial class SongServiceTests
     [Test]
     public async Task Create_UnsupportedLinkUrl_ThrowsValidation()
     {
-        var (_, principal) = await CreateUserAsync("owner", editOwnParticipation: true, editOwnSongs: true);
+        var (_, principal) = await CreateUserAsync("owner", true, editOwnSongs: true);
 
         using var scope = new SongScope();
         await Should.ThrowAsync<ValidationException>(() =>
@@ -134,7 +133,7 @@ public partial class SongServiceTests
     [Test]
     public async Task Create_NormalizesRoles_TrimsDedupesAndSorts()
     {
-        var (_, principal) = await CreateUserAsync("owner", editOwnParticipation: true, editOwnSongs: true);
+        var (_, principal) = await CreateUserAsync("owner", true, editOwnSongs: true);
 
         using var scope = new SongScope();
         var result = await scope.Songs.CreateAsync(CreateRequest(roles: new[]
@@ -143,38 +142,41 @@ public partial class SongServiceTests
                 "",
                 "гитара",
                 "Гитара",
-                "Вокал"
+                "Вокал",
             }),
             principal,
             CancellationToken.None);
 
-        result.Roles.Select(r => r.Title)
+        result
+            .Roles.Select(r => r.Title)
             .ToArray()
             .ShouldBe(new[]
                 {
                     "Вокал",
                     "Гитара",
-                    "гитара"
+                    "гитара",
                 },
-                ignoreOrder: true);
+                true);
 
         using var db = Db();
-        var stored = await db.SongRoles.Where(r => r.SongId == result.Id)
+        var stored = await db
+            .SongRoles.Where(r => r.SongId == result.Id)
             .Select(r => r.RoleTitle)
             .OrderBy(r => r)
             .ToListAsync();
         stored.ShouldBe(new[]
-        {
-            "Вокал",
-            "Гитара",
-            "гитара"
-        }, ignoreOrder: true);
+            {
+                "Вокал",
+                "Гитара",
+                "гитара",
+            },
+            true);
     }
 
     [Test]
     public async Task Create_EmptyRoles_CreatesSongWithoutRoles()
     {
-        var (_, principal) = await CreateUserAsync("owner", editOwnParticipation: true, editOwnSongs: true);
+        var (_, principal) = await CreateUserAsync("owner", true, editOwnSongs: true);
 
         using var scope = new SongScope();
         var result = await scope.Songs.CreateAsync(CreateRequest(roles: []), principal, CancellationToken.None);

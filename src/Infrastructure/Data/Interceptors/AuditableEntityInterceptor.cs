@@ -24,10 +24,7 @@ public class AuditableEntityInterceptor(IHttpContextAccessor httpContextAccessor
 
     private void UpdateAuditEntities(DbContext? context)
     {
-        if (context is null)
-        {
-            return;
-        }
+        if (context is null) return;
 
         var utcNow = DateTimeOffset.UtcNow;
         var userId = GetUserId();
@@ -51,10 +48,7 @@ public class AuditableEntityInterceptor(IHttpContextAccessor httpContextAccessor
     private Guid? GetUserId()
     {
         var principal = httpContextAccessor.HttpContext?.User;
-        if (principal?.Identity?.IsAuthenticated != true)
-        {
-            return null;
-        }
+        if (principal?.Identity?.IsAuthenticated != true) return null;
 
         var value = principal.FindFirstValue(ClaimTypes.NameIdentifier);
         return string.IsNullOrEmpty(value) ? null : Guid.Parse(value);

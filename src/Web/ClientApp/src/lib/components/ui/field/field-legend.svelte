@@ -14,11 +14,11 @@
 </script>
 
 <legend
-        bind:this={ref}
-        data-slot="field-legend"
-        data-variant={variant}
-        class={cn("mb-1.5 font-medium data-[variant=label]:text-sm data-[variant=legend]:text-base", className)}
-        {...restProps}
+    bind:this={ref}
+    data-slot="field-legend"
+    data-variant={variant}
+    class={cn("mb-1.5 font-medium data-[variant=label]:text-sm data-[variant=legend]:text-base", className)}
+    {...restProps}
 >
     {@render children?.()}
 </legend>

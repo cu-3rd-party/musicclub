@@ -18,19 +18,16 @@ public static partial class Auth
         CancellationToken cancellationToken)
     {
         var user = await userManager.GetUserAsync(claimsPrincipal);
-        if (user is null)
-        {
-            return TypedResults.NotFound();
-        }
+        if (user is null) return TypedResults.NotFound();
 
-        var profile = new UserProfileDto(Id: user.Id,
-            DisplayName: user.DisplayName,
-            Username: user.UserName!,
-            AvatarUrl: user.AvatarUrl,
-            Permissions: await permissionService.GetPermissionValuesAsync(user, cancellationToken),
-            LastLoginAt: null,
-            CreatedAt: user.CreatedAt,
-            UpdatedAt: user.UpdatedAt);
+        var profile = new UserProfileDto(user.Id,
+            user.DisplayName,
+            user.UserName!,
+            user.AvatarUrl,
+            await permissionService.GetPermissionValuesAsync(user, cancellationToken),
+            null,
+            user.CreatedAt,
+            user.UpdatedAt);
 
         return TypedResults.Ok(profile);
     }

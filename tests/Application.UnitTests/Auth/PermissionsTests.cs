@@ -52,21 +52,24 @@ public class PermissionsTests
     [Test]
     public void ByRole_Administrator_EqualsAll()
     {
-        Permissions.ByRole[Roles.Administrator]
+        Permissions
+            .ByRole[Roles.Administrator]
             .ShouldBe(Permissions.All);
     }
 
     [Test]
     public void ByRole_Roadie_EqualsRoadie()
     {
-        Permissions.ByRole[Roles.Roadie]
+        Permissions
+            .ByRole[Roles.Roadie]
             .ShouldBe(Permissions.Roadie);
     }
 
     [Test]
     public void ByRole_Default_EqualsDefault()
     {
-        Permissions.ByRole[Roles.Default]
+        Permissions
+            .ByRole[Roles.Default]
             .ShouldBe(Permissions.Default);
     }
 
@@ -95,7 +98,8 @@ public class PermissionsTests
             Permissions.EventsEdit,
             Permissions.TracklistsEdit,
         };
-        allPermissions.Distinct()
+        allPermissions
+            .Distinct()
             .Count()
             .ShouldBe(allPermissions.Length);
     }

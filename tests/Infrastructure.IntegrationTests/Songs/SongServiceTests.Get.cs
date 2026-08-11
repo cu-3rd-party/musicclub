@@ -20,10 +20,10 @@ public partial class SongServiceTests
     public async Task Get_ReturnsSongRolesAndAssignments()
     {
         var (owner, ownerPrincipal) = await CreateUserAsync("owner", editOwnSongs: true);
-        var (member, _) = await CreateUserAsync("member", editOwnParticipation: true);
+        var (member, _) = await CreateUserAsync("member", true);
         var songId = await SeedSongAsync(roles: new[]
             {
-                "Вокал"
+                "Вокал",
             },
             createdById: owner.Id);
 
@@ -33,13 +33,15 @@ public partial class SongServiceTests
         var details = await scope.Songs.GetAsync(songId, CancellationToken.None);
 
         details.Id.ShouldBe(songId);
-        details.Roles.Select(r => r.Title)
+        details
+            .Roles.Select(r => r.Title)
             .ShouldBe(new[]
             {
-                "Вокал"
+                "Вокал",
             });
         details.Roles.ShouldHaveSingleItem();
-        details.Roles[0]
+        details
+            .Roles[0]
             .Assignment.ShouldNotBeNull();
         details.Roles[0].Assignment!.User.Id.ShouldBe(member.Id);
         details.Roles[0].Assignment!.User.DisplayName.ShouldBe("Display member");

@@ -18,18 +18,18 @@
 </script>
 
 <Button
-        bind:ref
-        data-sidebar="trigger"
-        data-slot="sidebar-trigger"
-        variant="ghost"
-        size="icon-sm"
-        class={cn("cn-sidebar-trigger", className)}
-        type="button"
-        onclick={(e) => {
+    bind:ref
+    data-sidebar="trigger"
+    data-slot="sidebar-trigger"
+    variant="ghost"
+    size="icon-sm"
+    class={cn("cn-sidebar-trigger", className)}
+    type="button"
+    onclick={(e) => {
 		onclick?.(e);
 		sidebar.toggle();
 	}}
-        {...restProps}
+    {...restProps}
 >
     <PanelLeftIcon/>
     <span class="sr-only">Toggle Sidebar</span>

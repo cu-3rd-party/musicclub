@@ -31,5 +31,8 @@ internal sealed class DatabaseResetter : IAsyncDisposable
         await _connection.CloseAsync();
     }
 
-    public async ValueTask DisposeAsync() => await _connection.DisposeAsync();
+    public async ValueTask DisposeAsync()
+    {
+        await _connection.DisposeAsync();
+    }
 }

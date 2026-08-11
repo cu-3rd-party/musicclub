@@ -14,7 +14,7 @@ public partial class SongServiceTests
         var (appUser, principal) = await CreateUserAsync("user");
         var songId = await SeedSongAsync(roles: new[]
         {
-            "Вокал"
+            "Вокал",
         });
         var roleId = await FindRoleIdAsync(songId, "Вокал");
 
@@ -26,20 +26,22 @@ public partial class SongServiceTests
     [Test]
     public async Task Join_AddsAssignment()
     {
-        var (appUser, principal) = await CreateUserAsync("user", editOwnParticipation: true);
+        var (appUser, principal) = await CreateUserAsync("user", true);
         var songId = await SeedSongAsync(roles: new[]
         {
             "Вокал",
-            "Гитара"
+            "Гитара",
         });
         var roleId = await FindRoleIdAsync(songId, "Вокал");
 
         using var scope = new SongScope();
         var result = await scope.Songs.JoinRoleAsync(appUser, principal, roleId, CancellationToken.None);
 
-        result.Roles.Count(r => r.Assignment != null)
+        result
+            .Roles.Count(r => r.Assignment != null)
             .ShouldBe(1);
-        result.Roles.Single(r => r.Title == "Вокал")
+        result
+            .Roles.Single(r => r.Title == "Вокал")
             .Assignment.ShouldNotBeNull();
         result.Roles.Single(r => r.Title == "Вокал")
             .Assignment!.User.Id.ShouldBe(appUser.Id);
@@ -52,10 +54,10 @@ public partial class SongServiceTests
     [Test]
     public async Task Join_SameRoleTwice_ThrowsAlreadyOccupied()
     {
-        var (appUser, principal) = await CreateUserAsync("user", editOwnParticipation: true);
+        var (appUser, principal) = await CreateUserAsync("user", true);
         var songId = await SeedSongAsync(roles: new[]
         {
-            "Вокал"
+            "Вокал",
         });
         var roleId = await FindRoleIdAsync(songId, "Вокал");
 
@@ -68,7 +70,7 @@ public partial class SongServiceTests
     [Test]
     public async Task Join_NonExistentRole_ThrowsNotFound()
     {
-        var (appUser, principal) = await CreateUserAsync("user", editOwnParticipation: true);
+        var (appUser, principal) = await CreateUserAsync("user", true);
 
         using var scope = new SongScope();
         await Should.ThrowAsync<NotFoundException>(() =>
@@ -81,7 +83,7 @@ public partial class SongServiceTests
         var (appUser, principal) = await CreateUserAsync("user");
         var songId = await SeedSongAsync(roles: new[]
         {
-            "Вокал"
+            "Вокал",
         });
         var roleId = await FindRoleIdAsync(songId, "Вокал");
 
@@ -93,10 +95,10 @@ public partial class SongServiceTests
     [Test]
     public async Task Leave_RemovesAssignment()
     {
-        var (appUser, principal) = await CreateUserAsync("user", editOwnParticipation: true);
+        var (appUser, principal) = await CreateUserAsync("user", true);
         var songId = await SeedSongAsync(roles: new[]
         {
-            "Вокал"
+            "Вокал",
         });
         var roleId = await FindRoleIdAsync(songId, "Вокал");
         await SeedAssignmentAsync(songId, "Вокал", appUser.Id);
@@ -104,7 +106,8 @@ public partial class SongServiceTests
         using (var scope = new SongScope())
         {
             var result = await scope.Songs.LeaveRoleAsync(appUser, principal, roleId, CancellationToken.None);
-            result.Roles.Count(r => r.Assignment != null)
+            result
+                .Roles.Count(r => r.Assignment != null)
                 .ShouldBe(0);
         }
 
@@ -115,10 +118,10 @@ public partial class SongServiceTests
     [Test]
     public async Task Leave_NotJoined_ThrowsRoleUnoccupied()
     {
-        var (appUser, principal) = await CreateUserAsync("user", editOwnParticipation: true);
+        var (appUser, principal) = await CreateUserAsync("user", true);
         var songId = await SeedSongAsync(roles: new[]
         {
-            "Вокал"
+            "Вокал",
         });
         var roleId = await FindRoleIdAsync(songId, "Вокал");
 
@@ -130,7 +133,7 @@ public partial class SongServiceTests
     [Test]
     public async Task Leave_NonExistentRole_ThrowsNotFound()
     {
-        var (appUser, principal) = await CreateUserAsync("user", editOwnParticipation: true);
+        var (appUser, principal) = await CreateUserAsync("user", true);
 
         using var scope = new SongScope();
         await Should.ThrowAsync<NotFoundException>(() =>

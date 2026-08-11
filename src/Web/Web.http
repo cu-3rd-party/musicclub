@@ -48,7 +48,7 @@ Content-Type: application/json
 
 // CreateTodoListCommand
 {
-  "Title": "Backlog"
+    "Title": "Backlog"
 }
 
 ###
@@ -60,8 +60,8 @@ Content-Type: application/json
 
 // UpdateTodoListCommand
 {
-  "Id": 1,
-  "Title": "Product Backlog"
+    "Id": 1,
+    "Title": "Product Backlog"
 }
 
 ###
@@ -87,8 +87,8 @@ Content-Type: application/json
 
 // CreateTodoItemCommand
 {
-  "ListId": 1,
-  "Title": "Eat a burrito 🌯"
+    "ListId": 1,
+    "Title": "Eat a burrito 🌯"
 }
 
 ###
@@ -100,10 +100,10 @@ Content-Type: application/json
 
 // UpdateTodoItemDetailCommand
 {
-  "Id": 1,
-  "ListId": 1,
-  "Priority": 3,
-  "Note": "This is a good idea!"
+    "Id": 1,
+    "ListId": 1,
+    "Priority": 3,
+    "Note": "This is a good idea!"
 }
 
 ###
@@ -115,9 +115,9 @@ Content-Type: application/json
 
 // UpdateTodoItemCommand
 {
-  "Id": 1,
-  "Title": "Eat a yummy burrito 🌯",
-  "Done": true
+    "Id": 1,
+    "Title": "Eat a yummy burrito 🌯",
+    "Done": true
 }
 
 ###

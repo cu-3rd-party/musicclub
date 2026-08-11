@@ -21,18 +21,15 @@ public partial class SongServiceTests
     public async Task Delete_ByOwner_RemovesSongAndCascades()
     {
         var (owner, principal) = await CreateUserAsync("owner", editOwnSongs: true);
-        var (member, _) = await CreateUserAsync("member", editOwnParticipation: true);
+        var (member, _) = await CreateUserAsync("member", true);
         var songId = await SeedSongAsync(roles: new[]
             {
-                "Вокал"
+                "Вокал",
             },
             createdById: owner.Id);
         await SeedAssignmentAsync(songId, "Вокал", member.Id);
 
-        using (var scope = new SongScope())
-        {
-            await scope.Songs.DeleteAsync(songId, principal, CancellationToken.None);
-        }
+        using (var scope = new SongScope()) await scope.Songs.DeleteAsync(songId, principal, CancellationToken.None);
 
         using var db = Db();
         (await db.Songs.CountAsync(s => s.Id == songId)).ShouldBe(0);
@@ -63,9 +60,7 @@ public partial class SongServiceTests
         var songId = await SeedSongAsync(createdById: owner.Id);
 
         using (var scope = new SongScope())
-        {
             await scope.Songs.DeleteAsync(songId, editorPrincipal, CancellationToken.None);
-        }
 
         using var db = Db();
         (await db.Songs.CountAsync(s => s.Id == songId)).ShouldBe(0);

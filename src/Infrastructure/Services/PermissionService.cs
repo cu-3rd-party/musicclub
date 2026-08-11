@@ -12,7 +12,8 @@ public class PermissionService(UserManager<ApplicationUser> userManager, RoleMan
         CancellationToken cancellationToken)
     {
         var claims = await userManager.GetClaimsAsync(user);
-        return claims.Where(c => c.Type == PermissionClaimTypes.Permission)
+        return claims
+            .Where(c => c.Type == PermissionClaimTypes.Permission)
             .Select(c => c.Value)
             .ToList();
     }
@@ -22,16 +23,14 @@ public class PermissionService(UserManager<ApplicationUser> userManager, RoleMan
         CancellationToken cancellationToken)
     {
         var existing = await userManager.GetClaimsAsync(user);
-        var existingSet = existing.Where(c => c.Type == PermissionClaimTypes.Permission)
+        var existingSet = existing
+            .Where(c => c.Type == PermissionClaimTypes.Permission)
             .Select(c => c.Value)
             .ToHashSet(StringComparer.Ordinal);
 
         foreach (var permission in permissions.Distinct(StringComparer.Ordinal))
         {
-            if (existingSet.Contains(permission))
-            {
-                continue;
-            }
+            if (existingSet.Contains(permission)) continue;
 
             await userManager.AddClaimAsync(user, new Claim(PermissionClaimTypes.Permission, permission));
         }
@@ -43,26 +42,20 @@ public class PermissionService(UserManager<ApplicationUser> userManager, RoleMan
         {
             var createResult = await roleManager.CreateAsync(new IdentityRole<Guid>(role));
             if (!createResult.Succeeded)
-            {
                 throw new InvalidOperationException($"Failed to create role '{role}': " +
                                                     string.Join(", ", createResult.Errors.Select(e => e.Description)));
-            }
         }
 
         if (!await userManager.IsInRoleAsync(user, role))
         {
             var addResult = await userManager.AddToRoleAsync(user, role);
             if (!addResult.Succeeded)
-            {
                 throw new InvalidOperationException($"Failed to assign role '{role}' to user '{user.Id}': " +
                                                     string.Join(", ", addResult.Errors.Select(e => e.Description)));
-            }
         }
 
         if (Permissions.ByRole.TryGetValue(role, out var bundle))
-        {
             await GrantPermissionsAsync(user, bundle, cancellationToken);
-        }
     }
 
     public Task GrantDefaultAsync(ApplicationUser user, CancellationToken cancellationToken)

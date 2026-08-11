@@ -24,21 +24,22 @@ public class AuthService(IOptions<SecurityOptions> securityOptions, IPermissionS
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Jti,
-                Guid.NewGuid()
+                Guid
+                    .NewGuid()
                     .ToString()),
         };
 
         var accessToken = CreateToken(claims, now, AccessTokenTtl);
         var refreshToken = CreateToken(claims, now, RefreshTokenTtl);
 
-        var profile = new UserProfileDto(Id: user.Id,
-            DisplayName: user.DisplayName,
-            Username: user.UserName ?? string.Empty,
-            AvatarUrl: user.AvatarUrl,
-            Permissions: await permissionService.GetPermissionValuesAsync(user, cancellationToken),
-            LastLoginAt: null,
-            CreatedAt: user.CreatedAt,
-            UpdatedAt: user.UpdatedAt);
+        var profile = new UserProfileDto(user.Id,
+            user.DisplayName,
+            user.UserName ?? string.Empty,
+            user.AvatarUrl,
+            await permissionService.GetPermissionValuesAsync(user, cancellationToken),
+            null,
+            user.CreatedAt,
+            user.UpdatedAt);
 
         var session = new AuthSessionDto(accessToken, refreshToken, now + AccessTokenTtl, now, profile);
         // TODO: это надо добавлять в user_session и в дальнейшем сделать апи менеджмента сессиями
@@ -61,11 +62,12 @@ public class AuthService(IOptions<SecurityOptions> securityOptions, IPermissionS
         var principal = handler.ValidateToken(refreshToken, parameters, out _);
         var now = DateTimeOffset.UtcNow;
 
-        var newClaims = principal.Claims
-            .Where(c => c.Type is JwtRegisteredClaimNames.Sub or JwtRegisteredClaimNames.Jti)
+        var newClaims = principal
+            .Claims.Where(c => c.Type is JwtRegisteredClaimNames.Sub or JwtRegisteredClaimNames.Jti)
             .Select(c => c.Type == JwtRegisteredClaimNames.Jti
                 ? new Claim(JwtRegisteredClaimNames.Jti,
-                    Guid.NewGuid()
+                    Guid
+                        .NewGuid()
                         .ToString())
                 : new Claim(c.Type, c.Value))
             .ToList();

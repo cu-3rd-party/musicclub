@@ -15,9 +15,8 @@ public class SongThumbnailTests
         [Test]
         public void CustomUrl_ReturnsCustomUrl()
         {
-            SongThumbnail.Normalize("https://custom.com/thumb.jpg",
-                    SongLinkType.Youtube,
-                    "https://youtube.com/watch?v=abc")
+            SongThumbnail
+                .Normalize("https://custom.com/thumb.jpg", SongLinkType.Youtube, "https://youtube.com/watch?v=abc")
                 .ShouldBe("https://custom.com/thumb.jpg");
         }
 
@@ -39,14 +38,16 @@ public class SongThumbnailTests
         [Test]
         public void NullCustomUrl_YandexLink_ReturnsNull()
         {
-            SongThumbnail.Normalize(null, SongLinkType.YandexMusic, "https://music.yandex.ru/album/123")
+            SongThumbnail
+                .Normalize(null, SongLinkType.YandexMusic, "https://music.yandex.ru/album/123")
                 .ShouldBeNull();
         }
 
         [Test]
         public void NullCustomUrl_SoundcloudLink_ReturnsNull()
         {
-            SongThumbnail.Normalize(null, SongLinkType.Soundcloud, "https://soundcloud.com/artist/track")
+            SongThumbnail
+                .Normalize(null, SongLinkType.Soundcloud, "https://soundcloud.com/artist/track")
                 .ShouldBeNull();
         }
 
@@ -90,9 +91,8 @@ public class SongThumbnailTests
         [Test]
         public void CustomUrlWhitespace_ReturnsCustomUrl()
         {
-            SongThumbnail.Normalize("  https://custom.com/thumb.jpg  ",
-                    SongLinkType.Youtube,
-                    "https://youtube.com/watch?v=abc")
+            SongThumbnail
+                .Normalize("  https://custom.com/thumb.jpg  ", SongLinkType.Youtube, "https://youtube.com/watch?v=abc")
                 .ShouldBe("  https://custom.com/thumb.jpg  ");
         }
     }

@@ -32,6 +32,6 @@ function getBgImages(): Promise<string[]> {
 export const load: LayoutServerLoad = async () => {
     let bgImages = await getBgImages();
     return {
-        bgImage: bgImages[Math.floor(Math.random() * bgImages.length)] 
+        bgImage: bgImages[Math.floor(Math.random() * bgImages.length)]
     }
 };

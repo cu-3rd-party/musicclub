@@ -12,11 +12,13 @@ public class TgAuthLinkConfiguration : IEntityTypeConfiguration<TgAuthLink>
         builder.ToTable(t => t.HasComment("Диплинки для захода в систему"));
 
         builder.HasKey(a => a.Id);
-        builder.Property(a => a.Id)
+        builder
+            .Property(a => a.Id)
             .HasColumnName("id")
             .HasDefaultValueSql("gen_random_uuid()");
 
-        builder.Property(a => a.TgUserId)
+        builder
+            .Property(a => a.TgUserId)
             .HasComment("Айди кто использовал ссылку");
 
         builder.HasIndex(a => a.TgUserId);

@@ -11,11 +11,11 @@
 </script>
 
 <div
-        bind:this={ref}
-        data-slot="sidebar-group"
-        data-sidebar="group"
-        class={cn("p-2 relative flex w-full min-w-0 flex-col", className)}
-        {...restProps}
+    bind:this={ref}
+    data-slot="sidebar-group"
+    data-sidebar="group"
+    class={cn("p-2 relative flex w-full min-w-0 flex-col", className)}
+    {...restProps}
 >
     {@render children?.()}
 </div>

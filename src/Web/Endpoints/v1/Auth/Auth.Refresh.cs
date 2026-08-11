@@ -10,10 +10,7 @@ public static partial class Auth
         RefreshTokenRequest? request,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request?.RefreshToken))
-        {
-            return TypedResults.BadRequest();
-        }
+        if (string.IsNullOrWhiteSpace(request?.RefreshToken)) return TypedResults.BadRequest();
 
         var tokenPair = await service.RefreshAsync(request.RefreshToken, cancellationToken);
         return TypedResults.Ok(tokenPair);

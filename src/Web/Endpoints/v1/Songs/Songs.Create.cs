@@ -13,9 +13,7 @@ public static partial class Songs
         CancellationToken cancellationToken)
     {
         if (request is null || string.IsNullOrWhiteSpace(request.Title) || string.IsNullOrWhiteSpace(request.Artist))
-        {
             return TypedResults.BadRequest();
-        }
 
         var song = await service.CreateAsync(request, user, cancellationToken);
 

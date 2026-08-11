@@ -9,6 +9,7 @@
     let normalized = $derived(language?.toLowerCase() || "auto");
 </script>
 
-<span class="inline-flex h-6 min-w-10 items-center justify-center rounded border border-border/40 bg-muted/30 px-2 text-xs font-medium text-muted-foreground">
+<span
+    class="inline-flex h-6 min-w-10 items-center justify-center rounded border border-border/40 bg-muted/30 px-2 text-xs font-medium text-muted-foreground">
 	{labels[normalized] ?? normalized.toUpperCase()}
 </span>

@@ -25,63 +25,46 @@ public class TelegramAuthService(
     {
         var parsed = QueryHelpers.ParseQuery(initData);
         if (!parsed.TryGetValue("hash", out var hashValues))
-        {
             throw new BadHttpRequestException("no hash in init data string");
-        }
 
         var receivedHash = hashValues.ToString();
 
         var dataCheckString = string.Join("\n",
-            parsed.Where(x => x.Key != "hash")
+            parsed
+                .Where(x => x.Key != "hash")
                 .OrderBy(x => x.Key)
                 .Select(x => $"{x.Key}={x.Value}"));
 
         byte[] secretKey;
         using (var hmac = new HMACSHA256("WebAppData"u8.ToArray()))
-        {
             secretKey = hmac.ComputeHash(Encoding.UTF8.GetBytes(telegramOptions.Value.BotToken));
-        }
 
         byte[] calculatedHash;
         using (var hmac = new HMACSHA256(secretKey))
-        {
             calculatedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(dataCheckString));
-        }
 
         var receivedHashBytes = Convert.FromHexString(receivedHash);
 
         if (!CryptographicOperations.FixedTimeEquals(calculatedHash, receivedHashBytes))
-        {
             throw new BadHttpRequestException("token hash doesn't match");
-        }
 
         if (!parsed.TryGetValue("auth_date", out var authDateValue))
-        {
             throw new BadHttpRequestException("Missing auth_date");
-        }
 
-        if (!long.TryParse(authDateValue, out var unixSeconds))
-        {
-            throw new BadHttpRequestException("Invalid auth_date");
-        }
+        if (!long.TryParse(authDateValue, out var unixSeconds)) throw new BadHttpRequestException("Invalid auth_date");
 
         var authDate = DateTimeOffset.FromUnixTimeSeconds(unixSeconds);
 
-        if (DateTimeOffset.UtcNow - authDate > TokenTtl)
-        {
-            throw new BadHttpRequestException("token expired");
-        }
+        if (DateTimeOffset.UtcNow - authDate > TokenTtl) throw new BadHttpRequestException("token expired");
     }
 
-    public Telegram.Bot.Types.User? ExtractTgUser(string initData)
+    public User? ExtractTgUser(string initData)
     {
         var parsed = QueryHelpers.ParseQuery(initData);
         if (!parsed.TryGetValue("user", out var userValues))
-        {
             throw new BadHttpRequestException("no user in init data string");
-        }
 
-        var user = JsonSerializer.Deserialize<Telegram.Bot.Types.User>(userValues.ToString());
+        var user = JsonSerializer.Deserialize<User>(userValues.ToString());
         return user;
     }
 
@@ -89,10 +72,7 @@ public class TelegramAuthService(
     {
         Validate(initData);
         var tgUser = ExtractTgUser(initData);
-        if (tgUser == null)
-        {
-            throw new BadHttpRequestException("no user extracted");
-        }
+        if (tgUser == null) throw new BadHttpRequestException("no user extracted");
 
         var user = await UpsertUserAsync(tgUser, cancellationToken);
         return await authService.CreateAuthSession(user, cancellationToken);
@@ -125,8 +105,7 @@ public class TelegramAuthService(
         return await authService.CreateAuthSession(user, cancellationToken);
     }
 
-    public async Task<ApplicationUser> UpsertUserAsync(Telegram.Bot.Types.User tgUser,
-        CancellationToken cancellationToken)
+    public async Task<ApplicationUser> UpsertUserAsync(User tgUser, CancellationToken cancellationToken)
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.TgUserId == tgUser.Id, cancellationToken);
         if (user != null) return user;

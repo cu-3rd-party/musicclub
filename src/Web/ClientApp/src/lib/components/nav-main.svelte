@@ -58,8 +58,8 @@
                             <Collapsible.Trigger>
                                 {#snippet child({props})}
                                     <Sidebar.MenuAction
-                                            {...props}
-                                            class="data-[state=open]:rotate-90"
+                                        {...props}
+                                        class="data-[state=open]:rotate-90"
                                     >
                                         <ChevronRightIcon/>
                                         <span class="sr-only">Toggle</span>

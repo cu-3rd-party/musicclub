@@ -31,12 +31,12 @@
 <div class="flex items-center justify-end gap-2">
     <a href={resolve(`/data/${id}`)} class={openButtonClass}>Открыть</a>
     <button
-            type="button"
-            class={deleteButtonClass}
-            aria-label="Удалить материал"
-            title={isDeleteConfirming ? "Нажмите еще раз, чтобы удалить" : "Удалить материал"}
-            disabled={isDeleting}
-            onclick={() => onDeleteClick(id)}
+        type="button"
+        class={deleteButtonClass}
+        aria-label="Удалить материал"
+        title={isDeleteConfirming ? "Нажмите еще раз, чтобы удалить" : "Удалить материал"}
+        disabled={isDeleting}
+        onclick={() => onDeleteClick(id)}
     >
         <Trash2Icon class="size-4"/>
     </button>

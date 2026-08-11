@@ -29,17 +29,17 @@ public static class DependencyInjection
         Guard.Against.Null(connectionString, message: $"Connection string '{Services.Database}' not found.");
 
         builder.Services.Configure<TelegramOptions>(builder.Configuration.GetSection(TelegramOptions.SectionName));
-        builder.Services.AddOptions<SecurityOptions>()
+        builder
+            .Services.AddOptions<SecurityOptions>()
             .Configure<IConfiguration, IHostEnvironment>((options, configuration, environment) =>
             {
-                var secret = configuration.GetSection(SecurityOptions.SectionName)
+                var secret = configuration
+                    .GetSection(SecurityOptions.SectionName)
                     .GetValue<string>("Secret");
                 if (string.IsNullOrWhiteSpace(secret))
                 {
                     if (environment.IsProduction())
-                    {
                         throw new InvalidOperationException("Security:Secret must be configured in production");
-                    }
 
                     secret = SecurityOptions.DefaultJwtKey;
                 }
@@ -48,10 +48,12 @@ public static class DependencyInjection
             })
             .ValidateOnStart();
 
-        builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        builder
+            .Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer();
 
-        builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+        builder
+            .Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
             .Configure<IOptions<SecurityOptions>>((options, securityOptions) =>
             {
                 options.MapInboundClaims = false;
@@ -91,7 +93,8 @@ public static class DependencyInjection
         builder.Services.AddScoped<IPermissionService, PermissionService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
 
-        builder.Services.AddIdentityCore<ApplicationUser>()
+        builder
+            .Services.AddIdentityCore<ApplicationUser>()
             .AddRoles<IdentityRole<Guid>>()
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddSignInManager()

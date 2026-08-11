@@ -11,8 +11,15 @@ public static class TestApp
     private static string? _userId;
     private static List<string>? _roles;
 
-    public static string? GetUserId() => _userId;
-    public static List<string>? GetRoles() => _roles;
+    public static string? GetUserId()
+    {
+        return _userId;
+    }
+
+    public static List<string>? GetRoles()
+    {
+        return _roles;
+    }
 
     public static async Task<string> RunAsDefaultUserAsync()
     {
@@ -21,7 +28,7 @@ public static class TestApp
 
     public static async Task<string> RunAsAdministratorAsync()
     {
-        return await RunAsUserAsync("administrator@local", "Administrator1234!", [Roles.Administrator]);
+        return await RunAsUserAsync("administrator@local", "Administrator1234!", [Roles.Administrator,]);
     }
 
     public static async Task<string> RunAsUserAsync(string userName, string password, string[] roles)
@@ -34,16 +41,13 @@ public static class TestApp
         var user = new ApplicationUser
         {
             UserName = userName,
-            Email = userName
+            Email = userName,
         };
         var result = await userManager.CreateAsync(user, password);
 
         if (roles.Length > 0)
         {
-            foreach (var role in roles)
-            {
-                await roleManager.CreateAsync(new IdentityRole<Guid>(role));
-            }
+            foreach (var role in roles) await roleManager.CreateAsync(new IdentityRole<Guid>(role));
 
             await userManager.AddToRolesAsync(user, roles);
         }
@@ -51,7 +55,7 @@ public static class TestApp
         if (result.Succeeded)
         {
             _userId = user.Id.ToString();
-            _roles = [..roles];
+            _roles = [..roles,];
             return _userId;
         }
 
@@ -61,10 +65,7 @@ public static class TestApp
 
     public static async Task ResetState()
     {
-        if (FunctionalTestSetup.DbResetter is not null)
-        {
-            await FunctionalTestSetup.DbResetter.ResetAsync();
-        }
+        if (FunctionalTestSetup.DbResetter is not null) await FunctionalTestSetup.DbResetter.ResetAsync();
 
         _userId = null;
         _roles = null;

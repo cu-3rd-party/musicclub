@@ -87,10 +87,10 @@
             {/snippet}
         </Tooltip.Trigger>
         <Tooltip.Content
-                side="right"
-                align="center"
-                hidden={sidebar.state !== "collapsed" || sidebar.isMobile}
-                {...tooltipContentProps}
+            side="right"
+            align="center"
+            hidden={sidebar.state !== "collapsed" || sidebar.isMobile}
+            {...tooltipContentProps}
         >
             {#if typeof tooltipContent === "string"}
                 {tooltipContent}

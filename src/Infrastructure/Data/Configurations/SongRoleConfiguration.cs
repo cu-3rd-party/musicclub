@@ -11,25 +11,30 @@ public class SongRoleConfiguration : IEntityTypeConfiguration<SongRole>
         builder.ToTable("song_role");
 
         builder.HasKey(r => r.Id);
-        builder.Property(r => r.Id)
+        builder
+            .Property(r => r.Id)
             .HasColumnName("id")
             .HasDefaultValueSql("gen_random_uuid()");
 
-        builder.Property(r => r.SongId)
+        builder
+            .Property(r => r.SongId)
             .HasColumnName("song_id");
-        builder.Property(r => r.RoleTitle)
+        builder
+            .Property(r => r.RoleTitle)
             .HasColumnName("role")
             .IsRequired();
 
-        builder.HasIndex(r => new
+        builder
+            .HasIndex(r => new
             {
                 r.SongId,
-                r.RoleTitle
+                r.RoleTitle,
             })
             .IsUnique()
             .HasDatabaseName("song_role_song_id_role_title_unique");
 
-        builder.HasOne(r => r.Song)
+        builder
+            .HasOne(r => r.Song)
             .WithMany(s => s.Roles)
             .HasForeignKey(r => r.SongId)
             .OnDelete(DeleteBehavior.Cascade);

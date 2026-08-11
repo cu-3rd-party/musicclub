@@ -41,10 +41,7 @@ public class ApplicationDbContextInitialiser(
     {
         try
         {
-            if (env.IsDevelopment())
-            {
-                await db.Database.EnsureDeletedAsync();
-            }
+            if (env.IsDevelopment()) await db.Database.EnsureDeletedAsync();
 
             await EnsureDatabaseExistsAsync();
 
@@ -70,10 +67,7 @@ public class ApplicationDbContextInitialiser(
         checkCommand.CommandText = "SELECT 1 FROM pg_database WHERE datname = @name";
         checkCommand.Parameters.AddWithValue("name", databaseName ?? string.Empty);
 
-        if (await checkCommand.ExecuteScalarAsync() is not null)
-        {
-            return;
-        }
+        if (await checkCommand.ExecuteScalarAsync() is not null) return;
 
         await using var createCommand = connection.CreateCommand();
         createCommand.CommandText = $"CREATE DATABASE \"{databaseName}\"";

@@ -1,20 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <RootNamespace>CuMusicClub.Application</RootNamespace>
-    <AssemblyName>CuMusicClub.Application</AssemblyName>
-  </PropertyGroup>
+    <PropertyGroup>
+        <RootNamespace>CuMusicClub.Application</RootNamespace>
+        <AssemblyName>CuMusicClub.Application</AssemblyName>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Ardalis.GuardClauses"/>
-    <PackageReference Include="FluentValidation.DependencyInjectionExtensions"/>
-    <PackageReference Include="Microsoft.Extensions.Hosting"/>
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
-    <PackageReference Include="Telegram.Bot" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Ardalis.GuardClauses"/>
+        <PackageReference Include="FluentValidation.DependencyInjectionExtensions"/>
+        <PackageReference Include="Microsoft.Extensions.Hosting"/>
+        <PackageReference Include="System.IdentityModel.Tokens.Jwt"/>
+        <PackageReference Include="Telegram.Bot"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Domain\Domain.csproj"/>
-  </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\Domain\Domain.csproj"/>
+    </ItemGroup>
 
 </Project>

@@ -11,38 +11,49 @@ public class EventConfiguration : IEntityTypeConfiguration<Event>
         builder.ToTable("event");
 
         builder.HasKey(e => e.Id);
-        builder.Property(e => e.Id)
+        builder
+            .Property(e => e.Id)
             .HasColumnName("id")
             .HasDefaultValueSql("gen_random_uuid()");
 
-        builder.Property(e => e.Title)
+        builder
+            .Property(e => e.Title)
             .HasColumnName("title")
             .IsRequired();
-        builder.Property(e => e.StartAt)
+        builder
+            .Property(e => e.StartAt)
             .HasColumnName("start_at");
-        builder.Property(e => e.Location)
+        builder
+            .Property(e => e.Location)
             .HasColumnName("location");
-        builder.Property(e => e.NotifyDayBefore)
+        builder
+            .Property(e => e.NotifyDayBefore)
             .HasColumnName("notify_day_before")
             .HasDefaultValue(false);
-        builder.Property(e => e.NotifyHourBefore)
+        builder
+            .Property(e => e.NotifyHourBefore)
             .HasColumnName("notify_hour_before")
             .HasDefaultValue(false);
-        builder.Property(e => e.CreatedById)
+        builder
+            .Property(e => e.CreatedById)
             .HasColumnName("created_by");
-        builder.Property(e => e.CreatedAt)
+        builder
+            .Property(e => e.CreatedAt)
             .HasColumnName("created_at")
             .HasDefaultValueSql("NOW()");
-        builder.Property(e => e.UpdatedAt)
+        builder
+            .Property(e => e.UpdatedAt)
             .HasColumnName("updated_at")
             .HasDefaultValueSql("NOW()");
 
-        builder.HasOne(e => e.CreatedBy)
+        builder
+            .HasOne(e => e.CreatedBy)
             .WithMany()
             .HasForeignKey(e => e.CreatedById)
             .OnDelete(DeleteBehavior.SetNull);
 
-        builder.HasIndex(e => e.StartAt)
+        builder
+            .HasIndex(e => e.StartAt)
             .HasDatabaseName("idx_event_start_at");
     }
 }

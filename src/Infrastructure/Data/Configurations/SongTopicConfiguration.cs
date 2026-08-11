@@ -11,24 +11,30 @@ public class SongTopicConfiguration : IEntityTypeConfiguration<SongTopic>
         builder.ToTable("song_topic");
 
         builder.HasKey(t => t.SongId);
-        builder.Property(t => t.SongId)
+        builder
+            .Property(t => t.SongId)
             .HasColumnName("song_id");
 
-        builder.Property(t => t.TopicId)
+        builder
+            .Property(t => t.TopicId)
             .HasColumnName("topic_id");
-        builder.Property(t => t.CreatedAt)
+        builder
+            .Property(t => t.CreatedAt)
             .HasColumnName("created_at")
             .HasDefaultValueSql("NOW()");
-        builder.Property(t => t.UpdatedAt)
+        builder
+            .Property(t => t.UpdatedAt)
             .HasColumnName("updated_at")
             .HasDefaultValueSql("NOW()");
 
-        builder.HasOne(t => t.Song)
+        builder
+            .HasOne(t => t.Song)
             .WithOne()
             .HasForeignKey<SongTopic>(t => t.SongId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasIndex(t => t.TopicId)
+        builder
+            .HasIndex(t => t.TopicId)
             .HasDatabaseName("idx_song_topic_topic_id");
     }
 }

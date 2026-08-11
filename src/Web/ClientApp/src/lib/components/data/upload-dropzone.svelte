@@ -49,29 +49,29 @@
 </script>
 
 <div
-        role="group"
-        aria-label="Зона загрузки документов"
-        class={`rounded-[1.75rem] border border-dashed px-6 py-10 text-center transition-colors ${isDragging ? "border-foreground bg-muted/80" : "border-border bg-background/70"} ${disabled ? "opacity-60" : ""}`}
-        ondragenter={(event) => {
+    role="group"
+    aria-label="Зона загрузки документов"
+    class={`rounded-[1.75rem] border border-dashed px-6 py-10 text-center transition-colors ${isDragging ? "border-foreground bg-muted/80" : "border-border bg-background/70"} ${disabled ? "opacity-60" : ""}`}
+    ondragenter={(event) => {
 		event.preventDefault();
 		if (!disabled) {
 			isDragging = true;
 		}
 	}}
-        ondragover={(event) => event.preventDefault()}
-        ondragleave={(event) => {
+    ondragover={(event) => event.preventDefault()}
+    ondragleave={(event) => {
 		event.preventDefault();
 		isDragging = false;
 	}}
-        ondrop={handleDrop}
+    ondrop={handleDrop}
 >
     <input
-            bind:this={inputElement}
-            type="file"
-            multiple
-            class="sr-only"
-            disabled={disabled}
-            onchange={handleInputChange}
+        bind:this={inputElement}
+        type="file"
+        multiple
+        class="sr-only"
+        disabled={disabled}
+        onchange={handleInputChange}
     />
 
     <div class="mx-auto flex max-w-xl flex-col items-center gap-4">

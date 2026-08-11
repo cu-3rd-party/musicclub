@@ -31,7 +31,8 @@ public class SongService(
         var limit = pageSize <= 0 || pageSize > MaxPageSize ? DefaultPageSize : pageSize;
         var offset = int.TryParse(pageToken, out var parsed) && parsed >= 0 ? parsed : 0;
 
-        var songsQuery = db.Songs.Include(s => s.CreatedBy)
+        var songsQuery = db
+            .Songs.Include(s => s.CreatedBy)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(query))
@@ -41,7 +42,8 @@ public class SongService(
                 EF.Functions.ILike(s.Title, pattern) || EF.Functions.ILike(s.Artist, pattern));
         }
 
-        var songs = await songsQuery.Include(s => s.Roles)
+        var songs = await songsQuery
+            .Include(s => s.Roles)
             .ThenInclude(r => r.Assignment)
             .ThenInclude(a => a!.User)
             .OrderByDescending(s => s.IsFeatured)
@@ -50,7 +52,8 @@ public class SongService(
             .Take(limit)
             .ToListAsync(cancellationToken);
 
-        var result = songs.Select(song => ToSongDto(song, song.Roles))
+        var result = songs
+            .Select(song => ToSongDto(song, song.Roles))
             .ToList();
 
         // TODO: make next page token more robust
@@ -61,7 +64,8 @@ public class SongService(
 
     public async Task<SongDto> GetAsync(Guid songId, CancellationToken cancellationToken)
     {
-        var song = await db.Songs.AsNoTracking()
+        var song = await db
+                       .Songs.AsNoTracking()
                        .Include(s => s.CreatedBy)
                        .Include(s => s.Roles)
                        .ThenInclude(r => r.Assignment)
@@ -119,7 +123,8 @@ public class SongService(
         ClaimsPrincipal currentUser,
         CancellationToken cancellationToken)
     {
-        var song = await db.Songs.Include(s => s.CreatedBy)
+        var song = await db
+                       .Songs.Include(s => s.CreatedBy)
                        .FirstOrDefaultAsync(s => s.Id == songId, cancellationToken) ??
                    throw new NotFoundException(songId.ToString(), nameof(Song));
 
@@ -148,7 +153,8 @@ public class SongService(
         await db.SaveChangesAsync(cancellationToken);
 
         var requestedRoles = SongHelpers.NormalizeRoles(request.AvailableRoles);
-        var currentRoles = await db.SongRoles.Where(r => r.SongId == songId)
+        var currentRoles = await db
+            .SongRoles.Where(r => r.SongId == songId)
             .Select(r => r.RoleTitle)
             .ToListAsync(cancellationToken);
         currentRoles.Sort(StringComparer.Ordinal);
@@ -166,7 +172,8 @@ public class SongService(
 
     public async Task DeleteAsync(Guid songId, ClaimsPrincipal currentUser, CancellationToken cancellationToken)
     {
-        var song = await db.Songs.Include(s => s.CreatedBy)
+        var song = await db
+                       .Songs.Include(s => s.CreatedBy)
                        .FirstOrDefaultAsync(s => s.Id == songId, cancellationToken) ??
                    throw new NotFoundException(songId.ToString(), nameof(Song));
 
@@ -192,7 +199,8 @@ public class SongService(
             (!isSelf && !permissions.Contains(Permissions.ParticipationEditAny)))
             throw new ForbiddenAccessException();
 
-        var role = await db.SongRoles.Include(r => r.Song)
+        var role = await db
+            .SongRoles.Include(r => r.Song)
             .Include(r => r.Assignment)
             .FirstOrDefaultAsync(r => r.Id == roleId, cancellationToken);
         if (role == null) throw new NotFoundException(roleId.ToString(), nameof(SongRole));
@@ -203,7 +211,7 @@ public class SongService(
         {
             UserId = user.Id,
             SongId = role.SongId,
-            RoleId = role.Id
+            RoleId = role.Id,
         };
         await db.SaveChangesAsync(cancellationToken);
 
@@ -223,14 +231,16 @@ public class SongService(
             (!isSelf && !permissions.Contains(Permissions.ParticipationEditAny)))
             throw new ForbiddenAccessException();
 
-        var role = await db.SongRoles.Include(r => r.Song)
+        var role = await db
+            .SongRoles.Include(r => r.Song)
             .Include(r => r.Assignment)
             .FirstOrDefaultAsync(r => r.Id == roleId, cancellationToken);
         if (role == null) throw new NotFoundException(roleId.ToString(), nameof(SongRole));
 
         if (role.Assignment == null) throw new BadHttpRequestException("role is unoccupied");
 
-        await db.SongRoleAssignments.Where(s => s.Id == role.Assignment.Id)
+        await db
+            .SongRoleAssignments.Where(s => s.Id == role.Assignment.Id)
             .ExecuteDeleteAsync(cancellationToken);
 
         return await GetAsync(role.Song.Id, cancellationToken);
@@ -240,7 +250,8 @@ public class SongService(
 
     private SongDto ToSongDto(Song song, IReadOnlyList<SongRole> roles)
     {
-        var roleDtos = roles.Select(r => new RoleDto(r.Id,
+        var roleDtos = roles
+            .Select(r => new RoleDto(r.Id,
                 r.RoleTitle,
                 r.Assignment is null
                     ? null
@@ -283,28 +294,27 @@ public class SongService(
         IReadOnlyCollection<string> desiredRoles,
         CancellationToken cancellationToken)
     {
-        var currentRoles = await db.SongRoles.Where(r => r.SongId == songId)
+        var currentRoles = await db
+            .SongRoles.Where(r => r.SongId == songId)
             .Select(r => r.RoleTitle)
             .ToListAsync(cancellationToken);
 
         var desiredSet = desiredRoles.ToHashSet(StringComparer.Ordinal);
 
-        var toRemove = currentRoles.Where(role => !desiredSet.Contains(role))
+        var toRemove = currentRoles
+            .Where(role => !desiredSet.Contains(role))
             .ToList();
         if (toRemove.Count > 0)
-        {
-            await db.SongRoles.Where(r => r.SongId == songId && toRemove.Contains(r.RoleTitle))
+            await db
+                .SongRoles.Where(r => r.SongId == songId && toRemove.Contains(r.RoleTitle))
                 .ExecuteDeleteAsync(cancellationToken);
-        }
 
         foreach (var role in desiredSet.Where(role => !currentRoles.Contains(role)))
-        {
             db.SongRoles.Add(new SongRole
             {
                 SongId = songId,
-                RoleTitle = role
+                RoleTitle = role,
             });
-        }
     }
 
     #endregion

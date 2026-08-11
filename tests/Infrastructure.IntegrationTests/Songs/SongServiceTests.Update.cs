@@ -25,7 +25,7 @@ public partial class SongServiceTests
         var songId = await SeedSongAsync(roles: new[]
             {
                 "Вокал",
-                "Гитара"
+                "Гитара",
             },
             createdById: owner.Id);
 
@@ -39,7 +39,7 @@ public partial class SongServiceTests
             new[]
             {
                 "Вокал",
-                "Соло"
+                "Соло",
             });
 
         var result = await scope.Songs.UpdateAsync(songId, request, principal, CancellationToken.None);
@@ -49,14 +49,15 @@ public partial class SongServiceTests
         result.Description.ShouldBe("epic solo");
         result.Url.ShouldBe("https://music.yandex.ru/album/1");
         result.ThumbnailUrl.ShouldBe("https://cdn.example.com/stairs.jpg");
-        result.Roles.Select(r => r.Title)
+        result
+            .Roles.Select(r => r.Title)
             .ToArray()
             .ShouldBe(new[]
                 {
                     "Вокал",
-                    "Соло"
+                    "Соло",
                 },
-                ignoreOrder: true);
+                true);
 
         using var db = Db();
         (await db.SongRoles.CountAsync(r => r.SongId == songId)).ShouldBe(2);
@@ -132,7 +133,7 @@ public partial class SongServiceTests
     public async Task Update_RemovingRoles_DeletesThem()
     {
         var (owner, principal) = await CreateUserAsync("owner", editOwnSongs: true);
-        var songId = await SeedSongAsync(roles: ["Вокал", "Гитара", "Бас"], createdById: owner.Id);
+        var songId = await SeedSongAsync(roles: ["Вокал", "Гитара", "Бас",], createdById: owner.Id);
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest("New Title",
@@ -143,14 +144,15 @@ public partial class SongServiceTests
             false,
             new[]
             {
-                "Вокал"
+                "Вокал",
             });
         var result = await scope.Songs.UpdateAsync(songId, request, principal, CancellationToken.None);
 
-        result.Roles.Select(r => r.Title)
+        result
+            .Roles.Select(r => r.Title)
             .ShouldBe(new[]
             {
-                "Вокал"
+                "Вокал",
             });
 
         using var db = Db();
@@ -163,7 +165,7 @@ public partial class SongServiceTests
         var (owner, principal) = await CreateUserAsync("owner", editOwnSongs: true);
         var songId = await SeedSongAsync(roles: new[]
             {
-                "Вокал"
+                "Вокал",
             },
             createdById: owner.Id);
 
@@ -180,18 +182,19 @@ public partial class SongServiceTests
                 "",
                 "гитара",
                 "Гитара",
-                "Вокал"
+                "Вокал",
             });
         var result = await scope.Songs.UpdateAsync(songId, request, principal, CancellationToken.None);
 
-        result.Roles.Select(r => r.Title)
+        result
+            .Roles.Select(r => r.Title)
             .ToArray()
             .ShouldBe(new[]
                 {
                     "Вокал",
                     "Гитара",
-                    "гитара"
+                    "гитара",
                 },
-                ignoreOrder: true);
+                true);
     }
 }

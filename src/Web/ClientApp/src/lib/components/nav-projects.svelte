@@ -23,11 +23,11 @@
         <div class="no-scrollbar flex h-full flex-col gap-2 overflow-y-auto pr-1">
             {#each queries as item (item.id)}
                 <button
-                        type="button"
-                        class={item.active
+                    type="button"
+                    class={item.active
 						? "bg-sidebar-accent text-sidebar-accent-foreground ring-sidebar-ring/40 flex w-full flex-col rounded-xl border border-sidebar-border/60 p-3 text-left shadow-sm ring-1"
 						: "hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground flex w-full flex-col rounded-xl border border-transparent p-3 text-left transition-colors"}
-                        onclick={() => void handleSelectSession(item.id)}
+                    onclick={() => void handleSelectSession(item.id)}
                 >
                     <div class="mb-1 flex items-center justify-between gap-3">
                         <p class="line-clamp-1 text-sm font-medium">{item.name}</p>

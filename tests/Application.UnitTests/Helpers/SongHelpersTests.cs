@@ -23,14 +23,16 @@ public class SongHelpersTests
         [TestCase("https://soundcloud.com/artist/track", SongLinkType.Soundcloud)]
         public void ReturnsCorrectLinkType(string url, SongLinkType expected)
         {
-            SongHelpers.DeriveLinkKind(url)
+            SongHelpers
+                .DeriveLinkKind(url)
                 .ShouldBe(expected);
         }
 
         [Test]
         public void TrimsAndCaseInsensitive()
         {
-            SongHelpers.DeriveLinkKind("  https://YOUTUBE.COM/watch?v=abc  ")
+            SongHelpers
+                .DeriveLinkKind("  https://YOUTUBE.COM/watch?v=abc  ")
                 .ShouldBe(SongLinkType.Youtube);
         }
 
@@ -73,14 +75,16 @@ public class SongHelpersTests
         [Test]
         public void NullInput_ReturnsEmptyList()
         {
-            SongHelpers.NormalizeRoles(null)
+            SongHelpers
+                .NormalizeRoles(null)
                 .ShouldBeEmpty();
         }
 
         [Test]
         public void EmptyInput_ReturnsEmptyList()
         {
-            SongHelpers.NormalizeRoles(Array.Empty<string>())
+            SongHelpers
+                .NormalizeRoles(Array.Empty<string>())
                 .ShouldBeEmpty();
         }
 
@@ -90,12 +94,12 @@ public class SongHelpersTests
             var result = SongHelpers.NormalizeRoles(new[]
             {
                 "  Vocal  ",
-                "  Guitar  "
+                "  Guitar  ",
             });
             result.ShouldBe(new[]
             {
                 "Guitar",
-                "Vocal"
+                "Vocal",
             });
         }
 
@@ -107,12 +111,12 @@ public class SongHelpersTests
                 "Vocal",
                 "",
                 "  ",
-                "Guitar"
+                "Guitar",
             });
             result.ShouldBe(new[]
             {
                 "Guitar",
-                "Vocal"
+                "Vocal",
             });
         }
 
@@ -123,7 +127,7 @@ public class SongHelpersTests
             {
                 "Vocal",
                 "Vocal",
-                "Vocal"
+                "Vocal",
             });
             result.Count.ShouldBe(1);
             result[0]
@@ -137,7 +141,7 @@ public class SongHelpersTests
             {
                 "vocal",
                 "Vocal",
-                "VOCAL"
+                "VOCAL",
             });
             result.Count.ShouldBe(3);
         }
@@ -150,38 +154,40 @@ public class SongHelpersTests
                 "Drums",
                 "Bass",
                 "Guitar",
-                "Vocal"
+                "Vocal",
             });
             result.ShouldBe(new[]
             {
                 "Bass",
                 "Drums",
                 "Guitar",
-                "Vocal"
+                "Vocal",
             });
         }
 
         [Test]
         public void SingleRole()
         {
-            SongHelpers.NormalizeRoles(new[]
+            SongHelpers
+                .NormalizeRoles(new[]
                 {
-                    "Vocal"
+                    "Vocal",
                 })
                 .ShouldBe(new[]
                 {
-                    "Vocal"
+                    "Vocal",
                 });
         }
 
         [Test]
         public void AllEmpty_ReturnsEmptyList()
         {
-            SongHelpers.NormalizeRoles(new[]
+            SongHelpers
+                .NormalizeRoles(new[]
                 {
                     "",
                     "  ",
-                    ""
+                    "",
                 })
                 .ShouldBeEmpty();
         }

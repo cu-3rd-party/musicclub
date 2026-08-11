@@ -35,11 +35,11 @@
 
 {#if hasContent}
     <div
-            bind:this={ref}
-            role="alert"
-            data-slot="field-error"
-            class={cn("text-destructive text-sm font-normal", className)}
-            {...restProps}
+        bind:this={ref}
+        role="alert"
+        data-slot="field-error"
+        class={cn("text-destructive text-sm font-normal", className)}
+        {...restProps}
     >
         {#if children}
             {@render children()}

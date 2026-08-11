@@ -1,6 +1,6 @@
 <script
-        lang="ts"
-        generics="TData, TValue, TContext extends HeaderContext<TData, TValue> | CellContext<TData, TValue>"
+    lang="ts"
+    generics="TData, TValue, TContext extends HeaderContext<TData, TValue> | CellContext<TData, TValue>"
 >
     import type {CellContext, ColumnDefTemplate, HeaderContext} from "@tanstack/table-core";
     import type {Attachment} from "svelte/attachments";

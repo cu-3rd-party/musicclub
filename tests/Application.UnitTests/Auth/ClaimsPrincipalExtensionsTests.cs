@@ -16,11 +16,12 @@ public class ClaimsPrincipalExtensionsTests
         var userId = Guid.NewGuid();
         var claims = new[]
         {
-            new Claim(JwtRegisteredClaimNames.Sub, userId.ToString())
+            new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
         };
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
 
-        principal.GetUserId()
+        principal
+            .GetUserId()
             .ShouldBe(userId);
     }
 
@@ -37,7 +38,7 @@ public class ClaimsPrincipalExtensionsTests
     {
         var claims = new[]
         {
-            new Claim("email", "test@example.com")
+            new Claim("email", "test@example.com"),
         };
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
 
@@ -51,14 +52,16 @@ public class ClaimsPrincipalExtensionsTests
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Jti,
-                Guid.NewGuid()
+                Guid
+                    .NewGuid()
                     .ToString()),
             new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
             new Claim("email", "test@example.com"),
         };
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
 
-        principal.GetUserId()
+        principal
+            .GetUserId()
             .ShouldBe(userId);
     }
 }

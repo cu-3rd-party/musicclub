@@ -13,30 +13,95 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     {
     }
 
-    public DbSet<Calendar> Calendars => Set<Calendar>();
-    public DbSet<CalendarAttachState> CalendarAttachStates => Set<CalendarAttachState>();
-    public DbSet<Song> Songs => Set<Song>();
-    public DbSet<SongRole> SongRoles => Set<SongRole>();
-    public DbSet<SongRoleAssignment> SongRoleAssignments => Set<SongRoleAssignment>();
-    public DbSet<UserSession> UserSessions => Set<UserSession>();
-    public DbSet<TgAuthLink> TgAuthLinks => Set<TgAuthLink>();
+    public DbSet<Calendar> Calendars
+    {
+        get { return Set<Calendar>(); }
+    }
 
-    IQueryable<ApplicationUser> IApplicationDbContext.Users => Users;
-    IQueryable<Calendar> IApplicationDbContext.Calendars => Calendars;
-    IQueryable<CalendarAttachState> IApplicationDbContext.CalendarAttachStates => CalendarAttachStates;
-    IQueryable<Song> IApplicationDbContext.Songs => Songs;
-    IQueryable<SongRole> IApplicationDbContext.SongRoles => SongRoles;
-    IQueryable<SongRoleAssignment> IApplicationDbContext.SongRoleAssignments => SongRoleAssignments;
-    IQueryable<UserSession> IApplicationDbContext.UserSessions => UserSessions;
-    IQueryable<TgAuthLink> IApplicationDbContext.TgAuthLinks => TgAuthLinks;
+    public DbSet<CalendarAttachState> CalendarAttachStates
+    {
+        get { return Set<CalendarAttachState>(); }
+    }
 
-    void IApplicationDbContext.Add(object entity) => Add(entity);
-    void IApplicationDbContext.Remove(object entity) => Remove(entity);
+    public DbSet<Song> Songs
+    {
+        get { return Set<Song>(); }
+    }
+
+    public DbSet<SongRole> SongRoles
+    {
+        get { return Set<SongRole>(); }
+    }
+
+    public DbSet<SongRoleAssignment> SongRoleAssignments
+    {
+        get { return Set<SongRoleAssignment>(); }
+    }
+
+    public DbSet<UserSession> UserSessions
+    {
+        get { return Set<UserSession>(); }
+    }
+
+    public DbSet<TgAuthLink> TgAuthLinks
+    {
+        get { return Set<TgAuthLink>(); }
+    }
+
+    IQueryable<ApplicationUser> IApplicationDbContext.Users
+    {
+        get { return Users; }
+    }
+
+    IQueryable<Calendar> IApplicationDbContext.Calendars
+    {
+        get { return Calendars; }
+    }
+
+    IQueryable<CalendarAttachState> IApplicationDbContext.CalendarAttachStates
+    {
+        get { return CalendarAttachStates; }
+    }
+
+    IQueryable<Song> IApplicationDbContext.Songs
+    {
+        get { return Songs; }
+    }
+
+    IQueryable<SongRole> IApplicationDbContext.SongRoles
+    {
+        get { return SongRoles; }
+    }
+
+    IQueryable<SongRoleAssignment> IApplicationDbContext.SongRoleAssignments
+    {
+        get { return SongRoleAssignments; }
+    }
+
+    IQueryable<UserSession> IApplicationDbContext.UserSessions
+    {
+        get { return UserSessions; }
+    }
+
+    IQueryable<TgAuthLink> IApplicationDbContext.TgAuthLinks
+    {
+        get { return TgAuthLinks; }
+    }
+
+    void IApplicationDbContext.Add(object entity)
+    {
+        Add(entity);
+    }
+
+    void IApplicationDbContext.Remove(object entity)
+    {
+        Remove(entity);
+    }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
-        builder.HasPostgresEnum<CuMusicClub.Domain.Enums.SongLinkType>();
+        builder.HasPostgresEnum<Domain.Enums.SongLinkType>();
         builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
     }
 }

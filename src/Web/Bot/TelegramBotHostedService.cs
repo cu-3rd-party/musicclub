@@ -106,11 +106,9 @@ public class TelegramBotHostedService : BackgroundService
                 {
                     WebApp.Url:
                     {
-                    } url
+                    } url,
                 })
-            {
                 return url;
-            }
 
             _logger.LogWarning("Menu button is not a WebApp; falling back to default URL");
         }

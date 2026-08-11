@@ -11,12 +11,12 @@
 </script>
 
 <span
-        bind:this={ref}
-        data-slot="breadcrumb-ellipsis"
-        role="presentation"
-        aria-hidden="true"
-        class={cn("size-5 [&>svg]:size-4 flex items-center justify-center", className)}
-        {...restProps}
+    bind:this={ref}
+    data-slot="breadcrumb-ellipsis"
+    role="presentation"
+    aria-hidden="true"
+    class={cn("size-5 [&>svg]:size-4 flex items-center justify-center", className)}
+    {...restProps}
 >
 	<MoreHorizontalIcon/>
 	<span class="sr-only">More</span>

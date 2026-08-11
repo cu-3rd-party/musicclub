@@ -10,10 +10,7 @@ public static partial class Auth
         TelegramAuthRequest? request,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request?.InitData))
-        {
-            return TypedResults.BadRequest();
-        }
+        if (string.IsNullOrWhiteSpace(request?.InitData)) return TypedResults.BadRequest();
 
         var session = await service.AuthenticateAsync(request.InitData, cancellationToken);
 
@@ -33,10 +30,7 @@ public static partial class Auth
         CancellationToken cancellationToken)
     {
         var authSession = await service.GetDeeplink(deeplinkUid, cancellationToken);
-        if (authSession == null)
-        {
-            return TypedResults.BadRequest();
-        }
+        if (authSession == null) return TypedResults.BadRequest();
 
         return TypedResults.Ok(authSession);
     }
