@@ -13,8 +13,8 @@ public partial class SongServiceTests
         var (_, principal) = await CreateUserAsync("owner", editOwnSongs: true);
 
         using var scope = new SongScope();
-        await Should.ThrowAsync<NotFoundException>(
-            () => scope.Songs.DeleteAsync(Guid.NewGuid(), principal, CancellationToken.None));
+        await Should.ThrowAsync<NotFoundException>(() =>
+            scope.Songs.DeleteAsync(Guid.NewGuid(), principal, CancellationToken.None));
     }
 
     [Test]
@@ -22,7 +22,11 @@ public partial class SongServiceTests
     {
         var (owner, principal) = await CreateUserAsync("owner", editOwnSongs: true);
         var (member, _) = await CreateUserAsync("member", editOwnParticipation: true);
-        var songId = await SeedSongAsync(roles: new[] { "Вокал" }, createdById: owner.Id);
+        var songId = await SeedSongAsync(roles: new[]
+            {
+                "Вокал"
+            },
+            createdById: owner.Id);
         await SeedAssignmentAsync(songId, "Вокал", member.Id);
 
         using (var scope = new SongScope())
@@ -44,8 +48,8 @@ public partial class SongServiceTests
         var songId = await SeedSongAsync(createdById: owner.Id);
 
         using var scope = new SongScope();
-        await Should.ThrowAsync<ForbiddenAccessException>(
-            () => scope.Songs.DeleteAsync(songId, otherPrincipal, CancellationToken.None));
+        await Should.ThrowAsync<ForbiddenAccessException>(() =>
+            scope.Songs.DeleteAsync(songId, otherPrincipal, CancellationToken.None));
 
         using var db = Db();
         (await db.Songs.CountAsync(s => s.Id == songId)).ShouldBe(1);

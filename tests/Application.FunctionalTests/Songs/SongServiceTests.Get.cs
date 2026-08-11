@@ -21,7 +21,11 @@ public partial class SongServiceTests
     {
         var (owner, ownerPrincipal) = await CreateUserAsync("owner", editOwnSongs: true);
         var (member, _) = await CreateUserAsync("member", editOwnParticipation: true);
-        var songId = await SeedSongAsync(roles: new[] { "Вокал" }, createdById: owner.Id);
+        var songId = await SeedSongAsync(roles: new[]
+            {
+                "Вокал"
+            },
+            createdById: owner.Id);
 
         await SeedAssignmentAsync(songId, "Вокал", member.Id);
 
@@ -29,9 +33,14 @@ public partial class SongServiceTests
         var details = await scope.Songs.GetAsync(songId, CancellationToken.None);
 
         details.Id.ShouldBe(songId);
-        details.Roles.Select(r => r.Title).ShouldBe(new[] { "Вокал" });
+        details.Roles.Select(r => r.Title)
+            .ShouldBe(new[]
+            {
+                "Вокал"
+            });
         details.Roles.ShouldHaveSingleItem();
-        details.Roles[0].Assignment.ShouldNotBeNull();
+        details.Roles[0]
+            .Assignment.ShouldNotBeNull();
         details.Roles[0].Assignment!.User.Id.ShouldBe(member.Id);
         details.Roles[0].Assignment!.User.DisplayName.ShouldBe("Display member");
     }

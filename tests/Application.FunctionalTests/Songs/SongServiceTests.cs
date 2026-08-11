@@ -40,8 +40,7 @@ public partial class SongServiceTests : TestBase
         return scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     }
 
-    private static async Task<(ApplicationUser AppUser, ClaimsPrincipal Principal)> CreateUserAsync(
-        string username,
+    private static async Task<(ApplicationUser AppUser, ClaimsPrincipal Principal)> CreateUserAsync(string username,
         bool editOwnParticipation = false,
         bool editAnyParticipation = false,
         bool editOwnSongs = false,
@@ -59,11 +58,14 @@ public partial class SongServiceTests : TestBase
             UpdatedAt = DateTimeOffset.UtcNow,
         };
         var result = await userManager.CreateAsync(user, "Test1234!");
-        result.Succeeded.ShouldBeTrue($"Failed to create user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+        result.Succeeded.ShouldBeTrue(
+            $"Failed to create user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
 
         var claims = new List<Claim>();
-        if (editOwnParticipation) claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.ParticipationEditOwn));
-        if (editAnyParticipation) claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.ParticipationEditAny));
+        if (editOwnParticipation)
+            claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.ParticipationEditOwn));
+        if (editAnyParticipation)
+            claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.ParticipationEditAny));
         if (editOwnSongs) claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.SongsEditOwn));
         if (editAnySongs) claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.SongsEditAny));
         if (editFeaturedSongs) claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.SongsEditFeatured));
@@ -73,17 +75,16 @@ public partial class SongServiceTests : TestBase
             await userManager.AddClaimAsync(user, claim);
         }
 
-        var identity = new ClaimsIdentity(
-        [
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-        ], "test");
+        var identity = new ClaimsIdentity([
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            ],
+            "test");
 
         return (user, new ClaimsPrincipal(identity));
     }
 
-    private static async Task<Guid> SeedSongAsync(
-        string title = "Bohemian Rhapsody",
+    private static async Task<Guid> SeedSongAsync(string title = "Bohemian Rhapsody",
         string artist = "Queen",
         string[]? roles = null,
         bool featured = false,
@@ -124,6 +125,7 @@ public partial class SongServiceTests : TestBase
                     RoleTitle = role,
                 });
             }
+
             await db.SaveChangesAsync();
         }
 
@@ -133,8 +135,7 @@ public partial class SongServiceTests : TestBase
     private static async Task<Guid> FindRoleIdAsync(Guid songId, string roleTitle)
     {
         using var db = Db();
-        var role = await db.SongRoles
-            .FirstOrDefaultAsync(r => r.SongId == songId && r.RoleTitle == roleTitle);
+        var role = await db.SongRoles.FirstOrDefaultAsync(r => r.SongId == songId && r.RoleTitle == roleTitle);
         return role?.Id ?? throw new InvalidOperationException($"Role '{roleTitle}' not found on song {songId}");
     }
 
@@ -158,13 +159,12 @@ public partial class SongServiceTests : TestBase
         await db.SaveChangesAsync();
     }
 
-    private static CreateSongRequest CreateRequest(
-        string title = "Bohemian Rhapsody",
+    private static CreateSongRequest CreateRequest(string title = "Bohemian Rhapsody",
         string artist = "Queen",
         string? url = null,
         bool featured = false,
         string? thumbnailUrl = null,
         string? description = null,
-        string[]? roles = null)
-        => new(title, artist, description, url ?? YoutubeUrl, thumbnailUrl, featured, roles);
+        string[]? roles = null) =>
+        new(title, artist, description, url ?? YoutubeUrl, thumbnailUrl, featured, roles);
 }

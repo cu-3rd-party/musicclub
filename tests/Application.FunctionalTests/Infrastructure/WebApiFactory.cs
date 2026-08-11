@@ -31,8 +31,7 @@ public class WebApiFactory : WebApplicationFactory<Program>
         string? configured = null;
         if (!string.IsNullOrWhiteSpace(contentRoot))
         {
-            configured = new ConfigurationBuilder()
-                .SetBasePath(contentRoot)
+            configured = new ConfigurationBuilder().SetBasePath(contentRoot)
                 .AddJsonFile("appsettings.json", optional: true)
                 .AddJsonFile($"appsettings.{environmentName}.json", optional: true)
                 .Build()
@@ -41,7 +40,10 @@ public class WebApiFactory : WebApplicationFactory<Program>
 
         if (!string.IsNullOrWhiteSpace(configured))
         {
-            return new NpgsqlConnectionStringBuilder(configured) { Database = TestDatabaseName }.ConnectionString;
+            return new NpgsqlConnectionStringBuilder(configured)
+            {
+                Database = TestDatabaseName
+            }.ConnectionString;
         }
 
         return $"Host=localhost;Database={TestDatabaseName};Username=postgres;Password=postgres";

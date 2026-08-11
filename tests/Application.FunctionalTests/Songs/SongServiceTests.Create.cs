@@ -26,15 +26,27 @@ public partial class SongServiceTests
         SongDto result;
         using (var scope = new SongScope())
         {
-            result = await scope.Songs.CreateAsync(
-                CreateRequest(roles: new[] { "Гитара", "Вокал" }), principal, CancellationToken.None);
+            result = await scope.Songs.CreateAsync(CreateRequest(roles: new[]
+                {
+                    "Гитара",
+                    "Вокал"
+                }),
+                principal,
+                CancellationToken.None);
 
             result.Title.ShouldBe("Bohemian Rhapsody");
             result.Artist.ShouldBe("Queen");
             result.Url.ShouldBe(YoutubeUrl);
             result.CreatedBy.Id.ShouldBe(appUser.Id);
-            result.Roles.Select(r => r.Title).OrderBy(x => x).ShouldBe(new[] { "Вокал", "Гитара" });
-            result.Roles.Count(r => r.Assignment != null).ShouldBe(0);
+            result.Roles.Select(r => r.Title)
+                .OrderBy(x => x)
+                .ShouldBe(new[]
+                {
+                    "Вокал",
+                    "Гитара"
+                });
+            result.Roles.Count(r => r.Assignment != null)
+                .ShouldBe(0);
         }
 
         using var db = Db();
@@ -65,7 +77,10 @@ public partial class SongServiceTests
     [Test]
     public async Task Create_FeaturedWithPermission_SetsFeatured()
     {
-        var (_, principal) = await CreateUserAsync("editor", editOwnParticipation: true, editAnySongs: true, editFeaturedSongs: true);
+        var (_, principal) = await CreateUserAsync("editor",
+            editOwnParticipation: true,
+            editAnySongs: true,
+            editFeaturedSongs: true);
 
         using var scope = new SongScope();
         var result = await scope.Songs.CreateAsync(CreateRequest(featured: true), principal, CancellationToken.None);
@@ -88,8 +103,9 @@ public partial class SongServiceTests
         var (_, principal) = await CreateUserAsync("owner", editOwnParticipation: true, editOwnSongs: true);
 
         using var scope = new SongScope();
-        var result = await scope.Songs.CreateAsync(
-            CreateRequest(thumbnailUrl: "https://cdn.example.com/thumb.jpg"), principal, CancellationToken.None);
+        var result = await scope.Songs.CreateAsync(CreateRequest(thumbnailUrl: "https://cdn.example.com/thumb.jpg"),
+            principal,
+            CancellationToken.None);
         result.ThumbnailUrl.ShouldBe("https://cdn.example.com/thumb.jpg");
     }
 
@@ -99,8 +115,9 @@ public partial class SongServiceTests
         var (_, principal) = await CreateUserAsync("owner", editOwnParticipation: true, editOwnSongs: true);
 
         using var scope = new SongScope();
-        var result = await scope.Songs.CreateAsync(
-            CreateRequest(url: "https://soundcloud.com/foo"), principal, CancellationToken.None);
+        var result = await scope.Songs.CreateAsync(CreateRequest(url: "https://soundcloud.com/foo"),
+            principal,
+            CancellationToken.None);
         result.ThumbnailUrl.ShouldBeNull();
     }
 
@@ -120,20 +137,38 @@ public partial class SongServiceTests
         var (_, principal) = await CreateUserAsync("owner", editOwnParticipation: true, editOwnSongs: true);
 
         using var scope = new SongScope();
-        var result = await scope.Songs.CreateAsync(
-            CreateRequest(roles: new[] { "  Вокал ", "", "гитара", "Гитара", "Вокал" }),
+        var result = await scope.Songs.CreateAsync(CreateRequest(roles: new[]
+            {
+                "  Вокал ",
+                "",
+                "гитара",
+                "Гитара",
+                "Вокал"
+            }),
             principal,
             CancellationToken.None);
 
-        result.Roles.Select(r => r.Title).ToArray().ShouldBe(new[] { "Вокал", "Гитара", "гитара" }, ignoreOrder: true);
+        result.Roles.Select(r => r.Title)
+            .ToArray()
+            .ShouldBe(new[]
+                {
+                    "Вокал",
+                    "Гитара",
+                    "гитара"
+                },
+                ignoreOrder: true);
 
         using var db = Db();
-        var stored = await db.SongRoles
-            .Where(r => r.SongId == result.Id)
+        var stored = await db.SongRoles.Where(r => r.SongId == result.Id)
             .Select(r => r.RoleTitle)
             .OrderBy(r => r)
             .ToListAsync();
-        stored.ShouldBe(new[] { "Вокал", "Гитара", "гитара" });
+        stored.ShouldBe(new[]
+        {
+            "Вокал",
+            "Гитара",
+            "гитара"
+        });
     }
 
     [Test]

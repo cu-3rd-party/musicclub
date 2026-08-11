@@ -13,27 +13,34 @@ public partial class SongServiceTests
         var (_, principal) = await CreateUserAsync("owner", editOwnSongs: true);
 
         using var scope = new SongScope();
-        var request = new UpdateSongRequest(
-            "New Title", "New Artist", null, YoutubeUrl, null, false, null);
-        await Should.ThrowAsync<NotFoundException>(
-            () => scope.Songs.UpdateAsync(Guid.NewGuid(), request, principal, CancellationToken.None));
+        var request = new UpdateSongRequest("New Title", "New Artist", null, YoutubeUrl, null, false, null);
+        await Should.ThrowAsync<NotFoundException>(() =>
+            scope.Songs.UpdateAsync(Guid.NewGuid(), request, principal, CancellationToken.None));
     }
 
     [Test]
     public async Task Update_ByOwner_UpdatesFieldsAndRoles()
     {
         var (owner, principal) = await CreateUserAsync("owner", editOwnSongs: true);
-        var songId = await SeedSongAsync(roles: new[] { "Вокал", "Гитара" }, createdById: owner.Id);
+        var songId = await SeedSongAsync(roles: new[]
+            {
+                "Вокал",
+                "Гитара"
+            },
+            createdById: owner.Id);
 
         using var scope = new SongScope();
-        var request = new UpdateSongRequest(
-            "Stairway to Heaven",
+        var request = new UpdateSongRequest("Stairway to Heaven",
             "Led Zeppelin",
             "epic solo",
             "https://music.yandex.ru/album/1",
             "https://cdn.example.com/stairs.jpg",
             false,
-            new[] { "Вокал", "Соло" });
+            new[]
+            {
+                "Вокал",
+                "Соло"
+            });
 
         var result = await scope.Songs.UpdateAsync(songId, request, principal, CancellationToken.None);
 
@@ -42,7 +49,14 @@ public partial class SongServiceTests
         result.Description.ShouldBe("epic solo");
         result.Url.ShouldBe("https://music.yandex.ru/album/1");
         result.ThumbnailUrl.ShouldBe("https://cdn.example.com/stairs.jpg");
-        result.Roles.Select(r => r.Title).ToArray().ShouldBe(new[] { "Вокал", "Соло" }, ignoreOrder: true);
+        result.Roles.Select(r => r.Title)
+            .ToArray()
+            .ShouldBe(new[]
+                {
+                    "Вокал",
+                    "Соло"
+                },
+                ignoreOrder: true);
 
         using var db = Db();
         (await db.SongRoles.CountAsync(r => r.SongId == songId)).ShouldBe(2);
@@ -57,10 +71,9 @@ public partial class SongServiceTests
         var songId = await SeedSongAsync(createdById: owner.Id);
 
         using var scope = new SongScope();
-        var request = new UpdateSongRequest(
-            "New Title", "New Artist", null, YoutubeUrl, null, false, null);
-        await Should.ThrowAsync<ForbiddenAccessException>(
-            () => scope.Songs.UpdateAsync(songId, request, otherPrincipal, CancellationToken.None));
+        var request = new UpdateSongRequest("New Title", "New Artist", null, YoutubeUrl, null, false, null);
+        await Should.ThrowAsync<ForbiddenAccessException>(() =>
+            scope.Songs.UpdateAsync(songId, request, otherPrincipal, CancellationToken.None));
     }
 
     [Test]
@@ -71,8 +84,7 @@ public partial class SongServiceTests
         var songId = await SeedSongAsync(createdById: owner.Id);
 
         using var scope = new SongScope();
-        var request = new UpdateSongRequest(
-            "New Title", "New Artist", null, YoutubeUrl, null, false, null);
+        var request = new UpdateSongRequest("New Title", "New Artist", null, YoutubeUrl, null, false, null);
         var result = await scope.Songs.UpdateAsync(songId, request, editorPrincipal, CancellationToken.None);
 
         result.Title.ShouldBe("New Title");
@@ -85,10 +97,9 @@ public partial class SongServiceTests
         var songId = await SeedSongAsync(createdById: owner.Id);
 
         using var scope = new SongScope();
-        var request = new UpdateSongRequest(
-            "New Title", "New Artist", null, YoutubeUrl, null, true, null);
-        await Should.ThrowAsync<ForbiddenAccessException>(
-            () => scope.Songs.UpdateAsync(songId, request, principal, CancellationToken.None));
+        var request = new UpdateSongRequest("New Title", "New Artist", null, YoutubeUrl, null, true, null);
+        await Should.ThrowAsync<ForbiddenAccessException>(() =>
+            scope.Songs.UpdateAsync(songId, request, principal, CancellationToken.None));
     }
 
     [Test]
@@ -98,8 +109,7 @@ public partial class SongServiceTests
         var songId = await SeedSongAsync(createdById: owner.Id);
 
         using var scope = new SongScope();
-        var request = new UpdateSongRequest(
-            "New Title", "New Artist", null, YoutubeUrl, null, true, null);
+        var request = new UpdateSongRequest("New Title", "New Artist", null, YoutubeUrl, null, true, null);
         var result = await scope.Songs.UpdateAsync(songId, request, principal, CancellationToken.None);
 
         result.Featured.ShouldBeTrue();
@@ -112,8 +122,7 @@ public partial class SongServiceTests
         var songId = await SeedSongAsync(featured: true, createdById: owner.Id);
 
         using var scope = new SongScope();
-        var request = new UpdateSongRequest(
-            "New Title", "New Artist", null, YoutubeUrl, null, false, null);
+        var request = new UpdateSongRequest("New Title", "New Artist", null, YoutubeUrl, null, false, null);
         var result = await scope.Songs.UpdateAsync(songId, request, principal, CancellationToken.None);
 
         result.Featured.ShouldBeTrue();
@@ -126,11 +135,23 @@ public partial class SongServiceTests
         var songId = await SeedSongAsync(roles: ["Вокал", "Гитара", "Бас"], createdById: owner.Id);
 
         using var scope = new SongScope();
-        var request = new UpdateSongRequest(
-            "New Title", "New Artist", null, YoutubeUrl, null, false, new[] { "Вокал" });
+        var request = new UpdateSongRequest("New Title",
+            "New Artist",
+            null,
+            YoutubeUrl,
+            null,
+            false,
+            new[]
+            {
+                "Вокал"
+            });
         var result = await scope.Songs.UpdateAsync(songId, request, principal, CancellationToken.None);
 
-        result.Roles.Select(r => r.Title).ShouldBe(new[] { "Вокал" });
+        result.Roles.Select(r => r.Title)
+            .ShouldBe(new[]
+            {
+                "Вокал"
+            });
 
         using var db = Db();
         (await db.SongRoles.CountAsync(r => r.SongId == songId)).ShouldBe(1);
@@ -140,14 +161,37 @@ public partial class SongServiceTests
     public async Task Update_NormalizesRoles_TrimsDedupesAndSorts()
     {
         var (owner, principal) = await CreateUserAsync("owner", editOwnSongs: true);
-        var songId = await SeedSongAsync(roles: new[] { "Вокал" }, createdById: owner.Id);
+        var songId = await SeedSongAsync(roles: new[]
+            {
+                "Вокал"
+            },
+            createdById: owner.Id);
 
         using var scope = new SongScope();
-        var request = new UpdateSongRequest(
-            "New Title", "New Artist", null, YoutubeUrl, null, false,
-            new[] { "  Вокал ", "", "гитара", "Гитара", "Вокал" });
+        var request = new UpdateSongRequest("New Title",
+            "New Artist",
+            null,
+            YoutubeUrl,
+            null,
+            false,
+            new[]
+            {
+                "  Вокал ",
+                "",
+                "гитара",
+                "Гитара",
+                "Вокал"
+            });
         var result = await scope.Songs.UpdateAsync(songId, request, principal, CancellationToken.None);
 
-        result.Roles.Select(r => r.Title).ToArray().ShouldBe(new[] { "Вокал", "Гитара", "гитара" }, ignoreOrder: true);
+        result.Roles.Select(r => r.Title)
+            .ToArray()
+            .ShouldBe(new[]
+                {
+                    "Вокал",
+                    "Гитара",
+                    "гитара"
+                },
+                ignoreOrder: true);
     }
 }

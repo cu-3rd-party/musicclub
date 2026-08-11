@@ -1,12 +1,12 @@
 using System.Security.Claims;
 using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Common.Exceptions;
+using CuMusicClub.Application.Helpers;
 using CuMusicClub.Application.Song;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Domain.Enums;
 using CuMusicClub.Domain.ValueObjects;
 using CuMusicClub.Infrastructure.Data;
-using FluentValidation.Results;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -85,7 +85,7 @@ public class SongService(
         if (request.Featured && !permissions.Contains(Permissions.SongsEditFeatured))
             throw new ForbiddenAccessException();
 
-        var linkKind = DeriveLinkKind(request.Url);
+        var linkKind = SongHelpers.DeriveLinkKind(request.Url);
         var thumbnailUrl = SongThumbnail.Normalize(request.ThumbnailUrl, linkKind, request.Url);
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -106,7 +106,7 @@ public class SongService(
         db.Songs.Add(song);
         await db.SaveChangesAsync(cancellationToken);
 
-        await ReplaceRolesAsync(song.Id, NormalizeRoles(request.AvailableRoles), cancellationToken);
+        await ReplaceRolesAsync(song.Id, SongHelpers.NormalizeRoles(request.AvailableRoles), cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
@@ -132,7 +132,7 @@ public class SongService(
         if (request.Featured && !permissions.Contains(Permissions.SongsEditFeatured))
             throw new ForbiddenAccessException();
 
-        var linkKind = DeriveLinkKind(request.Url);
+        var linkKind = SongHelpers.DeriveLinkKind(request.Url);
         var thumbnailUrl = SongThumbnail.Normalize(request.ThumbnailUrl, linkKind, request.Url);
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -147,7 +147,7 @@ public class SongService(
         song.UpdatedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
 
-        var requestedRoles = NormalizeRoles(request.AvailableRoles);
+        var requestedRoles = SongHelpers.NormalizeRoles(request.AvailableRoles);
         var currentRoles = await db.SongRoles.Where(r => r.SongId == songId)
             .Select(r => r.RoleTitle)
             .ToListAsync(cancellationToken);
@@ -305,36 +305,6 @@ public class SongService(
                 RoleTitle = role
             });
         }
-    }
-
-    private static List<string> NormalizeRoles(IReadOnlyList<string>? roles)
-    {
-        return roles?.Select(role => role.Trim())
-            .Where(role => role.Length > 0)
-            .Distinct(StringComparer.Ordinal)
-            .OrderBy(role => role, StringComparer.Ordinal)
-            .ToList() ?? [];
-    }
-
-    #endregion
-
-    #region Link handling
-
-    private static SongLinkType DeriveLinkKind(string? url)
-    {
-        if (string.IsNullOrWhiteSpace(url))
-            throw new ValidationException([new ValidationFailure("url", "Song URL is required")]);
-
-        var lower = url.Trim()
-            .ToLowerInvariant();
-
-        if (lower.Contains("youtube.com") || lower.Contains("youtu.be")) return SongLinkType.Youtube;
-
-        if (lower.Contains("music.yandex") || lower.Contains("yandex.ru")) return SongLinkType.YandexMusic;
-
-        if (lower.Contains("soundcloud.com")) return SongLinkType.Soundcloud;
-
-        throw new ValidationException([new ValidationFailure("url", $"Unsupported song link URL: {url}")]);
     }
 
     #endregion

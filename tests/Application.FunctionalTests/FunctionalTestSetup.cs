@@ -19,8 +19,8 @@ public class FunctionalTestSetup
         ScopeFactory = _factory.Services.GetRequiredService<IServiceScopeFactory>();
 
         var connectionString = _factory.Services.GetRequiredService<IConfiguration>()
-            .GetConnectionString("CuMusicClubDb")
-            ?? throw new InvalidOperationException("Connection string 'CuMusicClubDb' not configured.");
+                                   .GetConnectionString("CuMusicClubDb") ??
+                               throw new InvalidOperationException("Connection string 'CuMusicClubDb' not configured.");
 
         using var scope = ScopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();

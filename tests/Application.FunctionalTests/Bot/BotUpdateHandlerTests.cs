@@ -16,21 +16,57 @@ public class BotUpdateHandlerTests : TestBase
     private const string WebAppUrl = "https://app.example.com";
     private const long ChatId = 111;
 
-    private static User BotUser(long id, string? firstName = null, string? lastName = null, string? languageCode = "en")
-        => new() { Id = id, FirstName = firstName ?? $"User{id}", LastName = lastName, LanguageCode = languageCode };
+    private static User BotUser(long id,
+        string? firstName = null,
+        string? lastName = null,
+        string? languageCode = "en") =>
+        new()
+        {
+            Id = id,
+            FirstName = firstName ?? $"User{id}",
+            LastName = lastName,
+            LanguageCode = languageCode
+        };
 
-    private static Message TextMessage(long chatId, User from, string text)
-        => new() { Chat = new Chat { Id = chatId }, From = from, Text = text };
+    private static Message TextMessage(long chatId, User from, string text) =>
+        new()
+        {
+            Chat = new Chat
+            {
+                Id = chatId
+            },
+            From = from,
+            Text = text
+        };
 
-    private static CallbackQuery Callback(string id, User from, string data, long chatId = ChatId)
-        => new() { Id = id, Data = data, From = from, Message = new Message { Chat = new Chat { Id = chatId } } };
+    private static CallbackQuery Callback(string id, User from, string data, long chatId = ChatId) =>
+        new()
+        {
+            Id = id,
+            Data = data,
+            From = from,
+            Message = new Message
+            {
+                Chat = new Chat
+                {
+                    Id = chatId
+                }
+            }
+        };
 
-    private static Update MessageUpdate(Message message) => new() { Message = message };
+    private static Update MessageUpdate(Message message) =>
+        new()
+        {
+            Message = message
+        };
 
-    private static Update CallbackUpdate(CallbackQuery callback) => new() { CallbackQuery = callback };
+    private static Update CallbackUpdate(CallbackQuery callback) =>
+        new()
+        {
+            CallbackQuery = callback
+        };
 
-    private static async Task<ApplicationUser> CreateUserAsync(
-        string displayName = "Test User", long? tgUserId = null)
+    private static async Task<ApplicationUser> CreateUserAsync(string displayName = "Test User", long? tgUserId = null)
     {
         using var scope = FunctionalTestSetup.ScopeFactory.CreateScope();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
@@ -43,9 +79,9 @@ public class BotUpdateHandlerTests : TestBase
         var result = await userManager.CreateAsync(user);
         if (!result.Succeeded)
         {
-            throw new InvalidOperationException(
-                string.Join("; ", result.Errors.Select(e => e.Description)));
+            throw new InvalidOperationException(string.Join("; ", result.Errors.Select(e => e.Description)));
         }
+
         return user;
     }
 
@@ -84,7 +120,8 @@ public class BotUpdateHandlerTests : TestBase
         message.ChatId!.Identifier.ShouldBe(ChatId);
 
         var keyboard = message.ReplyMarkup.ShouldBeOfType<InlineKeyboardMarkup>();
-        var button = keyboard.InlineKeyboard.Single().Single();
+        var button = keyboard.InlineKeyboard.Single()
+            .Single();
         button.WebApp.ShouldNotBeNull();
         button.WebApp.Url.ShouldBe(WebAppUrl);
     }
@@ -98,7 +135,8 @@ public class BotUpdateHandlerTests : TestBase
         using var handler = new HandlerScope();
         await handler.Handler.HandleUpdateAsync(bot, update, WebAppUrl, CancellationToken.None);
 
-        bot.SentMessages.Single().Text.ShouldBe("Invalid or used authentication token.");
+        bot.SentMessages.Single()
+            .Text.ShouldBe("Invalid or used authentication token.");
     }
 
     [Test]
@@ -110,7 +148,8 @@ public class BotUpdateHandlerTests : TestBase
         using var handler = new HandlerScope();
         await handler.Handler.HandleUpdateAsync(bot, update, WebAppUrl, CancellationToken.None);
 
-        bot.SentMessages.Single().Text.ShouldBe("Invalid start parameter.");
+        bot.SentMessages.Single()
+            .Text.ShouldBe("Invalid start parameter.");
     }
 
     [Test]
@@ -122,6 +161,7 @@ public class BotUpdateHandlerTests : TestBase
         using var handler = new HandlerScope();
         await handler.Handler.HandleUpdateAsync(bot, update, WebAppUrl, CancellationToken.None);
 
-        bot.SentMessages.Single().Text.ShouldBe("Send /start to get the web app link.");
+        bot.SentMessages.Single()
+            .Text.ShouldBe("Send /start to get the web app link.");
     }
 }

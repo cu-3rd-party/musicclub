@@ -30,7 +30,13 @@ public partial class SongServiceTests
         using var scope = new SongScope();
         var result = await scope.Songs.ListAsync(null, 20, null, principal, CancellationToken.None);
 
-        result.Songs.Select(s => s.Id).ShouldBe(new[] { featuredId, newestId, oldId });
+        result.Songs.Select(s => s.Id)
+            .ShouldBe(new[]
+            {
+                featuredId,
+                newestId,
+                oldId
+            });
         result.NextPageToken.ShouldBeNull();
     }
 
@@ -42,13 +48,23 @@ public partial class SongServiceTests
         var match1 = await SeedSongAsync("Nightmare", "Avenged Sevenfold", createdAt: now.AddMinutes(-3));
         var match2 = await SeedSongAsync("Warmness on the Soul", "Avenged Sevenfold", createdAt: now.AddMinutes(-2));
         await SeedSongAsync("Smells Like Teen Spirit", "Nirvana", createdAt: now.AddMinutes(-4));
-        var featuredMatch = await SeedSongAsync("A Little Piece of Heaven", "Avenged Sevenfold", featured: true, createdAt: now.AddMinutes(-1));
+        var featuredMatch = await SeedSongAsync("A Little Piece of Heaven",
+            "Avenged Sevenfold",
+            featured: true,
+            createdAt: now.AddMinutes(-1));
 
         using var scope = new SongScope();
         var result = await scope.Songs.ListAsync("avenged", 20, null, principal, CancellationToken.None);
 
-        result.Songs.Select(s => s.Id).ShouldBe(new[] { featuredMatch, match2, match1 });
-        result.Songs.All(s => s.Artist == "Avenged Sevenfold").ShouldBeTrue();
+        result.Songs.Select(s => s.Id)
+            .ShouldBe(new[]
+            {
+                featuredMatch,
+                match2,
+                match1
+            });
+        result.Songs.All(s => s.Artist == "Avenged Sevenfold")
+            .ShouldBeTrue();
     }
 
     [Test]
@@ -74,11 +90,20 @@ public partial class SongServiceTests
 
         using var scope = new SongScope();
         var page1 = await scope.Songs.ListAsync(null, 2, null, principal, CancellationToken.None);
-        page1.Songs.Select(s => s.Id).ShouldBe(new[] { newestId, middleId });
+        page1.Songs.Select(s => s.Id)
+            .ShouldBe(new[]
+            {
+                newestId,
+                middleId
+            });
         page1.NextPageToken.ShouldBe("2");
 
         var page2 = await scope.Songs.ListAsync(null, 2, page1.NextPageToken, principal, CancellationToken.None);
-        page2.Songs.Select(s => s.Id).ShouldBe(new[] { oldestId });
+        page2.Songs.Select(s => s.Id)
+            .ShouldBe(new[]
+            {
+                oldestId
+            });
         page2.NextPageToken.ShouldBeNull();
     }
 
@@ -110,7 +135,11 @@ public partial class SongServiceTests
 
         using var scope = new SongScope();
         var result = await scope.Songs.ListAsync(null, 1, "not-a-number", principal, CancellationToken.None);
-        result.Songs.Select(s => s.Id).ShouldBe(new[] { newestId });
+        result.Songs.Select(s => s.Id)
+            .ShouldBe(new[]
+            {
+                newestId
+            });
     }
 
     [Test]
@@ -118,7 +147,12 @@ public partial class SongServiceTests
     {
         var (owner, ownerPrincipal) = await CreateUserAsync("owner", editOwnSongs: true, editOwnParticipation: true);
         var (member, memberPrincipal) = await CreateUserAsync("member", editOwnParticipation: true);
-        var songId = await SeedSongAsync(roles: new[] { "Вокал", "Барабаны" }, createdById: owner.Id);
+        var songId = await SeedSongAsync(roles: new[]
+            {
+                "Вокал",
+                "Барабаны"
+            },
+            createdById: owner.Id);
 
         using (var scope = new SongScope())
         {
@@ -135,7 +169,9 @@ public partial class SongServiceTests
         using (var scope = new SongScope())
         {
             var result = await scope.Songs.ListAsync(null, 20, null, ownerPrincipal, CancellationToken.None);
-            result.Songs.Single().Roles.Count(r => r.Assignment != null).ShouldBe(2);
+            result.Songs.Single()
+                .Roles.Count(r => r.Assignment != null)
+                .ShouldBe(2);
         }
     }
 }

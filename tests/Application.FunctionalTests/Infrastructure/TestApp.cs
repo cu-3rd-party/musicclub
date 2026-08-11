@@ -31,7 +31,11 @@ public static class TestApp
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
 
-        var user = new ApplicationUser { UserName = userName, Email = userName };
+        var user = new ApplicationUser
+        {
+            UserName = userName,
+            Email = userName
+        };
         var result = await userManager.CreateAsync(user, password);
 
         if (roles.Length > 0)
@@ -66,16 +70,14 @@ public static class TestApp
         _roles = null;
     }
 
-    public static async Task<TEntity?> FindAsync<TEntity>(params object[] keyValues)
-        where TEntity : class
+    public static async Task<TEntity?> FindAsync<TEntity>(params object[] keyValues) where TEntity : class
     {
         using var scope = FunctionalTestSetup.ScopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         return await context.FindAsync<TEntity>(keyValues);
     }
 
-    public static async Task AddAsync<TEntity>(TEntity entity)
-        where TEntity : class
+    public static async Task AddAsync<TEntity>(TEntity entity) where TEntity : class
     {
         using var scope = FunctionalTestSetup.ScopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();

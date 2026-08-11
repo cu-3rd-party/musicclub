@@ -18,12 +18,22 @@ public class ValidationExceptionTests
     [Test]
     public void SingleValidationFailureCreatesASingleElementErrorDictionary()
     {
-        var failures = new List<ValidationFailure> { new ValidationFailure("Age", "must be over 18"), };
+        var failures = new List<ValidationFailure>
+        {
+            new ValidationFailure("Age", "must be over 18"),
+        };
 
         var actual = new ValidationException(failures).Errors;
 
-        actual.Keys.ShouldBe(new string[] { "Age" });
-        actual["Age"].ShouldBe(new string[] { "must be over 18" });
+        actual.Keys.ShouldBe(new string[]
+        {
+            "Age"
+        });
+        actual["Age"]
+            .ShouldBe(new string[]
+            {
+                "must be over 18"
+            });
     }
 
     [Test]
@@ -42,16 +52,29 @@ public class ValidationExceptionTests
 
         var actual = new ValidationException(failures).Errors;
 
-        actual.Keys.ShouldBe(new string[] { "Password", "Age" }, ignoreOrder: true);
+        actual.Keys.ShouldBe(new string[]
+            {
+                "Password",
+                "Age"
+            },
+            ignoreOrder: true);
 
-        actual["Age"].ShouldBe(new string[] { "must be 25 or younger", "must be 18 or older", }, ignoreOrder: true);
+        actual["Age"]
+            .ShouldBe(new string[]
+                {
+                    "must be 25 or younger",
+                    "must be 18 or older",
+                },
+                ignoreOrder: true);
 
         actual["Password"]
-            .ShouldBe(
-                new string[]
+            .ShouldBe(new string[]
                 {
-                    "must contain lower case letter", "must contain upper case letter",
-                    "must contain at least 8 characters", "must contain a digit",
-                }, ignoreOrder: true);
+                    "must contain lower case letter",
+                    "must contain upper case letter",
+                    "must contain at least 8 characters",
+                    "must contain a digit",
+                },
+                ignoreOrder: true);
     }
 }

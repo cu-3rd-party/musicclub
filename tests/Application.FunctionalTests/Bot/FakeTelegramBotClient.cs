@@ -11,9 +11,13 @@ public class FakeTelegramBotClient : ITelegramBotClient
 {
     public List<object> Requests { get; } = [];
 
-    public List<SendMessageRequest> SentMessages => Requests.OfType<SendMessageRequest>().ToList();
+    public List<SendMessageRequest> SentMessages =>
+        Requests.OfType<SendMessageRequest>()
+            .ToList();
 
-    public List<AnswerCallbackQueryRequest> AnsweredCallbacks => Requests.OfType<AnswerCallbackQueryRequest>().ToList();
+    public List<AnswerCallbackQueryRequest> AnsweredCallbacks =>
+        Requests.OfType<AnswerCallbackQueryRequest>()
+            .ToList();
 
     public bool LocalBotServer => false;
 
@@ -35,8 +39,8 @@ public class FakeTelegramBotClient : ITelegramBotClient
         remove { }
     }
 
-    public Task<TResponse> SendRequest<TResponse>(
-        IRequest<TResponse> request, CancellationToken cancellationToken = default)
+    public Task<TResponse> SendRequest<TResponse>(IRequest<TResponse> request,
+        CancellationToken cancellationToken = default)
     {
         Requests.Add(request!);
         return Task.FromResult<TResponse>(default!);
@@ -44,9 +48,9 @@ public class FakeTelegramBotClient : ITelegramBotClient
 
     public Task<bool> TestApi(CancellationToken cancellationToken = default) => Task.FromResult(true);
 
-    public Task DownloadFile(string filePath, Stream destination, CancellationToken cancellationToken = default)
-        => Task.CompletedTask;
+    public Task DownloadFile(string filePath, Stream destination, CancellationToken cancellationToken = default) =>
+        Task.CompletedTask;
 
-    public Task DownloadFile(TGFile file, Stream destination, CancellationToken cancellationToken = default)
-        => Task.CompletedTask;
+    public Task DownloadFile(TGFile file, Stream destination, CancellationToken cancellationToken = default) =>
+        Task.CompletedTask;
 }
