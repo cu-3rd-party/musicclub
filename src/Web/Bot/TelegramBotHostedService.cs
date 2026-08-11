@@ -13,8 +13,7 @@ public class TelegramBotHostedService : BackgroundService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<TelegramBotHostedService> _logger;
 
-    public TelegramBotHostedService(
-        IOptions<BotOptions> options,
+    public TelegramBotHostedService(IOptions<BotOptions> options,
         IServiceScopeFactory scopeFactory,
         ILogger<TelegramBotHostedService> logger)
     {
@@ -27,8 +26,7 @@ public class TelegramBotHostedService : BackgroundService
     {
         if (string.IsNullOrWhiteSpace(_options.BotToken) || _options.BotToken.Trim() == DisabledToken)
         {
-            _logger.LogInformation(
-                "Telegram bot is not started: BotToken is '{Token}'.",
+            _logger.LogInformation("Telegram bot is not started: BotToken is '{Token}'.",
                 string.IsNullOrWhiteSpace(_options.BotToken) ? "<empty>" : _options.BotToken);
             return;
         }
@@ -55,7 +53,8 @@ public class TelegramBotHostedService : BackgroundService
             _logger.LogWarning(ex, "Failed to delete Telegram webhook (continuing with polling).");
         }
 
-        TelegramBotClient.OnUpdateHandler onUpdate = (Update update) => HandleUpdateAsync(bot, webAppUrl, update, stoppingToken);
+        TelegramBotClient.OnUpdateHandler onUpdate = (Update update) =>
+            HandleUpdateAsync(bot, webAppUrl, update, stoppingToken);
         TelegramBotClient.OnErrorHandler onError = (Exception exception, HandleErrorSource source) =>
         {
             _logger.LogError(exception, "Telegram bot error (source: {Source})", source);
@@ -81,7 +80,10 @@ public class TelegramBotHostedService : BackgroundService
         }
     }
 
-    private async Task HandleUpdateAsync(ITelegramBotClient bot, string webAppUrl, Update update, CancellationToken cancellationToken)
+    private async Task HandleUpdateAsync(ITelegramBotClient bot,
+        string webAppUrl,
+        Update update,
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -100,7 +102,12 @@ public class TelegramBotHostedService : BackgroundService
         try
         {
             var menuButton = await bot.GetChatMenuButton(cancellationToken: cancellationToken);
-            if (menuButton is MenuButtonWebApp { WebApp.Url: { } url })
+            if (menuButton is MenuButtonWebApp
+                {
+                    WebApp.Url:
+                    {
+                    } url
+                })
             {
                 return url;
             }

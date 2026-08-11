@@ -44,7 +44,12 @@ public class SongRoleAssignmentConfiguration : IEntityTypeConfiguration<SongRole
             .HasConstraintName("song_role_assignment")
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasIndex(a => new { a.SongId, a.RoleId, a.UserId })
+        builder.HasIndex(a => new
+            {
+                a.SongId,
+                a.RoleId,
+                a.UserId
+            })
             .IsUnique()
             .HasDatabaseName("song_role_assignment_unique");
         builder.HasIndex(a => a.SongId)

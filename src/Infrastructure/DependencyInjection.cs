@@ -32,7 +32,8 @@ public static class DependencyInjection
         builder.Services.AddOptions<SecurityOptions>()
             .Configure<IConfiguration, IHostEnvironment>((options, configuration, environment) =>
             {
-                var secret = configuration.GetSection(SecurityOptions.SectionName).GetValue<string>("Secret");
+                var secret = configuration.GetSection(SecurityOptions.SectionName)
+                    .GetValue<string>("Secret");
                 if (string.IsNullOrWhiteSpace(secret))
                 {
                     if (environment.IsProduction())
@@ -43,17 +44,14 @@ public static class DependencyInjection
                     secret = SecurityOptions.DefaultJwtKey;
                 }
 
-                options.SigningKey = new SymmetricSecurityKey(
-                    Encoding.UTF8.GetBytes(secret));
+                options.SigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
             })
             .ValidateOnStart();
 
-        builder.Services
-            .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer();
 
-        builder.Services
-            .AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+        builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
             .Configure<IOptions<SecurityOptions>>((options, securityOptions) =>
             {
                 options.MapInboundClaims = false;
@@ -93,8 +91,7 @@ public static class DependencyInjection
         builder.Services.AddScoped<IPermissionService, PermissionService>();
         builder.Services.AddSingleton<IAuthService, AuthService>();
 
-        builder.Services
-            .AddIdentityCore<ApplicationUser>()
+        builder.Services.AddIdentityCore<ApplicationUser>()
             .AddRoles<IdentityRole<Guid>>()
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddSignInManager()
@@ -103,15 +100,13 @@ public static class DependencyInjection
 
     private sealed class ConfigureJwtBearerOptions(
         IOptions<SecurityOptions> securityOptions,
-        ILogger<ConfigureJwtBearerOptions> logger)
-        : IConfigureOptions<JwtBearerOptions>
+        ILogger<ConfigureJwtBearerOptions> logger) : IConfigureOptions<JwtBearerOptions>
     {
         public void Configure(JwtBearerOptions options)
         {
             var key = securityOptions.Value.SigningKey;
 
-            logger.LogInformation(
-                "Configuring JWT. Signing key present: {HasKey}, key length: {KeyLength}",
+            logger.LogInformation("Configuring JWT. Signing key present: {HasKey}, key length: {KeyLength}",
                 key is not null,
                 key?.KeySize);
 

@@ -11,8 +11,7 @@ public static class ClaimsPrincipalExtensions
     /// </summary>
     public static Guid GetUserId(this ClaimsPrincipal principal)
     {
-        var value = principal.FindFirstValue(JwtRegisteredClaimNames.Sub)
-            ?? throw new UnauthorizedAccessException();
+        var value = principal.FindFirstValue(JwtRegisteredClaimNames.Sub) ?? throw new UnauthorizedAccessException();
         return Guid.Parse(value);
     }
 }

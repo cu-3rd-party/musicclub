@@ -12,7 +12,8 @@ public static class BotTexts
         ["auth.ok"] = "✅ Authentication successful! You may return to the web app.",
         ["auth.fail"] = "❌ Authentication failed or expired.",
         ["calendar.attach.ask"] = "Send your calendar ICS URL.",
-        ["calendar.attach.invalid_url"] = "That does not look like a valid ICS URL. Please send a link ending with .ics.",
+        ["calendar.attach.invalid_url"] =
+            "That does not look like a valid ICS URL. Please send a link ending with .ics.",
         ["calendar.attach.not_linked"] = "Please link your account in the Music Club web app first, then try again.",
         ["calendar.attach.success"] = "✅ Calendar attached.",
         ["calendar.attach.fail"] = "❌ Failed to attach calendar. Please try again later.",
@@ -35,8 +36,10 @@ public static class BotTexts
         ["auth.ok"] = "✅ Аутентификация успешна! Можно вернуться в веб-приложение.",
         ["auth.fail"] = "❌ Аутентификация не удалась или истекла.",
         ["calendar.attach.ask"] = "Пришлите ссылку на ваш календарь в формате ICS.",
-        ["calendar.attach.invalid_url"] = "Похоже, это не ссылка на ICS. Пришлите ссылку, которая заканчивается на .ics.",
-        ["calendar.attach.not_linked"] = "Сначала привяжите аккаунт в веб‑приложении Music Club, затем попробуйте снова.",
+        ["calendar.attach.invalid_url"] =
+            "Похоже, это не ссылка на ICS. Пришлите ссылку, которая заканчивается на .ics.",
+        ["calendar.attach.not_linked"] =
+            "Сначала привяжите аккаунт в веб‑приложении Music Club, затем попробуйте снова.",
         ["calendar.attach.success"] = "✅ Календарь прикреплён.",
         ["calendar.attach.fail"] = "❌ Не удалось прикрепить календарь. Попробуйте позже.",
         ["email.confirm.prompt"] = "Это ваш email: {0}?",
@@ -50,8 +53,8 @@ public static class BotTexts
 
     public static string Get(string key, string? languageCode)
     {
-        var isRussian = !string.IsNullOrEmpty(languageCode)
-            && languageCode.StartsWith("ru", StringComparison.OrdinalIgnoreCase);
+        var isRussian = !string.IsNullOrEmpty(languageCode) &&
+                        languageCode.StartsWith("ru", StringComparison.OrdinalIgnoreCase);
         var table = isRussian ? Ru : En;
         return table.TryGetValue(key, out var text) ? text : key;
     }

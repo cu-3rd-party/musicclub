@@ -32,8 +32,7 @@ public class TelegramAuthService(
         var receivedHash = hashValues.ToString();
 
         var dataCheckString = string.Join("\n",
-            parsed
-                .Where(x => x.Key != "hash")
+            parsed.Where(x => x.Key != "hash")
                 .OrderBy(x => x.Key)
                 .Select(x => $"{x.Key}={x.Value}"));
 
@@ -46,15 +45,12 @@ public class TelegramAuthService(
         byte[] calculatedHash;
         using (var hmac = new HMACSHA256(secretKey))
         {
-            calculatedHash = hmac.ComputeHash(
-                Encoding.UTF8.GetBytes(dataCheckString));
+            calculatedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(dataCheckString));
         }
 
         var receivedHashBytes = Convert.FromHexString(receivedHash);
 
-        if (!CryptographicOperations.FixedTimeEquals(
-                calculatedHash,
-                receivedHashBytes))
+        if (!CryptographicOperations.FixedTimeEquals(calculatedHash, receivedHashBytes))
         {
             throw new BadHttpRequestException("token hash doesn't match");
         }
@@ -118,12 +114,10 @@ public class TelegramAuthService(
     public async Task<AuthSessionDto?> GetDeeplink(Guid linkUid, CancellationToken cancellationToken)
     {
         var link = await db.TgAuthLinks.FirstOrDefaultAsync(l => l.Id == linkUid, cancellationToken);
-        if (link == null || link.TgUserId == null)
-            return null;
+        if (link == null || link.TgUserId == null) return null;
 
         var user = await db.Users.FirstOrDefaultAsync(u => u.TgUserId == link.TgUserId, cancellationToken);
-        if (user == null)
-            return null;
+        if (user == null) return null;
 
         db.TgAuthLinks.Remove(link);
         await db.SaveChangesAsync(cancellationToken);
@@ -131,11 +125,11 @@ public class TelegramAuthService(
         return await authService.CreateAuthSession(user, cancellationToken);
     }
 
-    public async Task<ApplicationUser> UpsertUserAsync(Telegram.Bot.Types.User tgUser, CancellationToken cancellationToken)
+    public async Task<ApplicationUser> UpsertUserAsync(Telegram.Bot.Types.User tgUser,
+        CancellationToken cancellationToken)
     {
         var user = await db.Users.FirstOrDefaultAsync(u => u.TgUserId == tgUser.Id, cancellationToken);
-        if (user != null)
-            return user;
+        if (user != null) return user;
 
         user = new ApplicationUser
         {

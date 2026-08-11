@@ -8,9 +8,8 @@ public class EventTrackItemConfiguration : IEntityTypeConfiguration<EventTrackIt
 {
     public void Configure(EntityTypeBuilder<EventTrackItem> builder)
     {
-        builder.ToTable("event_track_item", table => table
-            .HasCheckConstraint(
-                "track_item_requires_title",
+        builder.ToTable("event_track_item",
+            table => table.HasCheckConstraint("track_item_requires_title",
                 "\"song_id\" IS NOT NULL OR \"custom_title\" IS NOT NULL"));
 
         builder.HasKey(i => i.Id);
@@ -41,10 +40,18 @@ public class EventTrackItemConfiguration : IEntityTypeConfiguration<EventTrackIt
             .HasForeignKey(i => i.SongId)
             .OnDelete(DeleteBehavior.SetNull);
 
-        builder.HasIndex(i => new { i.EventId, i.Position })
+        builder.HasIndex(i => new
+            {
+                i.EventId,
+                i.Position
+            })
             .IsUnique()
             .HasDatabaseName("track_item_position");
-        builder.HasAlternateKey(i => new { i.EventId, i.Id })
+        builder.HasAlternateKey(i => new
+            {
+                i.EventId,
+                i.Id
+            })
             .HasName("track_item_identity");
     }
 }

@@ -6,8 +6,7 @@ public static class SongThumbnail
 {
     public static string? Normalize(string? customUrl, SongLinkType linkKind, string? linkUrl)
     {
-        if (!string.IsNullOrWhiteSpace(customUrl))
-            return customUrl;
+        if (!string.IsNullOrWhiteSpace(customUrl)) return customUrl;
 
         return linkKind switch
         {
@@ -18,8 +17,7 @@ public static class SongThumbnail
 
     private static string? ExtractYoutubeThumbnail(string? url)
     {
-        if (string.IsNullOrWhiteSpace(url))
-            return null;
+        if (string.IsNullOrWhiteSpace(url)) return null;
 
         var videoId = ParseYouTubeVideoId(url);
         return videoId is not null ? $"https://img.youtube.com/vi/{videoId}/hqdefault.jpg" : null;
@@ -28,8 +26,7 @@ public static class SongThumbnail
     private static string? ParseYouTubeVideoId(string url)
     {
         var uri = new Uri(url);
-        if (uri.Host.Contains("youtu.be"))
-            return uri.AbsolutePath.Trim('/');
+        if (uri.Host.Contains("youtu.be")) return uri.AbsolutePath.Trim('/');
 
         var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
         return query["v"];

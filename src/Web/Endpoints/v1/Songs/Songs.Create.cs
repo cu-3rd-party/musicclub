@@ -7,8 +7,7 @@ namespace CuMusicClub.Web.Endpoints.v1.Songs;
 public static partial class Songs
 {
     [EndpointSummary("Create a song")]
-    private static async Task<Results<Created<SongDto>, BadRequest>> Create(
-        ISongService service, 
+    private static async Task<Results<Created<SongDto>, BadRequest>> Create(ISongService service,
         ClaimsPrincipal user,
         CreateSongRequest? request,
         CancellationToken cancellationToken)

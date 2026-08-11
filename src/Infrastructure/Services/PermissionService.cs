@@ -5,25 +5,24 @@ using Microsoft.AspNetCore.Identity;
 
 namespace CuMusicClub.Infrastructure.Services;
 
-public class PermissionService(
-    UserManager<ApplicationUser> userManager,
-    RoleManager<IdentityRole<Guid>> roleManager
-) : IPermissionService
+public class PermissionService(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole<Guid>> roleManager)
+    : IPermissionService
 {
-    public async Task<IReadOnlyList<string>> GetPermissionValuesAsync(ApplicationUser user, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<string>> GetPermissionValuesAsync(ApplicationUser user,
+        CancellationToken cancellationToken)
     {
         var claims = await userManager.GetClaimsAsync(user);
-        return claims
-            .Where(c => c.Type == PermissionClaimTypes.Permission)
+        return claims.Where(c => c.Type == PermissionClaimTypes.Permission)
             .Select(c => c.Value)
             .ToList();
     }
 
-    public async Task GrantPermissionsAsync(ApplicationUser user, IEnumerable<string> permissions, CancellationToken cancellationToken)
+    public async Task GrantPermissionsAsync(ApplicationUser user,
+        IEnumerable<string> permissions,
+        CancellationToken cancellationToken)
     {
         var existing = await userManager.GetClaimsAsync(user);
-        var existingSet = existing
-            .Where(c => c.Type == PermissionClaimTypes.Permission)
+        var existingSet = existing.Where(c => c.Type == PermissionClaimTypes.Permission)
             .Select(c => c.Value)
             .ToHashSet(StringComparer.Ordinal);
 
@@ -45,9 +44,8 @@ public class PermissionService(
             var createResult = await roleManager.CreateAsync(new IdentityRole<Guid>(role));
             if (!createResult.Succeeded)
             {
-                throw new InvalidOperationException(
-                    $"Failed to create role '{role}': " +
-                    string.Join(", ", createResult.Errors.Select(e => e.Description)));
+                throw new InvalidOperationException($"Failed to create role '{role}': " +
+                                                    string.Join(", ", createResult.Errors.Select(e => e.Description)));
             }
         }
 
@@ -56,9 +54,8 @@ public class PermissionService(
             var addResult = await userManager.AddToRoleAsync(user, role);
             if (!addResult.Succeeded)
             {
-                throw new InvalidOperationException(
-                    $"Failed to assign role '{role}' to user '{user.Id}': " +
-                    string.Join(", ", addResult.Errors.Select(e => e.Description)));
+                throw new InvalidOperationException($"Failed to assign role '{role}' to user '{user.Id}': " +
+                                                    string.Join(", ", addResult.Errors.Select(e => e.Description)));
             }
         }
 

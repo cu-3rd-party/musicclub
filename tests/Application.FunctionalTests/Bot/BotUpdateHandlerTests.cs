@@ -98,7 +98,7 @@ public class BotUpdateHandlerTests : TestBase
         using var handler = new HandlerScope();
         await handler.Handler.HandleUpdateAsync(bot, update, WebAppUrl, CancellationToken.None);
 
-        bot.SentMessages.Single().Text.ShouldBe("Invalid authentication token.");
+        bot.SentMessages.Single().Text.ShouldBe("Invalid or used authentication token.");
     }
 
     [Test]

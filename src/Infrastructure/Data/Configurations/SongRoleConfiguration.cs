@@ -21,7 +21,11 @@ public class SongRoleConfiguration : IEntityTypeConfiguration<SongRole>
             .HasColumnName("role")
             .IsRequired();
 
-        builder.HasIndex(r => new { r.SongId, r.RoleTitle })
+        builder.HasIndex(r => new
+            {
+                r.SongId,
+                r.RoleTitle
+            })
             .IsUnique()
             .HasDatabaseName("song_role_song_id_role_title_unique");
 

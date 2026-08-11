@@ -123,7 +123,7 @@ public partial class SongServiceTests
     public async Task Update_RemovingRoles_DeletesThem()
     {
         var (owner, principal) = await CreateUserAsync("owner", editOwnSongs: true);
-        var songId = await SeedSongAsync(roles: new[] { "Вокал", "Гитара", "Бас" }, createdById: owner.Id);
+        var songId = await SeedSongAsync(roles: ["Вокал", "Гитара", "Бас"], createdById: owner.Id);
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(

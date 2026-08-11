@@ -13,8 +13,7 @@ public static class DependencyInjection
 
         builder.Services.AddExceptionHandler<ProblemDetailsExceptionHandler>();
 
-        builder.Services.Configure<ApiBehaviorOptions>(options =>
-            options.SuppressModelStateInvalidFilter = true);
+        builder.Services.Configure<ApiBehaviorOptions>(options => options.SuppressModelStateInvalidFilter = true);
 
         builder.Services.AddEndpointsApiExplorer();
 

@@ -15,7 +15,9 @@ public interface IPermissionService
     /// Writes the given permission values as individual <c>permission</c> claims on the user
     /// (idempotent — existing claims are left untouched).
     /// </summary>
-    Task GrantPermissionsAsync(ApplicationUser user, IEnumerable<string> permissions, CancellationToken cancellationToken);
+    Task GrantPermissionsAsync(ApplicationUser user,
+        IEnumerable<string> permissions,
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// Assigns a role to the user. The role itself is pure sugar: membership is recorded and

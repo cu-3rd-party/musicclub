@@ -22,18 +22,9 @@ public static class Permissions
     public const string EventsEdit = "events.edit";
     public const string TracklistsEdit = "tracklists.edit";
 
-    public static readonly IReadOnlyList<string> Default =
-    [
-        ParticipationEditOwn,
-        SongsEditOwn,
-    ];
+    public static readonly IReadOnlyList<string> Default = [ParticipationEditOwn, SongsEditOwn,];
 
-    public static readonly IReadOnlyList<string> Roadie =
-    [
-        ParticipationEditOwn,
-        ParticipationEditAny,
-        SongsEditOwn,
-    ];
+    public static readonly IReadOnlyList<string> Roadie = [ParticipationEditOwn, ParticipationEditAny, SongsEditOwn,];
 
     public static readonly IReadOnlyList<string> All =
     [

@@ -9,7 +9,9 @@ namespace CuMusicClub.Infrastructure.Data;
 
 public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>, IApplicationDbContext
 {
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
+    {
+    }
 
     public DbSet<Calendar> Calendars => Set<Calendar>();
     public DbSet<CalendarAttachState> CalendarAttachStates => Set<CalendarAttachState>();

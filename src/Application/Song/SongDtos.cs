@@ -13,10 +13,10 @@ public sealed record SongDto(
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 
-
 public sealed record SongUserDto(Guid Id, string DisplayName, string? Username, string? AvatarUrl);
 
 public sealed record RoleAssignmentDto(Guid Id, SongUserDto User, DateTimeOffset JoinedAt);
+
 public sealed record RoleDto(Guid Id, string Title, RoleAssignmentDto? Assignment);
 
 public sealed record PermissionsDto(

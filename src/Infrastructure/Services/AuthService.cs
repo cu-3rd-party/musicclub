@@ -22,14 +22,15 @@ public class AuthService(IOptions<SecurityOptions> securityOptions) : IAuthServi
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new Claim(JwtRegisteredClaimNames.Jti,
+                Guid.NewGuid()
+                    .ToString()),
         };
 
         var accessToken = CreateToken(claims, now, AccessTokenTtl);
         var refreshToken = CreateToken(claims, now, RefreshTokenTtl);
 
-        var profile = new UserProfileDto(
-            user.Id,
+        var profile = new UserProfileDto(user.Id,
             user.DisplayName,
             user.UserName ?? string.Empty,
             user.AvatarUrl,
@@ -61,7 +62,9 @@ public class AuthService(IOptions<SecurityOptions> securityOptions) : IAuthServi
         var newClaims = principal.Claims
             .Where(c => c.Type is JwtRegisteredClaimNames.Sub or JwtRegisteredClaimNames.Jti)
             .Select(c => c.Type == JwtRegisteredClaimNames.Jti
-                ? new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                ? new Claim(JwtRegisteredClaimNames.Jti,
+                    Guid.NewGuid()
+                        .ToString())
                 : new Claim(c.Type, c.Value))
             .ToList();
 

@@ -33,11 +33,10 @@ public class ApplicationDbContextInitialiser(
     UserManager<ApplicationUser> userManager,
     RoleManager<IdentityRole<Guid>> roleManager,
     IHostEnvironment env,
-    IConfiguration configuration
-)
+    IConfiguration configuration)
 {
-    private readonly string _connectionString = configuration.GetConnectionString(Shared.Services.Database)
-                                                ?? throw new InvalidOperationException(
+    private readonly string _connectionString = configuration.GetConnectionString(Shared.Services.Database) ??
+                                                throw new InvalidOperationException(
                                                     $"Connection string '{Shared.Services.Database}' not found.");
 
     public async Task InitialiseAsync()

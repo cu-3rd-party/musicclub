@@ -38,8 +38,16 @@ public class EventParticipantConfiguration : IEntityTypeConfiguration<EventParti
 
         builder.HasOne(p => p.TrackItem)
             .WithMany()
-            .HasForeignKey(p => new { p.EventId, p.TrackItemId })
-            .HasPrincipalKey(i => new { i.EventId, i.Id })
+            .HasForeignKey(p => new
+            {
+                p.EventId,
+                p.TrackItemId
+            })
+            .HasPrincipalKey(i => new
+            {
+                i.EventId,
+                i.Id
+            })
             .HasConstraintName("fk_event_participant_track_item")
             .OnDelete(DeleteBehavior.Cascade);
 
@@ -48,7 +56,13 @@ public class EventParticipantConfiguration : IEntityTypeConfiguration<EventParti
             .HasForeignKey(p => p.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasIndex(p => new { p.EventId, p.Role, p.UserId, p.TrackItemId })
+        builder.HasIndex(p => new
+            {
+                p.EventId,
+                p.Role,
+                p.UserId,
+                p.TrackItemId
+            })
             .IsUnique()
             .HasDatabaseName("uniq_event_participation");
         builder.HasIndex(p => p.EventId)

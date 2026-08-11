@@ -19,19 +19,21 @@ public class SongService(
     IPermissionService permissionService,
     ApplicationDbContext db,
     UserManager<ApplicationUser> userManager,
-    RoleManager<IdentityRole<Guid>> roleManager
-) : ISongService
+    RoleManager<IdentityRole<Guid>> roleManager) : ISongService
 {
     private const int DefaultPageSize = 20;
     private const int MaxPageSize = 100;
 
-    public async Task<ListSongsResultDto> ListAsync(string? query, int pageSize, string? pageToken, ClaimsPrincipal currentUser, CancellationToken cancellationToken)
+    public async Task<ListSongsResultDto> ListAsync(string? query,
+        int pageSize,
+        string? pageToken,
+        ClaimsPrincipal currentUser,
+        CancellationToken cancellationToken)
     {
         var limit = pageSize <= 0 || pageSize > MaxPageSize ? DefaultPageSize : pageSize;
         var offset = int.TryParse(pageToken, out var parsed) && parsed >= 0 ? parsed : 0;
 
-        var songsQuery = db.Songs
-            .Include(s => s.CreatedBy)
+        var songsQuery = db.Songs.Include(s => s.CreatedBy)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(query))
@@ -41,8 +43,7 @@ public class SongService(
                 EF.Functions.ILike(s.Title, pattern) || EF.Functions.ILike(s.Artist, pattern));
         }
 
-        var songs = await songsQuery
-            .Include(s => s.Roles)
+        var songs = await songsQuery.Include(s => s.Roles)
             .ThenInclude(r => r.Assignment)
             .ThenInclude(a => a!.User)
             .OrderByDescending(s => s.IsFeatured)
@@ -51,8 +52,7 @@ public class SongService(
             .Take(limit)
             .ToListAsync(cancellationToken);
 
-        var result = songs
-            .Select(song => ToSongDto(song, song.Roles))
+        var result = songs.Select(song => ToSongDto(song, song.Roles))
             .ToList();
 
         // TODO: make next page token more robust
@@ -68,20 +68,21 @@ public class SongService(
                        .Include(s => s.Roles)
                        .ThenInclude(r => r.Assignment)
                        .ThenInclude(a => a!.User)
-                       .FirstOrDefaultAsync(s => s.Id == songId, cancellationToken)
-                   ?? throw new NotFoundException(songId.ToString(), nameof(Song));
+                       .FirstOrDefaultAsync(s => s.Id == songId, cancellationToken) ??
+                   throw new NotFoundException(songId.ToString(), nameof(Song));
 
         var songDto = ToSongDto(song, song.Roles);
 
         return songDto;
     }
 
-    public async Task<SongDto> CreateAsync(CreateSongRequest request, ClaimsPrincipal currentUser, CancellationToken cancellationToken)
+    public async Task<SongDto> CreateAsync(CreateSongRequest request,
+        ClaimsPrincipal currentUser,
+        CancellationToken cancellationToken)
     {
         var user = await userManager.GetUserAsync(currentUser) ?? throw new ForbiddenAccessException();
         var permissions = await permissionService.GetPermissionValuesAsync(user, cancellationToken);
-        if (!permissions.Contains(Permissions.ParticipationEditOwn))
-            throw new ForbiddenAccessException();
+        if (!permissions.Contains(Permissions.ParticipationEditOwn)) throw new ForbiddenAccessException();
 
         if (request.Featured && !permissions.Contains(Permissions.SongsEditFeatured))
             throw new ForbiddenAccessException();
@@ -115,12 +116,14 @@ public class SongService(
         return await GetAsync(song.Id, cancellationToken);
     }
 
-    public async Task<SongDto> UpdateAsync(Guid songId, UpdateSongRequest request, ClaimsPrincipal currentUser, CancellationToken cancellationToken)
+    public async Task<SongDto> UpdateAsync(Guid songId,
+        UpdateSongRequest request,
+        ClaimsPrincipal currentUser,
+        CancellationToken cancellationToken)
     {
-        var song = await db.Songs
-                       .Include(s => s.CreatedBy)
-                       .FirstOrDefaultAsync(s => s.Id == songId, cancellationToken)
-                   ?? throw new NotFoundException(songId.ToString(), nameof(Song));
+        var song = await db.Songs.Include(s => s.CreatedBy)
+                       .FirstOrDefaultAsync(s => s.Id == songId, cancellationToken) ??
+                   throw new NotFoundException(songId.ToString(), nameof(Song));
 
         var user = await userManager.GetUserAsync(currentUser) ?? throw new ForbiddenAccessException();
         var permissions = await permissionService.GetPermissionValuesAsync(user, cancellationToken);
@@ -142,14 +145,12 @@ public class SongService(
         song.LinkKind = linkKind;
         song.LinkUrl = request.Url;
         song.ThumbnailUrl = thumbnailUrl;
-        if (permissions.Contains(Permissions.SongsEditFeatured))
-            song.IsFeatured = request.Featured;
+        if (permissions.Contains(Permissions.SongsEditFeatured)) song.IsFeatured = request.Featured;
         song.UpdatedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
 
         var requestedRoles = NormalizeRoles(request.AvailableRoles);
-        var currentRoles = await db.SongRoles
-            .Where(r => r.SongId == songId)
+        var currentRoles = await db.SongRoles.Where(r => r.SongId == songId)
             .Select(r => r.RoleTitle)
             .ToListAsync(cancellationToken);
         currentRoles.Sort(StringComparer.Ordinal);
@@ -167,10 +168,9 @@ public class SongService(
 
     public async Task DeleteAsync(Guid songId, ClaimsPrincipal currentUser, CancellationToken cancellationToken)
     {
-        var song = await db.Songs
-                       .Include(s => s.CreatedBy)
-                       .FirstOrDefaultAsync(s => s.Id == songId, cancellationToken)
-                   ?? throw new NotFoundException(songId.ToString(), nameof(Song));
+        var song = await db.Songs.Include(s => s.CreatedBy)
+                       .FirstOrDefaultAsync(s => s.Id == songId, cancellationToken) ??
+                   throw new NotFoundException(songId.ToString(), nameof(Song));
 
         var user = await userManager.GetUserAsync(currentUser) ?? throw new ForbiddenAccessException();
         var permissions = await permissionService.GetPermissionValuesAsync(user, cancellationToken);
@@ -181,52 +181,58 @@ public class SongService(
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<SongDto> JoinRoleAsync(ApplicationUser user, ClaimsPrincipal claimsPrincipal, Guid roleId, CancellationToken cancellationToken)
+    public async Task<SongDto> JoinRoleAsync(ApplicationUser user,
+        ClaimsPrincipal claimsPrincipal,
+        Guid roleId,
+        CancellationToken cancellationToken)
     {
         var permissions = await permissionService.GetPermissionValuesAsync(user, cancellationToken);
 
         var requester = await userManager.GetUserAsync(claimsPrincipal) ?? throw new UnauthorizedAccessException();
         var isSelf = requester.Id == user.Id;
-        if ((isSelf && !permissions.Contains(Permissions.ParticipationEditOwn)) || (!isSelf && !permissions.Contains(Permissions.ParticipationEditAny)))
+        if ((isSelf && !permissions.Contains(Permissions.ParticipationEditOwn)) ||
+            (!isSelf && !permissions.Contains(Permissions.ParticipationEditAny)))
             throw new ForbiddenAccessException();
-        
-        var role = await db.SongRoles
-            .Include(r => r.Song)
+
+        var role = await db.SongRoles.Include(r => r.Song)
             .Include(r => r.Assignment)
             .FirstOrDefaultAsync(r => r.Id == roleId, cancellationToken);
-        if (role == null )
-            throw new NotFoundException(roleId.ToString(), nameof(SongRole));
-        
-        if (role.Assignment != null)
-            throw new BadHttpRequestException("the role is already occupied");
+        if (role == null) throw new NotFoundException(roleId.ToString(), nameof(SongRole));
 
-        role.Assignment = new SongRoleAssignment { UserId = user.Id, SongId = role.SongId, RoleId = role.Id };
+        if (role.Assignment != null) throw new BadHttpRequestException("the role is already occupied");
+
+        role.Assignment = new SongRoleAssignment
+        {
+            UserId = user.Id,
+            SongId = role.SongId,
+            RoleId = role.Id
+        };
         await db.SaveChangesAsync(cancellationToken);
 
         return await GetAsync(role.Song.Id, cancellationToken);
     }
 
-    public async Task<SongDto> LeaveRoleAsync(ApplicationUser user, ClaimsPrincipal claimsPrincipal, Guid roleId, CancellationToken cancellationToken)
+    public async Task<SongDto> LeaveRoleAsync(ApplicationUser user,
+        ClaimsPrincipal claimsPrincipal,
+        Guid roleId,
+        CancellationToken cancellationToken)
     {
         var permissions = await permissionService.GetPermissionValuesAsync(user, cancellationToken);
 
         var requester = await userManager.GetUserAsync(claimsPrincipal) ?? throw new UnauthorizedAccessException();
         var isSelf = requester.Id == user.Id;
-        if ((isSelf && !permissions.Contains(Permissions.ParticipationEditOwn)) || (!isSelf && !permissions.Contains(Permissions.ParticipationEditAny)))
+        if ((isSelf && !permissions.Contains(Permissions.ParticipationEditOwn)) ||
+            (!isSelf && !permissions.Contains(Permissions.ParticipationEditAny)))
             throw new ForbiddenAccessException();
-        
-        var role = await db.SongRoles
-            .Include(r => r.Song)
+
+        var role = await db.SongRoles.Include(r => r.Song)
             .Include(r => r.Assignment)
             .FirstOrDefaultAsync(r => r.Id == roleId, cancellationToken);
-        if (role == null )
-            throw new NotFoundException(roleId.ToString(), nameof(SongRole));
+        if (role == null) throw new NotFoundException(roleId.ToString(), nameof(SongRole));
 
-        if (role.Assignment == null)
-            throw new BadHttpRequestException("role is unoccupied");
+        if (role.Assignment == null) throw new BadHttpRequestException("role is unoccupied");
 
-        await db.SongRoleAssignments
-            .Where(s => s.Id == role.Assignment.Id)
+        await db.SongRoleAssignments.Where(s => s.Id == role.Assignment.Id)
             .ExecuteDeleteAsync(cancellationToken);
 
         return await GetAsync(role.Song.Id, cancellationToken);
@@ -237,18 +243,18 @@ public class SongService(
     private SongDto ToSongDto(Song song, IReadOnlyList<SongRole> roles)
     {
         var roleDtos = roles.Select(r => new RoleDto(r.Id,
-            r.RoleTitle,
-            r.Assignment is null
-                ? null
-                : new RoleAssignmentDto(r.Assignment.Id,
-                    new SongUserDto(r.Assignment.User.Id,
-                        r.Assignment.User.DisplayName,
-                        r.Assignment.User.UserName,
-                        r.Assignment.User.AvatarUrl),
-                    r.Assignment.JoinedAt))).ToList();
+                r.RoleTitle,
+                r.Assignment is null
+                    ? null
+                    : new RoleAssignmentDto(r.Assignment.Id,
+                        new SongUserDto(r.Assignment.User.Id,
+                            r.Assignment.User.DisplayName,
+                            r.Assignment.User.UserName,
+                            r.Assignment.User.AvatarUrl),
+                        r.Assignment.JoinedAt)))
+            .ToList();
 
-        return new SongDto(
-            song.Id,
+        return new SongDto(song.Id,
             song.Title,
             song.Artist,
             song.Description,
@@ -263,10 +269,11 @@ public class SongService(
 
     private static SongUserDto MapCreatedBy(ApplicationUser? user)
     {
-        if (user is null)
-            return new SongUserDto(Guid.Empty, "Unknown", "unknown", null);
+        if (user is null) return new SongUserDto(Guid.Empty, "Unknown", "unknown", null);
 
-        return new SongUserDto(user.Id, user.DisplayName ?? string.Empty, user.UserName ?? string.Empty,
+        return new SongUserDto(user.Id,
+            user.DisplayName ?? string.Empty,
+            user.UserName ?? string.Empty,
             user.AvatarUrl);
     }
 
@@ -274,34 +281,37 @@ public class SongService(
 
     #region Role management
 
-    private async Task ReplaceRolesAsync(Guid songId, IReadOnlyCollection<string> desiredRoles,
+    private async Task ReplaceRolesAsync(Guid songId,
+        IReadOnlyCollection<string> desiredRoles,
         CancellationToken cancellationToken)
     {
-        var currentRoles = await db.SongRoles
-            .Where(r => r.SongId == songId)
+        var currentRoles = await db.SongRoles.Where(r => r.SongId == songId)
             .Select(r => r.RoleTitle)
             .ToListAsync(cancellationToken);
 
         var desiredSet = desiredRoles.ToHashSet(StringComparer.Ordinal);
 
-        var toRemove = currentRoles.Where(role => !desiredSet.Contains(role)).ToList();
+        var toRemove = currentRoles.Where(role => !desiredSet.Contains(role))
+            .ToList();
         if (toRemove.Count > 0)
         {
-            await db.SongRoles
-                .Where(r => r.SongId == songId && toRemove.Contains(r.RoleTitle))
+            await db.SongRoles.Where(r => r.SongId == songId && toRemove.Contains(r.RoleTitle))
                 .ExecuteDeleteAsync(cancellationToken);
         }
 
         foreach (var role in desiredSet.Where(role => !currentRoles.Contains(role)))
         {
-            db.SongRoles.Add(new SongRole { SongId = songId, RoleTitle = role });
+            db.SongRoles.Add(new SongRole
+            {
+                SongId = songId,
+                RoleTitle = role
+            });
         }
     }
 
     private static List<string> NormalizeRoles(IReadOnlyList<string>? roles)
     {
-        return roles?
-            .Select(role => role.Trim())
+        return roles?.Select(role => role.Trim())
             .Where(role => role.Length > 0)
             .Distinct(StringComparer.Ordinal)
             .OrderBy(role => role, StringComparer.Ordinal)
@@ -317,16 +327,14 @@ public class SongService(
         if (string.IsNullOrWhiteSpace(url))
             throw new ValidationException([new ValidationFailure("url", "Song URL is required")]);
 
-        var lower = url.Trim().ToLowerInvariant();
+        var lower = url.Trim()
+            .ToLowerInvariant();
 
-        if (lower.Contains("youtube.com") || lower.Contains("youtu.be"))
-            return SongLinkType.Youtube;
+        if (lower.Contains("youtube.com") || lower.Contains("youtu.be")) return SongLinkType.Youtube;
 
-        if (lower.Contains("music.yandex") || lower.Contains("yandex.ru"))
-            return SongLinkType.YandexMusic;
+        if (lower.Contains("music.yandex") || lower.Contains("yandex.ru")) return SongLinkType.YandexMusic;
 
-        if (lower.Contains("soundcloud.com"))
-            return SongLinkType.Soundcloud;
+        if (lower.Contains("soundcloud.com")) return SongLinkType.Soundcloud;
 
         throw new ValidationException([new ValidationFailure("url", $"Unsupported song link URL: {url}")]);
     }

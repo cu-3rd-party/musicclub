@@ -5,9 +5,17 @@ namespace CuMusicClub.Application.Song;
 
 public interface ISongService
 {
-    Task<ListSongsResultDto> ListAsync(string? query, int pageSize, string? pageToken, ClaimsPrincipal currentUser, CancellationToken cancellationToken);
+    Task<ListSongsResultDto> ListAsync(string? query,
+        int pageSize,
+        string? pageToken,
+        ClaimsPrincipal currentUser,
+        CancellationToken cancellationToken);
+
     Task<SongDto> GetAsync(Guid songId, CancellationToken cancellationToken);
-    Task<SongDto> CreateAsync(CreateSongRequest request, ClaimsPrincipal currentUser, CancellationToken cancellationToken);
+
+    Task<SongDto> CreateAsync(CreateSongRequest request,
+        ClaimsPrincipal currentUser,
+        CancellationToken cancellationToken);
 
     Task<SongDto> UpdateAsync(Guid songId,
         UpdateSongRequest request,
