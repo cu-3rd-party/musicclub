@@ -1,5 +1,5 @@
 using CuMusicClub.Application.Common.Auth;
-using CuMusicClub.Application.FunctionalTests.Infrastructure;
+using CuMusicClub.Infrastructure.IntegrationTests.Infrastructure;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Infrastructure.Data;
 using CuMusicClub.Web.Bot;
@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 
-namespace CuMusicClub.Application.FunctionalTests.Bot;
+namespace CuMusicClub.Infrastructure.IntegrationTests.Bot;
 
 public class BotUpdateHandlerTests : TestBase
 {

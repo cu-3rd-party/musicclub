@@ -1,4 +1,4 @@
-namespace CuMusicClub.Application.FunctionalTests.Infrastructure;
+namespace CuMusicClub.Infrastructure.IntegrationTests.Infrastructure;
 
 public abstract class TestBase
 {

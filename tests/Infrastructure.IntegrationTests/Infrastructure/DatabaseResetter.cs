@@ -2,7 +2,7 @@ using Npgsql;
 using Respawn;
 using System.Data.Common;
 
-namespace CuMusicClub.Application.FunctionalTests.Infrastructure;
+namespace CuMusicClub.Infrastructure.IntegrationTests.Infrastructure;
 
 internal sealed class DatabaseResetter : IAsyncDisposable
 {

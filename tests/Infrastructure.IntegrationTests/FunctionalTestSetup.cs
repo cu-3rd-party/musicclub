@@ -1,8 +1,8 @@
 using CuMusicClub.Infrastructure.Data;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Testcontainers.PostgreSql;
 
-namespace CuMusicClub.Application.FunctionalTests;
+namespace CuMusicClub.Infrastructure.IntegrationTests;
 
 [SetUpFixture]
 public class FunctionalTestSetup
@@ -11,21 +11,28 @@ public class FunctionalTestSetup
     internal static DatabaseResetter? DbResetter { get; private set; }
 
     private static WebApiFactory? _factory;
+    private static PostgreSqlContainer? _container;
 
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
     {
-        _factory = new WebApiFactory();
-        ScopeFactory = _factory.Services.GetRequiredService<IServiceScopeFactory>();
+        _container = new PostgreSqlBuilder()
+            .WithDatabase("musicclub_test")
+            .WithUsername("postgres")
+            .WithPassword("postgres")
+            .WithCleanUp(true)
+            .Build();
 
-        var connectionString = _factory.Services.GetRequiredService<IConfiguration>()
-                                   .GetConnectionString("CuMusicClubDb") ??
-                               throw new InvalidOperationException("Connection string 'CuMusicClubDb' not configured.");
+        await _container.StartAsync();
+
+        _factory = new WebApiFactory(_container.GetConnectionString());
+        ScopeFactory = _factory.Services.GetRequiredService<IServiceScopeFactory>();
 
         using var scope = ScopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         await context.Database.EnsureCreatedAsync();
-        DbResetter = await DatabaseResetter.CreateAsync(connectionString);
+
+        DbResetter = await DatabaseResetter.CreateAsync(_container.GetConnectionString());
     }
 
     [OneTimeTearDown]
@@ -33,5 +40,6 @@ public class FunctionalTestSetup
     {
         if (DbResetter is not null) await DbResetter.DisposeAsync();
         if (_factory is not null) await _factory.DisposeAsync();
+        if (_container is not null) await _container.DisposeAsync();
     }
 }

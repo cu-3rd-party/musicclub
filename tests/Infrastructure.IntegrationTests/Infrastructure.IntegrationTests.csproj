@@ -3,20 +3,36 @@
   <PropertyGroup>
     <RootNamespace>CuMusicClub.Infrastructure.IntegrationTests</RootNamespace>
     <AssemblyName>CuMusicClub.Infrastructure.IntegrationTests</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="testcontainers.properties" CopyToOutputDirectory="PreserveNewest"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing"/>
     <PackageReference Include="Microsoft.NET.Test.Sdk"/>
-    <PackageReference Include="NUnit"/>
-    <PackageReference Include="NUnit3TestAdapter"/>
+    <PackageReference Include="nunit"/>
     <PackageReference Include="NUnit.Analyzers">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="NUnit3TestAdapter"/>
     <PackageReference Include="coverlet.collector">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Moq"/>
+    <PackageReference Include="Respawn"/>
+    <PackageReference Include="Shouldly"/>
+    <PackageReference Include="Testcontainers"/>
+    <PackageReference Include="Testcontainers.PostgreSql"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Web\Web.csproj"/>
   </ItemGroup>
 
 </Project>

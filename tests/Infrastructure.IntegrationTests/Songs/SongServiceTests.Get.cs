@@ -1,7 +1,7 @@
 using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Common.Exceptions;
 
-namespace CuMusicClub.Application.FunctionalTests.Songs;
+namespace CuMusicClub.Infrastructure.IntegrationTests.Songs;
 
 public partial class SongServiceTests
 {

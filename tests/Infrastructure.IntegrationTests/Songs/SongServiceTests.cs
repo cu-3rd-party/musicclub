@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SongEntity = CuMusicClub.Domain.Entities.Song;
 
-namespace CuMusicClub.Application.FunctionalTests.Songs;
+namespace CuMusicClub.Infrastructure.IntegrationTests.Songs;
 
 public partial class SongServiceTests : TestBase
 {

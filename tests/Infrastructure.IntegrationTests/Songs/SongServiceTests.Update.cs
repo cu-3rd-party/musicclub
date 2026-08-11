@@ -3,7 +3,7 @@ using CuMusicClub.Application.Common.Exceptions;
 using CuMusicClub.Application.Song;
 using Microsoft.EntityFrameworkCore;
 
-namespace CuMusicClub.Application.FunctionalTests.Songs;
+namespace CuMusicClub.Infrastructure.IntegrationTests.Songs;
 
 public partial class SongServiceTests
 {

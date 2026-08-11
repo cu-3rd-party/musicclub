@@ -2,7 +2,7 @@ using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace CuMusicClub.Application.FunctionalTests.Songs;
+namespace CuMusicClub.Infrastructure.IntegrationTests.Songs;
 
 public partial class SongServiceTests
 {

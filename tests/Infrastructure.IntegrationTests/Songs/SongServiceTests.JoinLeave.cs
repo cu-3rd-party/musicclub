@@ -4,7 +4,7 @@ using CuMusicClub.Domain.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
-namespace CuMusicClub.Application.FunctionalTests.Songs;
+namespace CuMusicClub.Infrastructure.IntegrationTests.Songs;
 
 public partial class SongServiceTests
 {

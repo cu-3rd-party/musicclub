@@ -4,7 +4,7 @@ using CuMusicClub.Infrastructure.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CuMusicClub.Application.FunctionalTests.Infrastructure;
+namespace CuMusicClub.Infrastructure.IntegrationTests.Infrastructure;
 
 public static class TestApp
 {
