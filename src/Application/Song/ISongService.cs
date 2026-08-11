@@ -1,14 +1,28 @@
 using System.Security.Claims;
+using CuMusicClub.Domain.Entities;
 
 namespace CuMusicClub.Application.Song;
 
 public interface ISongService
 {
     Task<ListSongsResultDto> ListAsync(string? query, int pageSize, string? pageToken, ClaimsPrincipal currentUser, CancellationToken cancellationToken);
-    Task<SongDetailsDto> GetAsync(Guid songId, ClaimsPrincipal currentUser, CancellationToken cancellationToken);
-    Task<SongDetailsDto> CreateAsync(CreateSongRequest request, ClaimsPrincipal currentUser, CancellationToken cancellationToken);
-    Task<SongDetailsDto> UpdateAsync(Guid songId, UpdateSongRequest request, ClaimsPrincipal currentUser, CancellationToken cancellationToken);
+    Task<SongDto> GetAsync(Guid songId, CancellationToken cancellationToken);
+    Task<SongDto> CreateAsync(CreateSongRequest request, ClaimsPrincipal currentUser, CancellationToken cancellationToken);
+
+    Task<SongDto> UpdateAsync(Guid songId,
+        UpdateSongRequest request,
+        ClaimsPrincipal currentUser,
+        CancellationToken cancellationToken);
+
     Task DeleteAsync(Guid songId, ClaimsPrincipal currentUser, CancellationToken cancellationToken);
-    Task<SongDetailsDto> JoinRoleAsync(Guid songId, string role, ClaimsPrincipal currentUser, CancellationToken cancellationToken);
-    Task<SongDetailsDto> LeaveRoleAsync(Guid songId, string role, ClaimsPrincipal currentUser, CancellationToken cancellationToken);
+
+    Task<SongDto> JoinRoleAsync(ApplicationUser user,
+        ClaimsPrincipal claimsPrincipal,
+        Guid roleId,
+        CancellationToken cancellationToken);
+
+    Task<SongDto> LeaveRoleAsync(ApplicationUser user,
+        ClaimsPrincipal claimsPrincipal,
+        Guid roleId,
+        CancellationToken cancellationToken);
 }

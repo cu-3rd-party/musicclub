@@ -15,10 +15,4 @@ public static class ClaimsPrincipalExtensions
             ?? throw new UnauthorizedAccessException();
         return Guid.Parse(value);
     }
-
-    public static bool HasPermission(this ClaimsPrincipal principal, string permission)
-    {
-        // TODO: this doesn't work
-        return principal.HasClaim(PermissionClaimTypes.Permission, permission);
-    }
 }

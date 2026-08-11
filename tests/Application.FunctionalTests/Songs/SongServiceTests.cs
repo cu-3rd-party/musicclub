@@ -1,12 +1,15 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using CuMusicClub.Application.Common.Auth;
-using SongEntity = CuMusicClub.Domain.Entities.Song;
 using CuMusicClub.Application.Song;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Domain.Enums;
 using CuMusicClub.Infrastructure.Data;
+using CuMusicClub.Infrastructure.Services;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using SongEntity = CuMusicClub.Domain.Entities.Song;
 
 namespace CuMusicClub.Application.FunctionalTests.Songs;
 
@@ -19,11 +22,13 @@ public partial class SongServiceTests : TestBase
         private readonly IServiceScope _scope;
 
         public ISongService Songs { get; }
+        public UserManager<ApplicationUser> UserManager { get; }
 
         public SongScope()
         {
             _scope = FunctionalTestSetup.ScopeFactory.CreateScope();
             Songs = _scope.ServiceProvider.GetRequiredService<ISongService>();
+            UserManager = _scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         }
 
         public void Dispose() => _scope.Dispose();
@@ -35,7 +40,7 @@ public partial class SongServiceTests : TestBase
         return scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     }
 
-    private static async Task<ClaimsPrincipal> CreateUserAsync(
+    private static async Task<(ApplicationUser AppUser, ClaimsPrincipal Principal)> CreateUserAsync(
         string username,
         bool editOwnParticipation = false,
         bool editAnyParticipation = false,
@@ -43,39 +48,38 @@ public partial class SongServiceTests : TestBase
         bool editAnySongs = false,
         bool editFeaturedSongs = false)
     {
-        var userId = Guid.NewGuid();
-        await TestApp.AddAsync(new ApplicationUser
+        using var scope = FunctionalTestSetup.ScopeFactory.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+        var user = new ApplicationUser
         {
-            Id = userId,
             UserName = username,
             DisplayName = $"Display {username}",
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow,
-        });
+        };
+        var result = await userManager.CreateAsync(user, "Test1234!");
+        result.Succeeded.ShouldBeTrue($"Failed to create user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
 
-        var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, userId.ToString()) };
-        if (editOwnParticipation)
+        var claims = new List<Claim>();
+        if (editOwnParticipation) claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.ParticipationEditOwn));
+        if (editAnyParticipation) claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.ParticipationEditAny));
+        if (editOwnSongs) claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.SongsEditOwn));
+        if (editAnySongs) claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.SongsEditAny));
+        if (editFeaturedSongs) claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.SongsEditFeatured));
+
+        foreach (var claim in claims)
         {
-            claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.ParticipationEditOwn));
-        }
-        if (editAnyParticipation)
-        {
-            claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.ParticipationEditAny));
-        }
-        if (editOwnSongs)
-        {
-            claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.SongsEditOwn));
-        }
-        if (editAnySongs)
-        {
-            claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.SongsEditAny));
-        }
-        if (editFeaturedSongs)
-        {
-            claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.SongsEditFeatured));
+            await userManager.AddClaimAsync(user, claim);
         }
 
-        return new ClaimsPrincipal(new ClaimsIdentity(claims, "test"));
+        var identity = new ClaimsIdentity(
+        [
+            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+        ], "test");
+
+        return (user, new ClaimsPrincipal(identity));
     }
 
     private static async Task<Guid> SeedSongAsync(
@@ -88,7 +92,11 @@ public partial class SongServiceTests : TestBase
     {
         var songId = Guid.NewGuid();
         var now = createdAt ?? DateTimeOffset.UtcNow;
-        await TestApp.AddAsync(new SongEntity
+
+        using var scope = FunctionalTestSetup.ScopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var song = new SongEntity
         {
             Id = songId,
             Title = title,
@@ -101,17 +109,53 @@ public partial class SongServiceTests : TestBase
             IsFeatured = featured,
             CreatedAt = now,
             UpdatedAt = now,
-        });
+        };
+        db.Songs.Add(song);
+        await db.SaveChangesAsync();
 
         if (roles is not null)
         {
             foreach (var role in roles)
             {
-                await TestApp.AddAsync(new SongRole { SongId = songId, Role = role });
+                db.SongRoles.Add(new SongRole
+                {
+                    SongId = songId,
+                    Song = song,
+                    RoleTitle = role,
+                });
             }
+            await db.SaveChangesAsync();
         }
 
         return songId;
+    }
+
+    private static async Task<Guid> FindRoleIdAsync(Guid songId, string roleTitle)
+    {
+        using var db = Db();
+        var role = await db.SongRoles
+            .FirstOrDefaultAsync(r => r.SongId == songId && r.RoleTitle == roleTitle);
+        return role?.Id ?? throw new InvalidOperationException($"Role '{roleTitle}' not found on song {songId}");
+    }
+
+    private static async Task SeedAssignmentAsync(Guid songId, string roleTitle, Guid userId)
+    {
+        var roleId = await FindRoleIdAsync(songId, roleTitle);
+
+        using var scope = FunctionalTestSetup.ScopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+        var user = await db.Users.FirstAsync(u => u.Id == userId);
+
+        db.SongRoleAssignments.Add(new SongRoleAssignment
+        {
+            SongId = songId,
+            RoleId = roleId,
+            UserId = userId,
+            User = user,
+            JoinedAt = DateTimeOffset.UtcNow,
+        });
+        await db.SaveChangesAsync();
     }
 
     private static CreateSongRequest CreateRequest(

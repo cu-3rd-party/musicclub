@@ -27,47 +27,35 @@ public static class InitialiserExtensions
     }
 }
 
-public class ApplicationDbContextInitialiser
+public class ApplicationDbContextInitialiser(
+    ILogger<ApplicationDbContextInitialiser> logger,
+    ApplicationDbContext db,
+    UserManager<ApplicationUser> userManager,
+    RoleManager<IdentityRole<Guid>> roleManager,
+    IHostEnvironment env,
+    IConfiguration configuration
+)
 {
-    private readonly ILogger<ApplicationDbContextInitialiser> _logger;
-    private readonly ApplicationDbContext _context;
-    private readonly UserManager<ApplicationUser> _userManager;
-    private readonly RoleManager<IdentityRole<Guid>> _roleManager;
-    private readonly IHostEnvironment _env;
-    private readonly string _connectionString;
-
-    public ApplicationDbContextInitialiser(ILogger<ApplicationDbContextInitialiser> logger,
-        ApplicationDbContext context, UserManager<ApplicationUser> userManager,
-        RoleManager<IdentityRole<Guid>> roleManager, IHostEnvironment env, IConfiguration configuration)
-    {
-        _logger = logger;
-        _context = context;
-        _userManager = userManager;
-        _roleManager = roleManager;
-        _env = env;
-        _connectionString = configuration.GetConnectionString(Shared.Services.Database)
-            ?? throw new InvalidOperationException($"Connection string '{Shared.Services.Database}' not found.");
-    }
+    private readonly string _connectionString = configuration.GetConnectionString(Shared.Services.Database)
+                                                ?? throw new InvalidOperationException(
+                                                    $"Connection string '{Shared.Services.Database}' not found.");
 
     public async Task InitialiseAsync()
     {
         try
         {
-            if (_env.IsDevelopment())
+            if (env.IsDevelopment())
             {
-                // Dev: start from a clean database.
-                await _context.Database.EnsureDeletedAsync();
+                await db.Database.EnsureDeletedAsync();
             }
 
-            // MigrateAsync cannot create the database itself, so create it first.
             await EnsureDatabaseExistsAsync();
 
-            // Apply migrations (recreates the schema in dev, upgrades in place elsewhere).
-            await _context.Database.MigrateAsync();
+            await db.Database.EnsureCreatedAsync();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred while initialising the database.");
+            logger.LogError(ex, "An error occurred while initialising the database.");
             throw;
         }
     }
@@ -103,37 +91,13 @@ public class ApplicationDbContextInitialiser
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "An error occurred while seeding the database.");
+            logger.LogError(ex, "An error occurred while seeding the database.");
             throw;
         }
     }
 
     public async Task TrySeedAsync()
     {
-        // Default roles
-        var administratorRole = new IdentityRole<Guid>(Roles.Administrator);
-
-        if (_roleManager.Roles.All(r => r.Name != administratorRole.Name))
-        {
-            await _roleManager.CreateAsync(administratorRole);
-            foreach (var permission in Permissions.All)
-            {
-                await _roleManager.AddClaimAsync(administratorRole,
-                    new Claim(PermissionClaimTypes.Permission, permission));
-            }
-        }
-
-        // Default users
-        var administrator =
-            new ApplicationUser { UserName = "administrator@localhost", Email = "administrator@localhost" };
-
-        if (_userManager.Users.All(u => u.UserName != administrator.UserName))
-        {
-            await _userManager.CreateAsync(administrator, "Administrator1!");
-            if (!string.IsNullOrWhiteSpace(administratorRole.Name))
-            {
-                await _userManager.AddToRolesAsync(administrator, new[] { administratorRole.Name });
-            }
-        }
+        // do nothing operation uhh placeholder no need to seed
     }
 }

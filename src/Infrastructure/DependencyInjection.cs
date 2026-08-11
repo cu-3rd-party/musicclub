@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using CuMusicClub.Application.Auth;
+using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Common.Interfaces;
 using CuMusicClub.Application.Security;
 using CuMusicClub.Application.Song;
@@ -89,6 +90,7 @@ public static class DependencyInjection
 
         builder.Services.AddScoped<ISongService, SongService>();
         builder.Services.AddScoped<ITelegramAuthService, TelegramAuthService>();
+        builder.Services.AddScoped<IPermissionService, PermissionService>();
         builder.Services.AddSingleton<IAuthService, AuthService>();
 
         builder.Services

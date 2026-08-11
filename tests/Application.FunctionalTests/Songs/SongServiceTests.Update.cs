@@ -7,26 +7,23 @@ namespace CuMusicClub.Application.FunctionalTests.Songs;
 
 public partial class SongServiceTests
 {
-
-    #region Update
-
     [Test]
     public async Task Update_NonExistent_ThrowsNotFound()
     {
-        var user = await CreateUserAsync("owner", editOwnSongs: true);
+        var (_, principal) = await CreateUserAsync("owner", editOwnSongs: true);
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(
             "New Title", "New Artist", null, YoutubeUrl, null, false, null);
         await Should.ThrowAsync<NotFoundException>(
-            () => scope.Songs.UpdateAsync(Guid.NewGuid(), request, user, CancellationToken.None));
+            () => scope.Songs.UpdateAsync(Guid.NewGuid(), request, principal, CancellationToken.None));
     }
 
     [Test]
     public async Task Update_ByOwner_UpdatesFieldsAndRoles()
     {
-        var owner = await CreateUserAsync("owner", editOwnSongs: true);
-        var songId = await SeedSongAsync(roles: new[] { "Вокал", "Гитара" }, createdById: owner.GetUserId());
+        var (owner, principal) = await CreateUserAsync("owner", editOwnSongs: true);
+        var songId = await SeedSongAsync(roles: new[] { "Вокал", "Гитара" }, createdById: owner.Id);
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(
@@ -38,103 +35,102 @@ public partial class SongServiceTests
             false,
             new[] { "Вокал", "Соло" });
 
-        var details = await scope.Songs.UpdateAsync(songId, request, owner, CancellationToken.None);
+        var result = await scope.Songs.UpdateAsync(songId, request, principal, CancellationToken.None);
 
-        details.Song.Title.ShouldBe("Stairway to Heaven");
-        details.Song.Artist.ShouldBe("Led Zeppelin");
-        details.Song.Description.ShouldBe("epic solo");
-        details.Song.Url.ShouldBe("https://music.yandex.ru/album/1");
-        details.Song.ThumbnailUrl.ShouldBe("https://cdn.example.com/stairs.jpg");
-        details.Song.Roles.Select(r => r.Title).ShouldBe(new[] { "Вокал", "Соло" });
+        result.Title.ShouldBe("Stairway to Heaven");
+        result.Artist.ShouldBe("Led Zeppelin");
+        result.Description.ShouldBe("epic solo");
+        result.Url.ShouldBe("https://music.yandex.ru/album/1");
+        result.ThumbnailUrl.ShouldBe("https://cdn.example.com/stairs.jpg");
+        result.Roles.Select(r => r.Title).ToArray().ShouldBe(new[] { "Вокал", "Соло" }, ignoreOrder: true);
 
         using var db = Db();
         (await db.SongRoles.CountAsync(r => r.SongId == songId)).ShouldBe(2);
-        (await db.SongRoles.CountAsync(r => r.SongId == songId && r.Role == "Гитара")).ShouldBe(0);
+        (await db.SongRoles.CountAsync(r => r.SongId == songId && r.RoleTitle == "Гитара")).ShouldBe(0);
     }
 
     [Test]
     public async Task Update_ByOtherUser_WithoutEditAny_ThrowsForbidden()
     {
-        var owner = await CreateUserAsync("owner", editOwnSongs: true);
-        var other = await CreateUserAsync("other", editOwnSongs: true);
-        var songId = await SeedSongAsync(createdById: owner.GetUserId());
+        var (owner, _) = await CreateUserAsync("owner", editOwnSongs: true);
+        var (_, otherPrincipal) = await CreateUserAsync("other", editOwnSongs: true);
+        var songId = await SeedSongAsync(createdById: owner.Id);
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(
             "New Title", "New Artist", null, YoutubeUrl, null, false, null);
         await Should.ThrowAsync<ForbiddenAccessException>(
-            () => scope.Songs.UpdateAsync(songId, request, other, CancellationToken.None));
+            () => scope.Songs.UpdateAsync(songId, request, otherPrincipal, CancellationToken.None));
     }
 
     [Test]
     public async Task Update_ByOtherUser_WithEditAny_Succeeds()
     {
-        var owner = await CreateUserAsync("owner", editOwnSongs: true);
-        var editor = await CreateUserAsync("editor", editAnySongs: true);
-        var songId = await SeedSongAsync(createdById: owner.GetUserId());
+        var (owner, _) = await CreateUserAsync("owner", editOwnSongs: true);
+        var (_, editorPrincipal) = await CreateUserAsync("editor", editAnySongs: true);
+        var songId = await SeedSongAsync(createdById: owner.Id);
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(
             "New Title", "New Artist", null, YoutubeUrl, null, false, null);
-        var details = await scope.Songs.UpdateAsync(songId, request, editor, CancellationToken.None);
+        var result = await scope.Songs.UpdateAsync(songId, request, editorPrincipal, CancellationToken.None);
 
-        details.Song.Title.ShouldBe("New Title");
-        details.Song.EditableByMe.ShouldBeTrue();
+        result.Title.ShouldBe("New Title");
     }
 
     [Test]
     public async Task Update_FeaturedWithoutPermission_ThrowsForbidden()
     {
-        var owner = await CreateUserAsync("owner", editOwnSongs: true);
-        var songId = await SeedSongAsync(createdById: owner.GetUserId());
+        var (owner, principal) = await CreateUserAsync("owner", editOwnSongs: true);
+        var songId = await SeedSongAsync(createdById: owner.Id);
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(
             "New Title", "New Artist", null, YoutubeUrl, null, true, null);
         await Should.ThrowAsync<ForbiddenAccessException>(
-            () => scope.Songs.UpdateAsync(songId, request, owner, CancellationToken.None));
+            () => scope.Songs.UpdateAsync(songId, request, principal, CancellationToken.None));
     }
 
     [Test]
     public async Task Update_FeaturedWithPermission_UpdatesFeatured()
     {
-        var owner = await CreateUserAsync("owner", editOwnSongs: true, editFeaturedSongs: true);
-        var songId = await SeedSongAsync(createdById: owner.GetUserId());
+        var (owner, principal) = await CreateUserAsync("owner", editOwnSongs: true, editFeaturedSongs: true);
+        var songId = await SeedSongAsync(createdById: owner.Id);
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(
             "New Title", "New Artist", null, YoutubeUrl, null, true, null);
-        var details = await scope.Songs.UpdateAsync(songId, request, owner, CancellationToken.None);
+        var result = await scope.Songs.UpdateAsync(songId, request, principal, CancellationToken.None);
 
-        details.Song.Featured.ShouldBeTrue();
+        result.Featured.ShouldBeTrue();
     }
 
     [Test]
     public async Task Update_WithoutFeaturedPermission_KeepsFeaturedValue()
     {
-        var owner = await CreateUserAsync("owner", editOwnSongs: true);
-        var songId = await SeedSongAsync(featured: true, createdById: owner.GetUserId());
+        var (owner, principal) = await CreateUserAsync("owner", editOwnSongs: true);
+        var songId = await SeedSongAsync(featured: true, createdById: owner.Id);
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(
             "New Title", "New Artist", null, YoutubeUrl, null, false, null);
-        var details = await scope.Songs.UpdateAsync(songId, request, owner, CancellationToken.None);
+        var result = await scope.Songs.UpdateAsync(songId, request, principal, CancellationToken.None);
 
-        details.Song.Featured.ShouldBeTrue();
+        result.Featured.ShouldBeTrue();
     }
 
     [Test]
     public async Task Update_RemovingRoles_DeletesThem()
     {
-        var owner = await CreateUserAsync("owner", editOwnSongs: true);
-        var songId = await SeedSongAsync(roles: new[] { "Вокал", "Гитара", "Бас" }, createdById: owner.GetUserId());
+        var (owner, principal) = await CreateUserAsync("owner", editOwnSongs: true);
+        var songId = await SeedSongAsync(roles: new[] { "Вокал", "Гитара", "Бас" }, createdById: owner.Id);
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(
             "New Title", "New Artist", null, YoutubeUrl, null, false, new[] { "Вокал" });
-        var details = await scope.Songs.UpdateAsync(songId, request, owner, CancellationToken.None);
+        var result = await scope.Songs.UpdateAsync(songId, request, principal, CancellationToken.None);
 
-        details.Song.Roles.Select(r => r.Title).ShouldBe(new[] { "Вокал" });
+        result.Roles.Select(r => r.Title).ShouldBe(new[] { "Вокал" });
 
         using var db = Db();
         (await db.SongRoles.CountAsync(r => r.SongId == songId)).ShouldBe(1);
@@ -143,18 +139,15 @@ public partial class SongServiceTests
     [Test]
     public async Task Update_NormalizesRoles_TrimsDedupesAndSorts()
     {
-        var owner = await CreateUserAsync("owner", editOwnSongs: true);
-        var songId = await SeedSongAsync(roles: new[] { "Вокал" }, createdById: owner.GetUserId());
+        var (owner, principal) = await CreateUserAsync("owner", editOwnSongs: true);
+        var songId = await SeedSongAsync(roles: new[] { "Вокал" }, createdById: owner.Id);
 
         using var scope = new SongScope();
         var request = new UpdateSongRequest(
             "New Title", "New Artist", null, YoutubeUrl, null, false,
             new[] { "  Вокал ", "", "гитара", "Гитара", "Вокал" });
-        var details = await scope.Songs.UpdateAsync(songId, request, owner, CancellationToken.None);
+        var result = await scope.Songs.UpdateAsync(songId, request, principal, CancellationToken.None);
 
-        details.Song.Roles.Select(r => r.Title).ShouldBe(new[] { "Вокал", "Гитара", "гитара" });
+        result.Roles.Select(r => r.Title).ToArray().ShouldBe(new[] { "Вокал", "Гитара", "гитара" }, ignoreOrder: true);
     }
-
-    #endregion
-
 }

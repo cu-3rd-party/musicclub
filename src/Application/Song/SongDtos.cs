@@ -10,15 +10,13 @@ public sealed record SongDto(
     bool Featured,
     SongUserDto CreatedBy,
     IReadOnlyList<RoleDto> Roles,
-    bool EditableByMe,
-    int AssignmentCount,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 
 
-public sealed record SongUserDto(Guid Id, string DisplayName, string Username, string? AvatarUrl);
+public sealed record SongUserDto(Guid Id, string DisplayName, string? Username, string? AvatarUrl);
 
-public sealed record RoleAssignmentDto(SongUserDto User, DateTimeOffset JoinedAt);
+public sealed record RoleAssignmentDto(Guid Id, SongUserDto User, DateTimeOffset JoinedAt);
 public sealed record RoleDto(Guid Id, string Title, RoleAssignmentDto? Assignment);
 
 public sealed record PermissionsDto(
@@ -29,8 +27,6 @@ public sealed record PermissionsDto(
     bool EditFeaturedSongs,
     bool EditEvents,
     bool EditTracklists);
-
-public sealed record SongDetailsDto(SongDto Song, IReadOnlyList<RoleAssignmentDto> Assignments, PermissionsDto Permissions);
 
 public sealed record ListSongsResultDto(IReadOnlyList<SongDto> Songs, string? NextPageToken);
 

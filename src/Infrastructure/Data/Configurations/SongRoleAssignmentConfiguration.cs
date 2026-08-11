@@ -18,7 +18,7 @@ public class SongRoleAssignmentConfiguration : IEntityTypeConfiguration<SongRole
         builder.Property(a => a.SongId)
             .HasColumnName("song_id")
             .IsRequired();
-        builder.Property(a => a.Role)
+        builder.Property(a => a.RoleId)
             .HasColumnName("role")
             .IsRequired();
         builder.Property(a => a.UserId)
@@ -39,12 +39,12 @@ public class SongRoleAssignmentConfiguration : IEntityTypeConfiguration<SongRole
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(a => a.SongRole)
-            .WithMany(r => r.Assignments)
-            .HasForeignKey(a => new { a.SongId, a.Role })
-            .HasConstraintName("song_role_exists")
+            .WithOne(r => r.Assignment)
+            .HasForeignKey<SongRoleAssignment>(a => a.RoleId)
+            .HasConstraintName("song_role_assignment")
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasIndex(a => new { a.SongId, a.Role, a.UserId })
+        builder.HasIndex(a => new { a.SongId, a.RoleId, a.UserId })
             .IsUnique()
             .HasDatabaseName("song_role_assignment_unique");
         builder.HasIndex(a => a.SongId)

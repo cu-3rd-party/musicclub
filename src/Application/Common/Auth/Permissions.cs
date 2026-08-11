@@ -1,8 +1,11 @@
+using RoleNames = CuMusicClub.Domain.Constants.Roles;
+
 namespace CuMusicClub.Application.Common.Auth;
 
 /// <summary>
 /// Claim type that carries granular permissions (e.g. <c>"permission"</c> with value
-/// <c>songs.edit_own</c>). Permissions can be granted on users or on roles.
+/// <c>songs.edit_own</c>). Permissions are written as individual claims on the user
+/// (<c>AspNetUserClaims</c>) and read back via <c>UserManager.GetClaimsAsync</c>.
 /// </summary>
 public static class PermissionClaimTypes
 {
@@ -19,6 +22,19 @@ public static class Permissions
     public const string EventsEdit = "events.edit";
     public const string TracklistsEdit = "tracklists.edit";
 
+    public static readonly IReadOnlyList<string> Default =
+    [
+        ParticipationEditOwn,
+        SongsEditOwn,
+    ];
+
+    public static readonly IReadOnlyList<string> Roadie =
+    [
+        ParticipationEditOwn,
+        ParticipationEditAny,
+        SongsEditOwn,
+    ];
+
     public static readonly IReadOnlyList<string> All =
     [
         ParticipationEditOwn,
@@ -29,4 +45,17 @@ public static class Permissions
         EventsEdit,
         TracklistsEdit,
     ];
+
+    /// <summary>
+    /// Role name → permission bundle. Roles are pure sugar: they carry no behaviour of their
+    /// own. Assigning a role to a user merely materializes <see cref="ByRole"/>[role] as
+    /// individual <c>permission</c> claims on that user.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> ByRole =
+        new Dictionary<string, IReadOnlyList<string>>
+        {
+            [RoleNames.Administrator] = All,
+            [RoleNames.Roadie] = Roadie,
+            [RoleNames.Default] = Default,
+        };
 }

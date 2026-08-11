@@ -11,9 +11,9 @@ public static partial class Songs
         group.MapPost("/", Create);
         group.MapPut("/{songId:guid}", Update);
         group.MapDelete("/{songId:guid}", Delete);
-        group.MapPost("/{songId:guid}/join", Join);
-        group.MapPost("/{songId:guid}/leave", Leave);
+        group.MapPost("/roles/{roleId:guid}/join", Join);
+        group.MapPost("/roles/{roleId:guid}/leave", Leave);
     }
 }
 
-public sealed record RoleRequest(string Role);
+public sealed record RoleRequest(Guid ActorUserId);
