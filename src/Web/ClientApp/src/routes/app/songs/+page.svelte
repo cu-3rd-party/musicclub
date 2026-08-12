@@ -1,12 +1,23 @@
 <script lang="ts">
-    import * as InputGroup from "$lib/components/ui/input-group"
+    import * as InputGroup from "$lib/components/ui/input-group";
     import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
     import {ArrowUp, Ellipsis, Plus, SearchIcon, Settings} from "@lucide/svelte";
     import {Checkbox} from "$lib/components/ui/checkbox";
-    import SongCard from "$lib/components/song-card.svelte";
+    import SongCard from "$lib/components/songs/song-card.svelte";
     import {Button} from "$lib/components/ui/button";
+    import {getSongs} from "$lib/api/songs";
+    import type {Song} from "$lib/songs/types";
+    import {page} from "$app/state";
+    import {goto} from "$app/navigation";
+    import TextType from "$lib/components/songs/text-type.svelte";
 
     let showScrollTop = $state(false);
+    let searchInput = $state("");
+    let songs = $state<Song[]>([]);
+    let loading = $state(true);
+    let error = $state<string | null>(null);
+
+    const searchQuery = $derived(page.url.searchParams.get("q") ?? "");
 
     function observe(element: HTMLElement) {
         const observer = new IntersectionObserver(
@@ -14,8 +25,8 @@
                 showScrollTop = !entry.isIntersecting;
             },
             {
-                threshold: 0
-            }
+                threshold: 0,
+            },
         );
 
         observer.observe(element);
@@ -23,16 +34,83 @@
         return {
             destroy() {
                 observer.disconnect();
-            }
+            },
         };
     }
 
     function scrollToTop() {
         window.scrollTo({
             top: 0,
-            behavior: "smooth"
+            behavior: "smooth",
         });
     }
+
+    let searchTimer: ReturnType<typeof setTimeout>;
+
+    function handleSearchInput(value: string) {
+        searchInput = value;
+
+        clearTimeout(searchTimer);
+
+        searchTimer = setTimeout(() => {
+            const query = value.trim();
+
+            const url = new URL(page.url);
+
+            if (query) {
+                url.searchParams.set("q", query);
+            } else {
+                url.searchParams.delete("q");
+            }
+
+            goto(`${url.pathname}${url.search}`, {
+                replaceState: true,
+                noScroll: true,
+                keepFocus: true,
+            });
+        }, 300);
+    }
+
+    $effect(() => {
+        searchInput = searchQuery;
+    });
+
+    $effect(() => {
+        const query = searchQuery;
+
+        let cancelled = false;
+
+        async function loadSongs() {
+            loading = true;
+            error = null;
+
+            try {
+                const result = await getSongs({
+                    query: query || undefined,
+                    pageSize: 24,
+                });
+
+                if (!cancelled) {
+                    songs = result.songs;
+                }
+            } catch (err) {
+                if (!cancelled) {
+                    error = "Не удалось загрузить песни";
+                    console.error(err);
+                }
+            } finally {
+                if (!cancelled) {
+                    loading = false;
+                }
+            }
+        }
+
+        loadSongs();
+
+        return () => {
+            cancelled = true;
+        };
+    });
 </script>
 
 <main class="w-full h-full flex flex-col px-4">
@@ -41,7 +119,14 @@
             <InputGroup.Addon>
                 <SearchIcon/>
             </InputGroup.Addon>
-            <InputGroup.Input placeholder="Название песни"/>
+
+            <InputGroup.Input
+                placeholder="Название песни"
+                value={searchInput}
+                oninput={(event) =>
+					handleSearchInput(event.currentTarget.value)}
+            />
+
             <InputGroup.Addon align="inline-end">
                 <DropdownMenu.Root>
                     <DropdownMenu.Trigger>
@@ -56,15 +141,18 @@
                             </InputGroup.Button>
                         {/snippet}
                     </DropdownMenu.Trigger>
+
                     <DropdownMenu.Content align="end">
                         <DropdownMenu.Item>
                             <Settings/>
                             Роли
                         </DropdownMenu.Item>
+
                         <DropdownMenu.Item>
                             <Checkbox checked={true}/>
                             Сначала Избранные
                         </DropdownMenu.Item>
+
                         <DropdownMenu.Item>
                             <Checkbox/>
                             Заполненные
@@ -74,32 +162,48 @@
             </InputGroup.Addon>
         </InputGroup.Root>
     </div>
-    <!-- TODO: добавить кнопку вернуться наверх-->
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-        <SongCard
-            title="Когда-нибудь 2"
-            artist="KSB muzic"
-            description="Лучшая песня всея альбома 2026 давайте сыграем пожалуйста очень длинное описание"
-            imageUrl="https://avatars.yandex.net/get-music-content/19035207/89bd1de5.a.43279081-1/m1000x1000"
-            filledAssignments={1}
-            totalAssignments={5}
-        />
 
-        <SongCard
-            title="счастливый человек"
-            artist="кис-кис"
-            imageUrl="https://avatars.yandex.net/get-music-content/16469857/21036ce0.a.38430333-1/m1000x1000"
-            featured={true}
-            filledAssignments={1}
-            totalAssignments={4}
-        />
+    {#if loading}
+        <div class="py-8 text-center text-muted-foreground">
+            Загрузка...
+        </div>
+    {:else if error}
+        <div class="py-8 text-center text-destructive">
+            {error}
+        </div>
+    {:else if songs.length === 0}
+        <div class="py-8 text-center text-muted-foreground">
+            <TextType
+                text={searchQuery ? "404 NOT FOUND" : "204 NO CONTENT "}
+                typingSpeed={100}
+                deletingSpeed={50}
+                showCursor={true}
+                loop={false}
+                cursorCharacter="▎"
+                cursorBlinkDuration={0.5}
+                variableSpeed={{ min: 60, max: 120 }}
+            />
+        </div>
+    {:else}
+        <div
+            class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+        >
+            {#each songs as song (song.id)}
+                <SongCard
+                    title={song.title}
+                    artist={song.artist}
+                    description={song.description ?? undefined}
+                    imageUrl={song.thumbnailUrl ?? undefined}
+                    featured={song.featured}
+                    filledAssignments={song.roles.filter(
+						(role) => role.assignment !== null,
+					).length}
+                    totalAssignments={song.roles.length}
+                />
+            {/each}
+        </div>
+    {/if}
 
-        <SongCard
-            title="I Really Want to Stay at Your House"
-            artist="Rosa Walton"
-            imageUrl="https://avatars.yandex.net/get-music-content/17681324/a0a99b82.a.39716308-1/m1000x1000"
-        />
-    </div>
     {#if showScrollTop}
         <Button
             class="fixed left-4 bottom-18 z-50 rounded-full shadow-lg"
@@ -110,11 +214,11 @@
             <ArrowUp/>
         </Button>
     {/if}
+
     <Button
         class="fixed right-4 bottom-18 z-50 rounded-full shadow-lg"
         size="icon"
-        onclick={scrollToTop}
-        aria-label="Вернуться наверх"
+        aria-label="Добавить песню"
     >
         <Plus/>
     </Button>
