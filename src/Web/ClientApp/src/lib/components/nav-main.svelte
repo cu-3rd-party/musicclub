@@ -1,8 +1,8 @@
 <script lang="ts">
     import {resolve} from "$app/paths";
     import type {NavUrl} from "./app-sidebar.svelte";
-    import * as Collapsible from "$lib/components/ui/collapsible/index.js";
-    import * as Sidebar from "$lib/components/ui/sidebar/index.js";
+    import * as Collapsible from "$lib/components/ui/collapsible";
+    import * as Sidebar from "$lib/components/ui/sidebar";
     import ChevronRightIcon from "@lucide/svelte/icons/chevron-right";
 
     const isExternalUrl = (url: NavUrl): url is `http${string}` => url.startsWith("http");

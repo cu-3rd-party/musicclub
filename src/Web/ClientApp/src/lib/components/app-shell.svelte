@@ -2,9 +2,9 @@
     import type {Snippet} from "svelte";
     import {authState} from "$lib/auth/store";
     import AppSidebar from "$lib/components/app-sidebar.svelte";
-    import * as Breadcrumb from "$lib/components/ui/breadcrumb/index.js";
-    import {Separator} from "$lib/components/ui/separator/index.js";
-    import * as Sidebar from "$lib/components/ui/sidebar/index.js";
+    import * as Breadcrumb from "$lib/components/ui/breadcrumb";
+    import {Separator} from "$lib/components/ui/separator";
+    import * as Sidebar from "$lib/components/ui/sidebar";
     import {cn} from "$lib/utils";
 
     type BreadcrumbItem = {

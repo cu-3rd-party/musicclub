@@ -176,7 +176,7 @@
     import NavProjects from "./nav-projects.svelte";
     import NavSecondary from "./nav-secondary.svelte";
     import NavUser from "./nav-user.svelte";
-    import * as Sidebar from "$lib/components/ui/sidebar/index.js";
+    import * as Sidebar from "$lib/components/ui/sidebar";
     import type {ComponentProps} from "svelte";
 
     let {

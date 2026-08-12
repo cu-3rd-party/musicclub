@@ -1,6 +1,6 @@
 <script lang="ts">
     import Trash2Icon from "@lucide/svelte/icons/trash-2";
-    import {buttonVariants} from "$lib/components/ui/button/index.js";
+    import {buttonVariants} from "$lib/components/ui/button";
     import {cn} from "$lib/utils.js";
     import {resolve} from "$app/paths";
 

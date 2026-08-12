@@ -2,7 +2,7 @@
     import {goto} from "$app/navigation";
     import {activateQuerySession} from "$lib/ask/query-sessions";
     import type {SidebarQuerySession} from "$lib/ask/query-sessions";
-    import * as Sidebar from "$lib/components/ui/sidebar/index.js";
+    import * as Sidebar from "$lib/components/ui/sidebar";
     import {resolve} from "$app/paths";
 
     let {

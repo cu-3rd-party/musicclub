@@ -1,6 +1,6 @@
 <script lang="ts">
-    import {Button} from "$lib/components/ui/button/index.js";
-    import {Badge} from "$lib/components/ui/badge/index.js";
+    import {Button} from "$lib/components/ui/button";
+    import {Badge} from "$lib/components/ui/badge";
     import type {KnowledgeObject} from "$lib/data/types";
     import {formatBytes, formatDateTime, getObjectTitle, getObjectTypeLabel} from "$lib/data/utils";
     import DataStatusBadge from "$lib/components/data/data-status-badge.svelte";

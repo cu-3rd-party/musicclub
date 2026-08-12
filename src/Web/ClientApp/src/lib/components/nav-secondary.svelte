@@ -1,7 +1,7 @@
 <script lang="ts">
     import {resolve} from "$app/paths";
     import type {NavUrl} from "./app-sidebar.svelte";
-    import * as Sidebar from "$lib/components/ui/sidebar/index.js";
+    import * as Sidebar from "$lib/components/ui/sidebar";
     import type {Component, ComponentProps} from "svelte";
 
     const isExternalUrl = (url: NavUrl): url is `http${string}` => url.startsWith("http");

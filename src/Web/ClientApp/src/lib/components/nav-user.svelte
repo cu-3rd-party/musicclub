@@ -1,11 +1,11 @@
 <script lang="ts">
     import {goto} from "$app/navigation";
     import {resolve} from "$app/paths";
-    import * as Avatar from "$lib/components/ui/avatar/index.js";
-    import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
-    import * as Sidebar from "$lib/components/ui/sidebar/index.js";
+    import * as Avatar from "$lib/components/ui/avatar";
+    import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
+    import * as Sidebar from "$lib/components/ui/sidebar";
     import {logout} from "$lib/auth/store";
-    import {useSidebar} from "$lib/components/ui/sidebar/index.js";
+    import {useSidebar} from "$lib/components/ui/sidebar";
     import {BadgeCheckIcon, ChevronsUpDownIcon, LogOutIcon} from "@lucide/svelte";
 
     let {

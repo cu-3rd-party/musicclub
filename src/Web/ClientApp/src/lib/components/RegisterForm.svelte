@@ -1,13 +1,13 @@
 <script lang="ts">
     import {goto} from "$app/navigation";
     import {resolve} from "$app/paths";
-    import * as Alert from "$lib/components/ui/alert/index.js";
+    import * as Alert from "$lib/components/ui/alert";
     import {getApiErrorMessage} from "$lib/api/auth";
     import {signUp} from "$lib/auth/store";
     import {cn} from "$lib/utils.js";
-    import {Button} from "$lib/components/ui/button/index.js";
-    import * as Field from "$lib/components/ui/field/index.js";
-    import {Input} from "$lib/components/ui/input/index.js";
+    import {Button} from "$lib/components/ui/button";
+    import * as Field from "$lib/components/ui/field";
+    import {Input} from "$lib/components/ui/input";
     import type {HTMLAttributes} from "svelte/elements";
 
     let {class: className, ...restProps}: HTMLAttributes<HTMLFormElement> = $props();
