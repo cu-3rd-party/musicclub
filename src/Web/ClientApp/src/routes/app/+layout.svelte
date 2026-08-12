@@ -13,9 +13,13 @@
     ];
 </script>
 
-<div class="flex min-h-screen flex-col">
-    <main class="flex-1 overflow-y-auto pb-16">
+<div class="flex h-screen flex-col">
+    <main class="min-h-0 flex-1 overflow-y-auto">
         {@render children?.()}
     </main>
-    <BottomNav items={navItems} class="fixed bottom-0 z-50 w-full"/>
+
+    <BottomNav
+        items={navItems}
+        class="shrink-0"
+    />
 </div>
