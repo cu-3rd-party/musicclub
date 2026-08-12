@@ -1,15 +1,31 @@
 <script lang="ts">
     import * as InputGroup from "$lib/components/ui/input-group";
     import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
-    import {ArrowUp, Ellipsis, Plus, SearchIcon, Settings} from "@lucide/svelte";
+    import {
+        ArrowUp,
+        ClipboardPaste,
+        Ellipsis,
+        Link,
+        MessageSquare,
+        MicVocal,
+        Music2,
+        Pencil,
+        Plus,
+        SearchIcon,
+        Settings,
+        User
+    } from "@lucide/svelte";
     import {Checkbox} from "$lib/components/ui/checkbox";
     import SongCard from "$lib/components/songs/song-card.svelte";
-    import {Button} from "$lib/components/ui/button";
+    import {Button, buttonVariants} from "$lib/components/ui/button";
     import {getSongs} from "$lib/api/songs";
     import type {Song} from "$lib/songs/types";
     import {page} from "$app/state";
     import {goto} from "$app/navigation";
     import TextType from "$lib/components/songs/text-type.svelte";
+    import * as Dialog from "$lib/components/ui/dialog"
+    import {Separator} from "$lib/components/ui/separator";
+    import CreateSong from "$lib/components/create-song.svelte";
 
     let showScrollTop = $state(false);
     let searchInput = $state("");
@@ -215,11 +231,5 @@
         </Button>
     {/if}
 
-    <Button
-        class="fixed right-4 bottom-18 z-50 rounded-full shadow-lg"
-        size="icon"
-        aria-label="Добавить песню"
-    >
-        <Plus/>
-    </Button>
+    <CreateSong class="fixed right-4 bottom-18 z-50 shadow-lg"></CreateSong>
 </main>
