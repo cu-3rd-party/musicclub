@@ -91,7 +91,7 @@ public class BotUpdateHandler(
         string webAppUrl,
         CancellationToken cancellationToken)
     {
-        logger.LogInformation("Received command /start without args");
+        logger.LogDebug("Received command /start without args");
 
         var keyboard = new InlineKeyboardMarkup(new[]
         {
@@ -114,7 +114,7 @@ public class BotUpdateHandler(
         string args,
         CancellationToken cancellationToken)
     {
-        logger.LogInformation("Received command start with {Args}", args);
+        logger.LogDebug("Received command start with {Args}", args);
 
         if (!args.StartsWith("auth_", StringComparison.Ordinal))
         {

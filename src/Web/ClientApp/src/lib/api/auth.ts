@@ -32,13 +32,14 @@ export async function createDeeplink(): Promise<Deeplink> {
 }
 
 export async function getDeeplink(link: Deeplink): Promise<AuthSession | null> {
-    const response = await api.get<AuthSession>(
-        `/api/v1/auth/telegram/link/${link.uid}`
-    );
-    if (response.status != 200) {
+    try {
+        const response = await api.get<AuthSession>(
+            `/api/v1/auth/telegram/link/${link.uid}`
+        );
+        return response.data;
+    } catch (e) {
         return null;
     }
-    return response.data;
 }
 
 export async function refreshAuthTokens(

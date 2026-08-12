@@ -7,6 +7,7 @@ export type UserProfile = {
     role: "admin" | "guest";
     emailVerified: boolean;
     avatarUrl?: string | null;
+    permissions: string[];
     lastLoginAt?: string | null;
     createdAt: string;
     updatedAt: string;
