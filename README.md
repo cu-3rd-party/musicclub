@@ -1,5 +1,1 @@
-﻿# Пример архитектуры
-
-Этот проект был начат из [Clean.Architecture.Solution.Template](https://github.com/jasontaylordev/CleanArchitecture)
-версии 10.8.0
-и в дальнейшем доведен до ума
+﻿крутое место бтв https://data.metabrainz.org/pub/musicbrainz/data/fullexport/20260806-144707/
