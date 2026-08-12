@@ -17,6 +17,7 @@
     import type {HTMLFormAttributes} from "svelte/elements";
     import * as Card from "$lib/components/ui/card/index.js";
     import type {Deeplink} from "$lib/auth/types";
+    import {DEFAULT_APP_PAGE} from "$lib/config";
 
     let {
         ref = $bindable(null),
@@ -47,7 +48,7 @@
                     ...session,
                     accessTokenAcquiredAt: new Date().toISOString(),
                 });
-                await goto(resolve("/app"));
+                await goto(resolve(DEFAULT_APP_PAGE));
             }
         } catch (error) {
             errorMessage = getApiErrorMessage(error, "Не удалось выполнить вход.");

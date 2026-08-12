@@ -3,6 +3,7 @@
     import {goto} from "$app/navigation";
     import {resolve} from "$app/paths";
     import {authState} from "$lib/auth/store";
+    import {DEFAULT_APP_PAGE} from "$lib/config";
 
     $effect(() => {
         if (!browser) {
@@ -14,7 +15,7 @@
                 return;
             }
 
-            void goto(state.user ? resolve("/app") : resolve("/auth"));
+            void goto(state.user ? resolve(DEFAULT_APP_PAGE) : resolve("/auth"));
         });
     });
 </script>
