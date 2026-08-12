@@ -17,5 +17,5 @@
     <main class="flex-1 overflow-y-auto pb-16">
         {@render children?.()}
     </main>
-    <BottomNav items={navItems} />
+    <BottomNav items={navItems} class="fixed bottom-0 z-50 w-full"/>
 </div>
