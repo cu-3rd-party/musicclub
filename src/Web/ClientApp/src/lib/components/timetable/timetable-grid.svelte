@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { TimetableEvent } from "$lib/timetable/types";
+    import type {TimetableEvent} from "$lib/timetable/types";
     import TimetableEventComponent from "./timetable-event.svelte";
     import CurrentTimeMarker from "./current-time-marker.svelte";
 
@@ -17,7 +17,7 @@
 
     const hours = $derived(
         Array.from(
-            { length: endHour - startHour },
+            {length: endHour - startHour},
             (_, i) => startHour + i
         )
     );

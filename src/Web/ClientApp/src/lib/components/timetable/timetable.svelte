@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { TimetableEvent } from "$lib/timetable/types";
+    import type {TimetableEvent} from "$lib/timetable/types";
 
     import TimetableHeader from "./timetable-header.svelte";
     import TimetableTimeColumn from "./timetable-time-column.svelte";

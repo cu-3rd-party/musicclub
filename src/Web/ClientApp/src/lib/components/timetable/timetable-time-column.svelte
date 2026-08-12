@@ -11,7 +11,7 @@
 
     const hours = $derived(
         Array.from(
-            { length: endHour - startHour + 1 },
+            {length: endHour - startHour + 1},
             (_, i) => startHour + i
         )
     );

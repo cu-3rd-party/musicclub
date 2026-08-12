@@ -39,7 +39,7 @@
         <div class="absolute inset-0">
             {#if featured}
                 <Card.Action class="absolute top-2 right-2">
-                    <Star class="size-6" />
+                    <Star class="size-6"/>
                 </Card.Action>
             {/if}
 
@@ -56,7 +56,7 @@
             <Card.Title class="text-right">{artist}</Card.Title>
         </div>
         {#if description !== undefined}
-        <Card.Description>{description}</Card.Description>
+            <Card.Description>{description}</Card.Description>
         {/if}
     </Card.Header>
 </Card.Root>

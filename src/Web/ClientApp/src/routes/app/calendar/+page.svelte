@@ -1,6 +1,6 @@
 <script lang="ts">
     import Timetable from "$lib/components/timetable/timetable.svelte";
-    import type { TimetableEvent } from "$lib/timetable/types";
+    import type {TimetableEvent} from "$lib/timetable/types";
     import {Button} from "$lib/components/ui/button";
     import {Plus} from "@lucide/svelte";
 

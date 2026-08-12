@@ -47,7 +47,7 @@
                     aria-current={active ? "page" : undefined}
                     onclick={(e) => navigate(item.href, e)}
                 >
-                    <item.icon class="size-5" strokeWidth={active ? 2.5 : 2} />
+                    <item.icon class="size-5" strokeWidth={active ? 2.5 : 2}/>
                     <span>{item.label}</span>
                 </a>
             </li>

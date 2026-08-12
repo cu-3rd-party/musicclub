@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { ChevronLeft, ChevronRight } from "@lucide/svelte";
-    import { Button } from "$lib/components/ui/button";
+    import {ChevronLeft, ChevronRight} from "@lucide/svelte";
+    import {Button} from "$lib/components/ui/button";
 
     let {
         date,
@@ -28,7 +28,7 @@
         onclick={onPrevious}
         aria-label="Предыдущий день"
     >
-        <ChevronLeft />
+        <ChevronLeft/>
     </Button>
 
     <button class="text-center" onclick={onToday}>
@@ -47,6 +47,6 @@
         onclick={onNext}
         aria-label="Следующий день"
     >
-        <ChevronRight />
+        <ChevronRight/>
     </Button>
 </header>
