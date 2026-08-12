@@ -1,5 +1,5 @@
 using CuMusicClub.Application.Common.Exceptions;
-using CuMusicClub.Application.Helpers;
+using CuMusicClub.Application.Services.Song.Helpers;
 using CuMusicClub.Domain.Enums;
 using NUnit.Framework;
 using Shouldly;

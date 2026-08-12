@@ -1,7 +1,6 @@
-using CuMusicClub.Application.Auth;
 using CuMusicClub.Domain.Entities;
 
-namespace CuMusicClub.Application.Security;
+namespace CuMusicClub.Application.Services.Auth;
 
 public interface IAuthService
 {

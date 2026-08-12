@@ -1,8 +1,8 @@
 using System.Security.Claims;
 using System.Text.RegularExpressions;
-using CuMusicClub.Application.Auth;
 using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Common.Interfaces;
+using CuMusicClub.Application.Services.Telegram;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Infrastructure.Data;
 using CuMusicClub.Infrastructure.Services;

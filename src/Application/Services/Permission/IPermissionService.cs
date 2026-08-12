@@ -1,6 +1,6 @@
 using CuMusicClub.Domain.Entities;
 
-namespace CuMusicClub.Application.Common.Auth;
+namespace CuMusicClub.Application.Services.Permission;
 
 /// <summary>
 /// Central place for reading/writing user permissions.

@@ -1,4 +1,5 @@
-using CuMusicClub.Application.Auth;
+using CuMusicClub.Application.Services.Auth;
+using CuMusicClub.Application.Services.Telegram;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace CuMusicClub.Web.Endpoints.v1.Auth;
@@ -18,7 +19,7 @@ public static partial class Auth
     }
 
     [EndpointSummary("Request telegram /start deeplink for usage in bot")]
-    private static async Task<Results<Ok<TelegramDeeplink>, BadRequest>> TelegramDeeplink(ITelegramAuthService service,
+    private static async Task<Results<Ok<TelegramDto>, BadRequest>> TelegramDeeplink(ITelegramAuthService service,
         CancellationToken cancellationToken)
     {
         return TypedResults.Ok(await service.CreateDeeplink(cancellationToken));

@@ -1,7 +1,9 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using CuMusicClub.Application.Common.Auth;
-using CuMusicClub.Application.Song;
+using CuMusicClub.Application.Services.Permission;
+using CuMusicClub.Application.Services.Song;
+using CuMusicClub.Domain.Constants;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Domain.Enums;
 using CuMusicClub.Infrastructure.Data;
@@ -66,12 +68,12 @@ public partial class SongServiceTests : TestBase
 
         var claims = new List<Claim>();
         if (editOwnParticipation)
-            claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.ParticipationEditOwn));
+            claims.Add(new Claim(PermissionClaimTypes.Permission, Permission.ParticipationEditOwn));
         if (editAnyParticipation)
-            claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.ParticipationEditAny));
-        if (editOwnSongs) claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.SongsEditOwn));
-        if (editAnySongs) claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.SongsEditAny));
-        if (editFeaturedSongs) claims.Add(new Claim(PermissionClaimTypes.Permission, Permissions.SongsEditFeatured));
+            claims.Add(new Claim(PermissionClaimTypes.Permission, Permission.ParticipationEditAny));
+        if (editOwnSongs) claims.Add(new Claim(PermissionClaimTypes.Permission, Permission.SongsEditOwn));
+        if (editAnySongs) claims.Add(new Claim(PermissionClaimTypes.Permission, Permission.SongsEditAny));
+        if (editFeaturedSongs) claims.Add(new Claim(PermissionClaimTypes.Permission, Permission.SongsEditFeatured));
 
         foreach (var claim in claims) await userManager.AddClaimAsync(user, claim);
 

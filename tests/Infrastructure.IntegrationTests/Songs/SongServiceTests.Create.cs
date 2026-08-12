@@ -1,6 +1,6 @@
 using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Common.Exceptions;
-using CuMusicClub.Application.Song;
+using CuMusicClub.Application.Services.Song;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 

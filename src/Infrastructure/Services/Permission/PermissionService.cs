@@ -1,9 +1,10 @@
 using System.Security.Claims;
-using CuMusicClub.Application.Common.Auth;
+using CuMusicClub.Application.Services.Permission;
+using CuMusicClub.Domain.Constants;
 using CuMusicClub.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
 
-namespace CuMusicClub.Infrastructure.Services;
+namespace CuMusicClub.Infrastructure.Services.Permission;
 
 public class PermissionService(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole<Guid>> roleManager)
     : IPermissionService
@@ -54,12 +55,12 @@ public class PermissionService(UserManager<ApplicationUser> userManager, RoleMan
                                                     string.Join(", ", addResult.Errors.Select(e => e.Description)));
         }
 
-        if (Permissions.ByRole.TryGetValue(role, out var bundle))
+        if (Domain.Constants.Permission.ByRole.TryGetValue(role, out var bundle))
             await GrantPermissionsAsync(user, bundle, cancellationToken);
     }
 
     public Task GrantDefaultAsync(ApplicationUser user, CancellationToken cancellationToken)
     {
-        return GrantPermissionsAsync(user, Permissions.Default, cancellationToken);
+        return GrantPermissionsAsync(user, Domain.Constants.Permission.Default, cancellationToken);
     }
 }

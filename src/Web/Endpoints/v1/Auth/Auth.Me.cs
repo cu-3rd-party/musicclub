@@ -1,7 +1,8 @@
 using System.Security.Claims;
-using CuMusicClub.Application.Auth;
 using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Common.Interfaces;
+using CuMusicClub.Application.Services.Auth;
+using CuMusicClub.Application.Services.Permission;
 using CuMusicClub.Domain.Entities;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;

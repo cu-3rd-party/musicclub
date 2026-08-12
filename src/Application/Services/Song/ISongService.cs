@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using CuMusicClub.Domain.Entities;
 
-namespace CuMusicClub.Application.Song;
+namespace CuMusicClub.Application.Services.Song;
 
 public interface ISongService
 {

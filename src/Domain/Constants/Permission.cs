@@ -1,18 +1,6 @@
-using RoleNames = CuMusicClub.Domain.Constants.Roles;
+namespace CuMusicClub.Domain.Constants;
 
-namespace CuMusicClub.Application.Common.Auth;
-
-/// <summary>
-/// Claim type that carries granular permissions (e.g. <c>"permission"</c> with value
-/// <c>songs.edit_own</c>). Permissions are written as individual claims on the user
-/// (<c>AspNetUserClaims</c>) and read back via <c>UserManager.GetClaimsAsync</c>.
-/// </summary>
-public static class PermissionClaimTypes
-{
-    public const string Permission = "permission";
-}
-
-public static class Permissions
+public static class Permission
 {
     public const string ParticipationEditOwn = "participation.edit_own";
     public const string ParticipationEditAny = "participation.edit_any";
@@ -45,8 +33,8 @@ public static class Permissions
     public static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> ByRole =
         new Dictionary<string, IReadOnlyList<string>>
         {
-            [RoleNames.Administrator] = All,
-            [RoleNames.Roadie] = Roadie,
-            [RoleNames.Default] = Default,
+            [Roles.Administrator] = All,
+            [Roles.Roadie] = Roadie,
+            [Roles.Default] = Default,
         };
 }

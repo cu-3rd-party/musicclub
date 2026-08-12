@@ -1,7 +1,7 @@
 using CuMusicClub.Application.Common.Exceptions;
 using CuMusicClub.Domain.Enums;
 
-namespace CuMusicClub.Application.Helpers;
+namespace CuMusicClub.Application.Services.Song.Helpers;
 
 public static class SongHelpers
 {

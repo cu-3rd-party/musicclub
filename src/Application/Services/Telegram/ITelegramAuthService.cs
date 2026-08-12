@@ -1,6 +1,7 @@
+using CuMusicClub.Application.Services.Auth;
 using CuMusicClub.Domain.Entities;
 
-namespace CuMusicClub.Application.Auth;
+namespace CuMusicClub.Application.Services.Telegram;
 
 public interface ITelegramAuthService
 {
@@ -17,7 +18,7 @@ public interface ITelegramAuthService
     /// </summary>
     /// <param name="initData">Строка, содержащая необработанные данные инициализации</param>
     /// <returns></returns>
-    public Telegram.Bot.Types.User? ExtractTgUser(string initData);
+    public global::Telegram.Bot.Types.User? ExtractTgUser(string initData);
 
     /// <summary>
     /// Validates initData, upserts user, and issues tokens.
@@ -34,7 +35,7 @@ public interface ITelegramAuthService
     /// </summary>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    Task<TelegramDeeplink> CreateDeeplink(CancellationToken cancellationToken);
+    Task<TelegramDto> CreateDeeplink(CancellationToken cancellationToken);
 
     /// <summary>
     /// Получить статус по диплинку
@@ -44,5 +45,5 @@ public interface ITelegramAuthService
     /// <returns></returns>
     Task<AuthSessionDto?> GetDeeplink(Guid linkUid, CancellationToken cancellationToken);
 
-    Task<ApplicationUser> UpsertUserAsync(Telegram.Bot.Types.User tgUser, CancellationToken cancellationToken);
+    Task<ApplicationUser> UpsertUserAsync(global::Telegram.Bot.Types.User tgUser, CancellationToken cancellationToken);
 }

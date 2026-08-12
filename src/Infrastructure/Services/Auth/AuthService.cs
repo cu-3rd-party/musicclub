@@ -1,14 +1,13 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using CuMusicClub.Application.Auth;
-using CuMusicClub.Application.Common.Auth;
-using CuMusicClub.Application.Security;
+using CuMusicClub.Application.Services.Auth;
+using CuMusicClub.Application.Services.Permission;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Infrastructure.Options;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
-namespace CuMusicClub.Infrastructure.Services;
+namespace CuMusicClub.Infrastructure.Services.Auth;
 
 public class AuthService(IOptions<SecurityOptions> securityOptions, IPermissionService permissionService) : IAuthService
 {

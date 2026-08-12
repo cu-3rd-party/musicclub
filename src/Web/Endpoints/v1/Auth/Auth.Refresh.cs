@@ -1,4 +1,5 @@
-using CuMusicClub.Application.Auth;
+using CuMusicClub.Application.Services.Auth;
+using CuMusicClub.Application.Services.Telegram;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace CuMusicClub.Web.Endpoints.v1.Auth;

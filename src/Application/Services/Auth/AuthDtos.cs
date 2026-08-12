@@ -1,4 +1,4 @@
-namespace CuMusicClub.Application.Auth;
+namespace CuMusicClub.Application.Services.Auth;
 
 public sealed record TelegramAuthRequest(string InitData);
 
@@ -22,5 +22,3 @@ public sealed record AuthSessionDto(
     DateTimeOffset ExpiresAt,
     DateTimeOffset AccessTokenAcquiredAt,
     UserProfileDto User);
-
-public sealed record TelegramDeeplink(string Url, Guid Uid);

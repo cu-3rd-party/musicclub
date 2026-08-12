@@ -1,20 +1,19 @@
 using System.Security.Claims;
 using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Common.Exceptions;
-using CuMusicClub.Application.Helpers;
-using CuMusicClub.Application.Song;
+using CuMusicClub.Application.Services.Permission;
+using CuMusicClub.Application.Services.Song;
+using CuMusicClub.Application.Services.Song.Helpers;
 using CuMusicClub.Domain.Entities;
-using CuMusicClub.Domain.Enums;
 using CuMusicClub.Domain.ValueObjects;
 using CuMusicClub.Infrastructure.Data;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
-namespace CuMusicClub.Infrastructure.Services;
+namespace CuMusicClub.Infrastructure.Services.Song;
 
-public class SongService(
+public partial class SongService(
     IPermissionService permissionService,
     ApplicationDbContext db,
     UserManager<ApplicationUser> userManager) : ISongService
@@ -71,7 +70,7 @@ public class SongService(
                        .ThenInclude(r => r.Assignment)
                        .ThenInclude(a => a!.User)
                        .FirstOrDefaultAsync(s => s.Id == songId, cancellationToken) ??
-                   throw new NotFoundException(songId.ToString(), nameof(Song));
+                   throw new NotFoundException(songId.ToString(), nameof(Domain.Entities.Song));
 
         var songDto = ToSongDto(song, song.Roles);
 
@@ -84,9 +83,9 @@ public class SongService(
     {
         var user = await userManager.GetUserAsync(currentUser) ?? throw new ForbiddenAccessException();
         var permissions = await permissionService.GetPermissionValuesAsync(user, cancellationToken);
-        if (!permissions.Contains(Permissions.ParticipationEditOwn)) throw new ForbiddenAccessException();
+        if (!permissions.Contains(Domain.Constants.Permission.ParticipationEditOwn)) throw new ForbiddenAccessException();
 
-        if (request.Featured && !permissions.Contains(Permissions.SongsEditFeatured))
+        if (request.Featured && !permissions.Contains(Domain.Constants.Permission.SongsEditFeatured))
             throw new ForbiddenAccessException();
 
         var linkKind = SongHelpers.DeriveLinkKind(request.Url);
@@ -94,7 +93,7 @@ public class SongService(
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
 
-        var song = new Song
+        var song = new Domain.Entities.Song
         {
             Title = request.Title,
             Artist = request.Artist,
@@ -126,15 +125,15 @@ public class SongService(
         var song = await db
                        .Songs.Include(s => s.CreatedBy)
                        .FirstOrDefaultAsync(s => s.Id == songId, cancellationToken) ??
-                   throw new NotFoundException(songId.ToString(), nameof(Song));
+                   throw new NotFoundException(songId.ToString(), nameof(Domain.Entities.Song));
 
         var user = await userManager.GetUserAsync(currentUser) ?? throw new ForbiddenAccessException();
         var permissions = await permissionService.GetPermissionValuesAsync(user, cancellationToken);
 
-        if (song.CreatedBy != null && user != song.CreatedBy && !permissions.Contains(Permissions.SongsEditAny))
+        if (song.CreatedBy != null && user != song.CreatedBy && !permissions.Contains(Domain.Constants.Permission.SongsEditAny))
             throw new ForbiddenAccessException();
 
-        if (request.Featured && !permissions.Contains(Permissions.SongsEditFeatured))
+        if (request.Featured && !permissions.Contains(Domain.Constants.Permission.SongsEditFeatured))
             throw new ForbiddenAccessException();
 
         var linkKind = SongHelpers.DeriveLinkKind(request.Url);
@@ -148,7 +147,7 @@ public class SongService(
         song.LinkKind = linkKind;
         song.LinkUrl = request.Url;
         song.ThumbnailUrl = thumbnailUrl;
-        if (permissions.Contains(Permissions.SongsEditFeatured)) song.IsFeatured = request.Featured;
+        if (permissions.Contains(Domain.Constants.Permission.SongsEditFeatured)) song.IsFeatured = request.Featured;
         song.UpdatedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
 
@@ -175,147 +174,14 @@ public class SongService(
         var song = await db
                        .Songs.Include(s => s.CreatedBy)
                        .FirstOrDefaultAsync(s => s.Id == songId, cancellationToken) ??
-                   throw new NotFoundException(songId.ToString(), nameof(Song));
+                   throw new NotFoundException(songId.ToString(), nameof(Domain.Entities.Song));
 
         var user = await userManager.GetUserAsync(currentUser) ?? throw new ForbiddenAccessException();
         var permissions = await permissionService.GetPermissionValuesAsync(user, cancellationToken);
-        if (song.CreatedBy != null && user != song.CreatedBy && !permissions.Contains(Permissions.SongsEditAny))
+        if (song.CreatedBy != null && user != song.CreatedBy && !permissions.Contains(Domain.Constants.Permission.SongsEditAny))
             throw new ForbiddenAccessException();
 
         db.Songs.Remove(song);
         await db.SaveChangesAsync(cancellationToken);
     }
-
-    public async Task<SongDto> JoinRoleAsync(ApplicationUser user,
-        ClaimsPrincipal claimsPrincipal,
-        Guid roleId,
-        CancellationToken cancellationToken)
-    {
-        var permissions = await permissionService.GetPermissionValuesAsync(user, cancellationToken);
-
-        var requester = await userManager.GetUserAsync(claimsPrincipal) ?? throw new UnauthorizedAccessException();
-        var isSelf = requester.Id == user.Id;
-        if ((isSelf && !permissions.Contains(Permissions.ParticipationEditOwn)) ||
-            (!isSelf && !permissions.Contains(Permissions.ParticipationEditAny)))
-            throw new ForbiddenAccessException();
-
-        var role = await db
-            .SongRoles.Include(r => r.Song)
-            .Include(r => r.Assignment)
-            .FirstOrDefaultAsync(r => r.Id == roleId, cancellationToken);
-        if (role == null) throw new NotFoundException(roleId.ToString(), nameof(SongRole));
-
-        if (role.Assignment != null) throw new BadHttpRequestException("the role is already occupied");
-
-        role.Assignment = new SongRoleAssignment
-        {
-            UserId = user.Id,
-            SongId = role.SongId,
-            RoleId = role.Id,
-        };
-        await db.SaveChangesAsync(cancellationToken);
-
-        return await GetAsync(role.Song.Id, cancellationToken);
-    }
-
-    public async Task<SongDto> LeaveRoleAsync(ApplicationUser user,
-        ClaimsPrincipal claimsPrincipal,
-        Guid roleId,
-        CancellationToken cancellationToken)
-    {
-        var permissions = await permissionService.GetPermissionValuesAsync(user, cancellationToken);
-
-        var requester = await userManager.GetUserAsync(claimsPrincipal) ?? throw new UnauthorizedAccessException();
-        var isSelf = requester.Id == user.Id;
-        if ((isSelf && !permissions.Contains(Permissions.ParticipationEditOwn)) ||
-            (!isSelf && !permissions.Contains(Permissions.ParticipationEditAny)))
-            throw new ForbiddenAccessException();
-
-        var role = await db
-            .SongRoles.Include(r => r.Song)
-            .Include(r => r.Assignment)
-            .FirstOrDefaultAsync(r => r.Id == roleId, cancellationToken);
-        if (role == null) throw new NotFoundException(roleId.ToString(), nameof(SongRole));
-
-        if (role.Assignment == null) throw new BadHttpRequestException("role is unoccupied");
-
-        await db
-            .SongRoleAssignments.Where(s => s.Id == role.Assignment.Id)
-            .ExecuteDeleteAsync(cancellationToken);
-
-        return await GetAsync(role.Song.Id, cancellationToken);
-    }
-
-    #region DTO mapping
-
-    private SongDto ToSongDto(Song song, IReadOnlyList<SongRole> roles)
-    {
-        var roleDtos = roles
-            .Select(r => new RoleDto(r.Id,
-                r.RoleTitle,
-                r.Assignment is null
-                    ? null
-                    : new RoleAssignmentDto(r.Assignment.Id,
-                        new SongUserDto(r.Assignment.User.Id,
-                            r.Assignment.User.DisplayName,
-                            r.Assignment.User.UserName,
-                            r.Assignment.User.AvatarUrl),
-                        r.Assignment.JoinedAt)))
-            .ToList();
-
-        return new SongDto(song.Id,
-            song.Title,
-            song.Artist,
-            song.Description,
-            song.LinkUrl,
-            song.ThumbnailUrl,
-            song.IsFeatured,
-            MapCreatedBy(song.CreatedBy),
-            roleDtos,
-            song.CreatedAt,
-            song.UpdatedAt);
-    }
-
-    private static SongUserDto MapCreatedBy(ApplicationUser? user)
-    {
-        if (user is null) return new SongUserDto(Guid.Empty, "Unknown", "unknown", null);
-
-        return new SongUserDto(user.Id,
-            user.DisplayName ?? string.Empty,
-            user.UserName ?? string.Empty,
-            user.AvatarUrl);
-    }
-
-    #endregion
-
-    #region Role management
-
-    private async Task ReplaceRolesAsync(Guid songId,
-        IReadOnlyCollection<string> desiredRoles,
-        CancellationToken cancellationToken)
-    {
-        var currentRoles = await db
-            .SongRoles.Where(r => r.SongId == songId)
-            .Select(r => r.RoleTitle)
-            .ToListAsync(cancellationToken);
-
-        var desiredSet = desiredRoles.ToHashSet(StringComparer.Ordinal);
-
-        var toRemove = currentRoles
-            .Where(role => !desiredSet.Contains(role))
-            .ToList();
-        if (toRemove.Count > 0)
-            await db
-                .SongRoles.Where(r => r.SongId == songId && toRemove.Contains(r.RoleTitle))
-                .ExecuteDeleteAsync(cancellationToken);
-
-        foreach (var role in desiredSet.Where(role => !currentRoles.Contains(role)))
-            db.SongRoles.Add(new SongRole
-            {
-                SongId = songId,
-                RoleTitle = role,
-            });
-    }
-
-    #endregion
 }

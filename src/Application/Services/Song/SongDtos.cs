@@ -1,4 +1,4 @@
-namespace CuMusicClub.Application.Song;
+namespace CuMusicClub.Application.Services.Song;
 
 public sealed record SongDto(
     Guid Id,

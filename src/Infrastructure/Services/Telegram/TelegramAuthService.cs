@@ -1,9 +1,9 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using CuMusicClub.Application.Auth;
-using CuMusicClub.Application.Common.Auth;
-using CuMusicClub.Application.Security;
+using CuMusicClub.Application.Services.Auth;
+using CuMusicClub.Application.Services.Permission;
+using CuMusicClub.Application.Services.Telegram;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Infrastructure.Data;
 using CuMusicClub.Infrastructure.Options;
@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Telegram.Bot.Types;
 
-namespace CuMusicClub.Infrastructure.Services;
+namespace CuMusicClub.Infrastructure.Services.Telegram;
 
 public class TelegramAuthService(
     ILogger<TelegramAuthService> logger,
@@ -89,12 +89,12 @@ public class TelegramAuthService(
         return await authService.RefreshSession(refreshToken, cancellationToken);
     }
 
-    public async Task<TelegramDeeplink> CreateDeeplink(CancellationToken cancellationToken)
+    public async Task<TelegramDto> CreateDeeplink(CancellationToken cancellationToken)
     {
         var link = new TgAuthLink();
         db.TgAuthLinks.Add(link);
         await db.SaveChangesAsync(cancellationToken);
-        return new TelegramDeeplink($"https://t.me/{telegramOptions.Value.BotUsername}?start=auth_{link.Id}", link.Id);
+        return new TelegramDto($"https://t.me/{telegramOptions.Value.BotUsername}?start=auth_{link.Id}", link.Id);
     }
 
     public async Task<AuthSessionDto?> GetDeeplink(Guid linkUid, CancellationToken cancellationToken)

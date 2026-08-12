@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using CuMusicClub.Application.Song;
+using CuMusicClub.Application.Services.Song;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace CuMusicClub.Web.Endpoints.v1.Songs;
