@@ -1,7 +1,7 @@
 import type {UUID} from "node:crypto";
 
 export type UserProfile = {
-    id: string;
+    Id: UUID;
     email: string;
     name?: string;
     role: "admin" | "guest";
