@@ -26,12 +26,13 @@ public static partial class Auth
     }
 
     [EndpointSummary("Get auth session from deeplink. One time use")]
-    private static async Task<Results<Ok<AuthSessionDto>, BadRequest>> LoginDeeplink(ITelegramAuthService service,
+    private static async Task<Results<Ok<AuthSessionDto>, NoContent>> LoginDeeplink(ITelegramAuthService service,
         Guid deeplinkUid,
         CancellationToken cancellationToken)
     {
         var authSession = await service.GetDeeplink(deeplinkUid, cancellationToken);
-        if (authSession == null) return TypedResults.BadRequest();
+
+        if (authSession == null) return TypedResults.NoContent();
 
         return TypedResults.Ok(authSession);
     }
