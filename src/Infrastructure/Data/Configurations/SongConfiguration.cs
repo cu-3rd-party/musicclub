@@ -40,7 +40,11 @@ public class SongConfiguration : IEntityTypeConfiguration<Song>
             .HasColumnName("created_by");
         builder
             .Property(s => s.ThumbnailUrl)
-            .HasColumnName("thumbnail_url");
+            .HasColumnName("thumbnail_url")
+            .HasComment("DEPRECATED: SHOULD BE READONLY. USE thumbnail_data_entry_id");
+        builder
+            .Property(s => s.ThumbnailDataEntryId)
+            .HasColumnName("thumbnail_data_entry_id");
         builder
             .Property(s => s.IsFeatured)
             .HasColumnName("is_featured")
@@ -58,6 +62,12 @@ public class SongConfiguration : IEntityTypeConfiguration<Song>
             .HasOne(s => s.CreatedBy)
             .WithMany()
             .HasForeignKey(s => s.CreatedById)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder
+            .HasOne(s => s.ThumbnailDataEntry)
+            .WithMany()
+            .HasForeignKey(s => s.ThumbnailDataEntryId)
             .OnDelete(DeleteBehavior.SetNull);
     }
 }

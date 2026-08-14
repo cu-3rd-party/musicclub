@@ -13,6 +13,8 @@ public class Song
     public Guid? CreatedById { get; set; }
     public ApplicationUser? CreatedBy { get; set; }
     public string? ThumbnailUrl { get; set; }
+    public Guid? ThumbnailDataEntryId { get; set; }
+    public DataEntry? ThumbnailDataEntry { get; set; }
     public bool IsFeatured { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }

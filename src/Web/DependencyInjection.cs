@@ -1,3 +1,4 @@
+using CuMusicClub.Web.Backfill;
 using CuMusicClub.Web.Bot;
 using Microsoft.AspNetCore.Mvc;
 
@@ -24,5 +25,7 @@ public static class DependencyInjection
         builder.Services.Configure<BotOptions>(builder.Configuration.GetSection(BotOptions.SectionName));
         builder.Services.AddScoped<BotUpdateHandler>();
         builder.Services.AddHostedService<TelegramBotHostedService>();
+        builder.Services.AddHttpClient();
+        builder.Services.AddHostedService<ThumbnailBackfillHostedService>();
     }
 }
