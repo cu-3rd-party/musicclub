@@ -206,6 +206,7 @@
         >
             {#each songs as song (song.id)}
                 <SongCard
+                    songId={song.id}
                     title={song.title}
                     artist={song.artist}
                     description={song.description ?? undefined}

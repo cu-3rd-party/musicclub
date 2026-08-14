@@ -5,10 +5,13 @@
     import type {HTMLFormAttributes} from "svelte/elements";
     import {Label} from "$lib/components/ui/label";
     import {Badge} from "$lib/components/ui/badge";
+    import {goto} from "$app/navigation";
+    import {resolve} from "$app/paths";
 
     let {
         ref = $bindable(null),
         class: className,
+        songId,
         title,
         artist,
         description,
@@ -18,6 +21,7 @@
         totalAssignments = 0,
         ...restProps
     }: WithElementRef<HTMLFormAttributes> & {
+        songId: string,
         title: string,
         artist: string,
         description?: string,
@@ -26,9 +30,13 @@
         filledAssignments?: number,
         totalAssignments?: number,
     } = $props();
+
+    async function navigateToSong() {
+        await goto(resolve(`/app/songs/${songId}`));
+    }
 </script>
 
-<Card.Root class="relative w-full pt-0 {className}">
+<Card.Root class="relative w-full pt-0 {className}" onclick={navigateToSong} role="link" tabindex={0}>
     <div class="relative aspect-video">
         <img
             src={imageUrl}
