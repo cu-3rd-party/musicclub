@@ -5,8 +5,9 @@
     import * as Avatar from "$lib/components/ui/avatar";
     import {Separator} from "$lib/components/ui/separator";
     import {Skeleton} from "$lib/components/ui/skeleton";
-    import {getSong} from "$lib/api/songs";
-    import type {Song} from "$lib/songs/types";
+    import {getSong, joinSongRole, leaveSongRole} from "$lib/api/songs";
+    import type {Song, SongRole} from "$lib/songs/types";
+    import {getStoredAuthSession} from "$lib/auth/storage";
     import {
         ArrowLeft,
         ExternalLink,
@@ -14,12 +15,19 @@
         User,
         Music,
     } from "@lucide/svelte";
+    import type {UUID} from "node:crypto";
 
     let song = $state<Song | null>(null);
     let loading = $state(true);
     let error = $state<string | null>(null);
+    let actingRoleId = $state<string | null>(null);
 
-    const songId = $derived(page.params.id as string);
+    const songId = $derived(page.params.id as UUID);
+    const currentUser = $derived(getStoredAuthSession()?.user ?? null);
+
+    function isCurrentUserAssigned(role: SongRole): boolean {
+        return role.assignment !== null && currentUser !== null && role.assignment.user.id === currentUser.id;
+    }
 
     $effect(() => {
         const id = songId;
@@ -74,6 +82,26 @@
             month: "long",
             year: "numeric",
         });
+    }
+
+    async function handleRoleClick(role: SongRole) {
+        if (!song || !currentUser || actingRoleId) return;
+
+        actingRoleId = role.id;
+
+        try {
+            if (isCurrentUserAssigned(role)) {
+                const updated = await leaveSongRole(role.id);
+                song = updated;
+            } else if (!role.assignment) {
+                const updated = await joinSongRole(role.id);
+                song = updated;
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            actingRoleId = null;
+        }
     }
 </script>
 
@@ -151,12 +179,7 @@
                         class="h-full w-full object-cover"
                     />
                     {#if song.featured}
-                        <Badge
-                            class="absolute top-3 right-3 bg-yellow-500 text-white border-0"
-                        >
-                            <Star class="size-3 mr-1"/>
-                            Избранное
-                        </Badge>
+                        <Star class="absolute top-2 right-2 size-6"/>
                     {/if}
                 </div>
             {:else}
@@ -202,10 +225,16 @@
                     </h3>
                     <div class="space-y-2">
                         {#each song.roles as role}
-                            <div
-                                class="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                            {@const isYou = isCurrentUserAssigned(role)}
+                            {@const isVacant = !role.assignment}
+                            {@const canAct = (isVacant || isYou) && currentUser}
+                            <button
+                                type="button"
+                                class="flex w-full items-center justify-between p-3 rounded-lg bg-muted/50 text-left transition-colors {canAct ? 'hover:bg-muted cursor-pointer' : 'cursor-default'}"
+                                onclick={() => handleRoleClick(role)}
+                                disabled={!canAct || actingRoleId !== null}
                             >
-                                <div class="flex items-center gap-3">
+                                <span class="flex items-center gap-3">
                                     {#if role.assignment}
                                         <Avatar.Root class="size-8">
                                             <Avatar.Image
@@ -239,12 +268,16 @@
                                             </p>
                                         </div>
                                     {/if}
-                                </div>
+                                </span>
 
-                                <Badge variant={role.assignment ? "default" : "secondary"}>
-                                    {role.assignment ? "Занято" : "Свободно"}
-                                </Badge>
-                            </div>
+                                {#if isYou}
+                                    <Badge variant="ghost">Вы</Badge>
+                                {:else if role.assignment}
+                                    <Badge variant="default">Занято</Badge>
+                                {:else}
+                                    <Badge variant="secondary">Свободно</Badge>
+                                {/if}
+                            </button>
                         {/each}
                     </div>
                 </div>

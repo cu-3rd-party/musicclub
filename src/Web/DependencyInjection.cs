@@ -27,5 +27,6 @@ public static class DependencyInjection
         builder.Services.AddHostedService<TelegramBotHostedService>();
         builder.Services.AddHttpClient();
         builder.Services.AddHostedService<ThumbnailBackfillHostedService>();
+        builder.Services.AddHostedService<PermissionsBackfillHostedService>();
     }
 }

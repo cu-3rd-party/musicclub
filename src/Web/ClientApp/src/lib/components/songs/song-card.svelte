@@ -1,6 +1,6 @@
 <script lang="ts">
     import * as Card from "$lib/components/ui/card";
-    import {Star} from "@lucide/svelte";
+    import {Music, Star} from "@lucide/svelte";
     import type {WithElementRef} from "bits-ui";
     import type {HTMLFormAttributes} from "svelte/elements";
     import {Label} from "$lib/components/ui/label";
@@ -38,11 +38,17 @@
 
 <Card.Root class="relative w-full pt-0 {className}" onclick={navigateToSong} role="link" tabindex={0}>
     <div class="relative aspect-video">
-        <img
-            src={imageUrl}
-            alt="placeholder"
-            class="h-full w-full object-cover"
-        />
+        {#if imageUrl}
+            <img
+                src={imageUrl}
+                alt="placeholder"
+                class="h-full w-full object-cover"
+            />
+        {:else}
+            <div class="w-full h-full bg-muted flex items-center justify-center">
+                <Music class="size-12 text-muted-foreground"/>
+            </div>
+        {/if}
 
         <div class="absolute inset-0">
             {#if featured}

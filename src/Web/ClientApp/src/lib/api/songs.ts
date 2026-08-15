@@ -64,7 +64,7 @@ export async function deleteSong(
 
 export async function joinSongRole(
     roleId: UUID,
-    payload: RolePayload,
+    payload?: RolePayload,
 ): Promise<Song> {
     const response = await api.post<Song>(
         `/api/v1/songs/roles/${roleId}/join`,
@@ -76,7 +76,7 @@ export async function joinSongRole(
 
 export async function leaveSongRole(
     roleId: UUID,
-    payload: RolePayload,
+    payload?: RolePayload,
 ): Promise<Song> {
     const response = await api.post<Song>(
         `/api/v1/songs/roles/${roleId}/leave`,
