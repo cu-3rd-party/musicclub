@@ -14,7 +14,7 @@
 </script>
 
 <div class="flex h-screen flex-col">
-    <main class="min-h-0 flex-1 overflow-y-auto">
+    <main class="min-h-0 flex-1 overflow-y-auto" id="app-container">
         {@render children?.()}
     </main>
 

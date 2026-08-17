@@ -3,28 +3,20 @@
     import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
     import {
         ArrowUp,
-        ClipboardPaste,
         Ellipsis,
-        Link,
-        MessageSquare,
-        MicVocal,
-        Music2,
-        Pencil,
-        Plus,
         SearchIcon,
-        Settings,
-        User
+        X,
+        Funnel
     } from "@lucide/svelte";
     import {Checkbox} from "$lib/components/ui/checkbox";
     import SongCard from "$lib/components/songs/song-card.svelte";
-    import {Button, buttonVariants} from "$lib/components/ui/button";
+    import {Button} from "$lib/components/ui/button";
     import {getSongs} from "$lib/api/songs";
     import type {Song} from "$lib/songs/types";
     import {page} from "$app/state";
     import {goto} from "$app/navigation";
     import TextType from "$lib/components/songs/text-type.svelte";
-    import * as Dialog from "$lib/components/ui/dialog"
-    import {Separator} from "$lib/components/ui/separator";
+    import * as Dialog from "$lib/components/ui/dialog";
     import CreateSong from "$lib/components/create-song.svelte";
 
     let showScrollTop = $state(false);
@@ -33,7 +25,153 @@
     let loading = $state(true);
     let error = $state<string | null>(null);
 
+    let favoriteFirst = $state(false);
+    let showFull = $state(false);
+    let rolesDialogOpen = $state(false);
+    let selectedRoleTitles = $state<Set<string>>(new Set());
+
     const searchQuery = $derived(page.url.searchParams.get("q") ?? "");
+
+    const allRoleTitles = $derived(
+        Array.from(
+            new Set(
+                songs.flatMap((song) =>
+                    song.roles.map((role) => role.title)
+                )
+            )
+        ).sort()
+    );
+
+    const filteredSongs = $derived(
+        (() => {
+            let result = [...songs];
+
+            if (favoriteFirst) {
+                result.sort((a, b) =>
+                    b.featured === a.featured ? 0 : b.featured ? 1 : -1
+                );
+            }
+
+            if (!showFull) {
+                result = result.filter(
+                    (song) =>
+                        song.roles.length === 0 ||
+                        song.roles.some(
+                            (role) => role.assignment === null
+                        )
+                );
+            }
+
+            if (selectedRoleTitles.size > 0) {
+                result = result.filter((song) =>
+                    song.roles.some(
+                        (role) =>
+                            selectedRoleTitles.has(role.title) &&
+                            role.assignment === null
+                    )
+                );
+            }
+
+            return result;
+        })()
+    );
+
+    function updateFilterUrl(
+        updates: {
+            q?: string | null;
+            roles?: Set<string> | null;
+            favoriteFirst?: boolean | null;
+            showFull?: boolean | null;
+        }
+    ) {
+        const url = new URL(page.url);
+
+        if ("q" in updates) {
+            const query = updates.q?.trim() ?? "";
+
+            if (query) {
+                url.searchParams.set("q", query);
+            } else {
+                url.searchParams.delete("q");
+            }
+        }
+
+        if ("roles" in updates) {
+            url.searchParams.delete("roles");
+
+            if (updates.roles && updates.roles.size > 0) {
+                for (const role of updates.roles) {
+                    url.searchParams.append("roles", role);
+                }
+            }
+        }
+
+        if ("favoriteFirst" in updates) {
+            if (updates.favoriteFirst) {
+                url.searchParams.set("favoriteFirst", "1");
+            } else {
+                url.searchParams.delete("favoriteFirst");
+            }
+        }
+
+        if ("showFull" in updates) {
+            if (updates.showFull) {
+                url.searchParams.set("showFull", "1");
+            } else {
+                url.searchParams.delete("showFull");
+            }
+        }
+
+        goto(`${url.pathname}${url.search}`, {
+            replaceState: true,
+            noScroll: true,
+            keepFocus: true
+        });
+    }
+
+    function toggleRoleTitle(title: string, checked: boolean) {
+        const newSet = new Set(selectedRoleTitles);
+
+        if (checked) {
+            newSet.add(title);
+        } else {
+            newSet.delete(title);
+        }
+
+        selectedRoleTitles = newSet;
+
+        updateFilterUrl({
+            roles: newSet
+        });
+    }
+
+    function clearRoleFilters() {
+        selectedRoleTitles = new Set();
+
+        updateFilterUrl({
+            roles: new Set()
+        });
+    }
+
+    function hasActiveRoleFilters() {
+        return selectedRoleTitles.size > 0;
+    }
+
+    function setFavoriteFirst(value: boolean) {
+        favoriteFirst = value;
+
+        updateFilterUrl({
+            favoriteFirst: value
+        });
+    }
+
+    function setShowFull(value: boolean) {
+        showFull = value;
+
+        updateFilterUrl({
+            showFull: value
+        });
+    }
 
     function observe(element: HTMLElement) {
         const observer = new IntersectionObserver(
@@ -41,8 +179,8 @@
                 showScrollTop = !entry.isIntersecting;
             },
             {
-                threshold: 0,
-            },
+                threshold: 0
+            }
         );
 
         observer.observe(element);
@@ -50,14 +188,14 @@
         return {
             destroy() {
                 observer.disconnect();
-            },
+            }
         };
     }
 
     function scrollToTop() {
-        window.scrollTo({
+        document.getElementById("app-container").scrollTo({
             top: 0,
-            behavior: "smooth",
+            behavior: "smooth"
         });
     }
 
@@ -69,26 +207,23 @@
         clearTimeout(searchTimer);
 
         searchTimer = setTimeout(() => {
-            const query = value.trim();
-
-            const url = new URL(page.url);
-
-            if (query) {
-                url.searchParams.set("q", query);
-            } else {
-                url.searchParams.delete("q");
-            }
-
-            goto(`${url.pathname}${url.search}`, {
-                replaceState: true,
-                noScroll: true,
-                keepFocus: true,
+            updateFilterUrl({
+                q: value
             });
         }, 300);
     }
 
+    // Восстанавливаем все фильтры из URL.
     $effect(() => {
-        searchInput = searchQuery;
+        const params = page.url.searchParams;
+
+        searchInput = params.get("q") ?? "";
+
+        const roles = params.getAll("roles");
+        selectedRoleTitles = new Set(roles);
+
+        favoriteFirst = params.get("favoriteFirst") === "1";
+        showFull = params.get("showFull") === "1";
     });
 
     $effect(() => {
@@ -103,7 +238,7 @@
             try {
                 const result = await getSongs({
                     query: query || undefined,
-                    pageSize: 24,
+                    pageSize: 24
                 });
 
                 if (!cancelled) {
@@ -158,20 +293,67 @@
                         {/snippet}
                     </DropdownMenu.Trigger>
 
-                    <DropdownMenu.Content align="end">
-                        <DropdownMenu.Item>
-                            <Settings/>
-                            Роли
+                    <DropdownMenu.Content align="end" class="w-56">
+                        <DropdownMenu.Item
+                            class="justify-between"
+                            onclick={(e) => e.preventDefault()}
+                        >
+                            <button
+                                type="button"
+                                class="flex flex-1 items-center gap-1.5"
+                                onclick={(e) => {
+                                    e.stopPropagation();
+                                    rolesDialogOpen = true;
+                                }}
+                            >
+                                <Funnel/>
+
+                                <span>Свободные роли</span>
+
+                                {#if selectedRoleTitles.size !== 0}
+                                    <span>
+                                        ({selectedRoleTitles.size})
+                                    </span>
+                                {/if}
+                            </button>
+
+                            {#if hasActiveRoleFilters()}
+                                <button
+                                    type="button"
+                                    class="ml-2 flex size-5 items-center justify-center rounded-sm hover:bg-muted"
+                                    onclick={(e) => {
+                                        e.stopPropagation();
+                                        clearRoleFilters();
+                                    }}
+                                    aria-label="Очистить фильтр ролей"
+                                >
+                                    <X class="size-4"/>
+                                </button>
+                            {/if}
                         </DropdownMenu.Item>
 
-                        <DropdownMenu.Item>
-                            <Checkbox checked={true}/>
-                            Сначала Избранные
+                        <DropdownMenu.Item
+                            onclick={() => setFavoriteFirst(!favoriteFirst)}
+                        >
+                            <Checkbox
+                                checked={favoriteFirst}
+                            />
+
+                            <span class="text-sm">
+								Сначала избранные
+							</span>
                         </DropdownMenu.Item>
 
-                        <DropdownMenu.Item>
-                            <Checkbox/>
-                            Заполненные
+                        <DropdownMenu.Item
+                            onclick={() => setShowFull(!showFull)}
+                        >
+                            <Checkbox
+                                checked={showFull}
+                            />
+
+                            <span class="text-sm">
+								Показывать заполненные
+							</span>
                         </DropdownMenu.Item>
                     </DropdownMenu.Content>
                 </DropdownMenu.Root>
@@ -204,7 +386,7 @@
         <div
             class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
         >
-            {#each songs as song (song.id)}
+            {#each filteredSongs as song (song.id)}
                 <SongCard
                     songId={song.id}
                     title={song.title}
@@ -213,7 +395,7 @@
                     imageUrl={song.thumbnailUrl ?? undefined}
                     featured={song.featured}
                     filledAssignments={song.roles.filter(
-						(role) => role.assignment !== null,
+						(role) => role.assignment !== null
 					).length}
                     totalAssignments={song.roles.length}
                 />
@@ -232,5 +414,62 @@
         </Button>
     {/if}
 
-    <CreateSong class="fixed right-4 bottom-18 z-50 shadow-lg"></CreateSong>
+    <CreateSong
+        class="fixed right-4 bottom-18 z-50 shadow-lg"
+    />
+
+    <Dialog.Root bind:open={rolesDialogOpen}>
+        <Dialog.Portal>
+            <Dialog.Content>
+                <Dialog.Header>
+                    <Dialog.Title class="text-lg font-semibold">
+                        Фильтр по ролям
+                    </Dialog.Title>
+
+                    <Dialog.Description
+                        class="text-sm text-muted-foreground"
+                    >
+                        Выберите роли, которые должны быть свободны.
+                        Будут показаны песни, где выбранные роли не
+                        заняты.
+                    </Dialog.Description>
+                </Dialog.Header>
+
+                <div class="grid gap-2 max-h-80 overflow-y-auto">
+                    {#each allRoleTitles as title}
+                        <label
+                            class="flex items-center gap-2 cursor-pointer"
+                        >
+                            <Checkbox
+                                checked={selectedRoleTitles.has(title)}
+                                onCheckedChange={(checked) =>
+									toggleRoleTitle(title, checked)}
+                            />
+
+                            <span class="text-sm">
+								{title}
+							</span>
+                        </label>
+                    {/each}
+
+                    {#if allRoleTitles.length === 0}
+                        <p
+                            class="text-sm text-muted-foreground text-center py-4"
+                        >
+                            Ролей пока нет
+                        </p>
+                    {/if}
+                </div>
+
+                <Dialog.Footer>
+                    <Button
+                        type="button"
+                        onclick={() => (rolesDialogOpen = false)}
+                    >
+                        Готово
+                    </Button>
+                </Dialog.Footer>
+            </Dialog.Content>
+        </Dialog.Portal>
+    </Dialog.Root>
 </main>

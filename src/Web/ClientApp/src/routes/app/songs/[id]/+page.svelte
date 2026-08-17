@@ -8,13 +8,7 @@
     import {getSong, joinSongRole, leaveSongRole} from "$lib/api/songs";
     import type {Song, SongRole} from "$lib/songs/types";
     import {getStoredAuthSession} from "$lib/auth/storage";
-    import {
-        ArrowLeft,
-        ExternalLink,
-        Star,
-        User,
-        Music,
-    } from "@lucide/svelte";
+    import {ArrowLeft, ExternalLink, Music, Star, User,} from "@lucide/svelte";
     import type {UUID} from "node:crypto";
 
     let song = $state<Song | null>(null);
@@ -63,10 +57,6 @@
         };
     });
 
-    function handleBack() {
-        history.back();
-    }
-
     function getInitials(name: string): string {
         return name
             .split(" ")
@@ -91,11 +81,9 @@
 
         try {
             if (isCurrentUserAssigned(role)) {
-                const updated = await leaveSongRole(role.id);
-                song = updated;
+                song = await leaveSongRole(role.id);
             } else if (!role.assignment) {
-                const updated = await joinSongRole(role.id);
-                song = updated;
+                song = await joinSongRole(role.id);
             }
         } catch (err) {
             console.error(err);
@@ -111,7 +99,7 @@
             <Button
                 variant="ghost"
                 size="icon"
-                onclick={handleBack}
+                onclick={() => history.back()}
                 aria-label="Назад"
             >
                 <ArrowLeft class="size-5"/>
