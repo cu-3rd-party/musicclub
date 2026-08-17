@@ -6,5 +6,5 @@ public interface IAuthService
 {
     Task<AuthSessionDto> CreateAuthSession(ApplicationUser user, CancellationToken cancellationToken);
 
-    Task<TokenPairDto> RefreshSession(string refreshToken, CancellationToken cancellationToken);
+    TokenPairDto? RefreshSession(string refreshToken, CancellationToken cancellationToken);
 }

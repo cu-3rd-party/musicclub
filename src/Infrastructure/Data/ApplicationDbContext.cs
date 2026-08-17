@@ -48,6 +48,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         get { return Set<TgAuthLink>(); }
     }
 
+    public DbSet<DataEntry> DataEntries
+    {
+        get { return Set<DataEntry>(); }
+    }
+
     IQueryable<ApplicationUser> IApplicationDbContext.Users
     {
         get { return Users; }
@@ -86,6 +91,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     IQueryable<TgAuthLink> IApplicationDbContext.TgAuthLinks
     {
         get { return TgAuthLinks; }
+    }
+
+    IQueryable<DataEntry> IApplicationDbContext.DataEntries
+    {
+        get { return DataEntries; }
     }
 
     void IApplicationDbContext.Add(object entity)

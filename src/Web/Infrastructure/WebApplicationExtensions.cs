@@ -1,5 +1,6 @@
 using CuMusicClub.Web.Endpoints;
 using CuMusicClub.Web.Endpoints.v1.Auth;
+using CuMusicClub.Web.Endpoints.v1.Data;
 using CuMusicClub.Web.Endpoints.v1.Songs;
 
 namespace CuMusicClub.Web.Infrastructure;
@@ -10,15 +11,17 @@ public static class WebApplicationExtensions
     {
         var v1 = app.MapGroup("/api/v1");
 
-        var auth = v1
+        Auth.Map(v1
             .MapGroup("/auth")
-            .WithTags("Auth");
-        Auth.Map(auth);
+            .WithTags("Auth"));
 
-        var songs = v1
+        Songs.Map(v1
             .MapGroup("/songs")
-            .WithTags("Songs");
-        Songs.Map(songs);
+            .WithTags("Songs"));
+
+        Data.Map(v1
+            .MapGroup("/data")
+            .WithTags("Data"));
 
         return app;
     }

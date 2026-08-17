@@ -4,6 +4,7 @@ using CuMusicClub.Application.Services.Auth;
 using CuMusicClub.Application.Services.Permission;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Infrastructure.Options;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -45,7 +46,7 @@ public class AuthService(IOptions<SecurityOptions> securityOptions, IPermissionS
         return session;
     }
 
-    public Task<TokenPairDto> RefreshSession(string refreshToken, CancellationToken cancellationToken)
+    public TokenPairDto? RefreshSession(string refreshToken, CancellationToken cancellationToken)
     {
         var handler = new JwtSecurityTokenHandler();
 
@@ -64,7 +65,7 @@ public class AuthService(IOptions<SecurityOptions> securityOptions, IPermissionS
         var userId = principal.FindFirst(JwtRegisteredClaimNames.Sub)
             ?.Value;
 
-        if (string.IsNullOrWhiteSpace(userId)) throw new SecurityTokenException("Refresh token has no sub claim.");
+        if (string.IsNullOrWhiteSpace(userId)) return null;
 
         var now = DateTimeOffset.UtcNow;
 
@@ -80,7 +81,7 @@ public class AuthService(IOptions<SecurityOptions> securityOptions, IPermissionS
         var newAccessToken = CreateToken(claims, now, AccessTokenTtl);
         var newRefreshToken = CreateToken(claims, now, RefreshTokenTtl);
 
-        return Task.FromResult(new TokenPairDto(newAccessToken, newRefreshToken, now + AccessTokenTtl));
+        return new TokenPairDto(newAccessToken, newRefreshToken, now + AccessTokenTtl);
     }
 
     private string CreateToken(IEnumerable<Claim> claims, DateTimeOffset issuedAt, TimeSpan ttl)

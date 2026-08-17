@@ -72,8 +72,8 @@ public sealed class ThumbnailBackfillHostedService(
         while (!cancellationToken.IsCancellationRequested)
         {
             var songs = await db
-                .Songs
-                .Where(s => s.ThumbnailDataEntryId == null && s.ThumbnailUrl != null && s.ThumbnailUrl.Trim() != "")
+                .Songs.Where(s =>
+                    s.ThumbnailDataEntryId == null && s.ThumbnailUrl != null && s.ThumbnailUrl.Trim() != "")
                 .OrderBy(s => s.Id)
                 .Take(BatchSize)
                 .ToListAsync(cancellationToken);
@@ -91,13 +91,17 @@ public sealed class ThumbnailBackfillHostedService(
                     !Uri.TryCreate(trimmedUrl, UriKind.Absolute, out var uri) ||
                     uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)
                 {
-                    logger.LogWarning("Skipping song {SongId} ({Title}): invalid thumbnail URL '{Url}'", song.Id, song.Title, song.ThumbnailUrl);
+                    logger.LogWarning("Skipping song {SongId} ({Title}): invalid thumbnail URL '{Url}'",
+                        song.Id,
+                        song.Title,
+                        song.ThumbnailUrl);
                     continue;
                 }
 
                 try
                 {
                     var dataEntry = await GetOrCreateDataEntryAsync(db, trimmedUrl, cancellationToken);
+                    song.ThumbnailUrl = $"/data/{dataEntry.Id}";
                     song.ThumbnailDataEntryId = dataEntry.Id;
                     succeeded++;
                     logger.LogDebug("Migrated thumbnail for song {SongId} ({Title})", song.Id, song.Title);
@@ -127,7 +131,9 @@ public sealed class ThumbnailBackfillHostedService(
                 failed);
     }
 
-    private async Task<DataEntry> GetOrCreateDataEntryAsync(ApplicationDbContext db, string url, CancellationToken cancellationToken)
+    private async Task<DataEntry> GetOrCreateDataEntryAsync(ApplicationDbContext db,
+        string url,
+        CancellationToken cancellationToken)
     {
         using var response = await _httpClient.GetAsync(
             url,
@@ -147,14 +153,11 @@ public sealed class ThumbnailBackfillHostedService(
 
         var content = await response.Content.ReadAsByteArrayAsync(cancellationToken);
 
-        if (content.Length == 0)
-            throw new InvalidOperationException($"Thumbnail response from '{url}' is empty.");
+        if (content.Length == 0) throw new InvalidOperationException($"Thumbnail response from '{url}' is empty.");
 
         var hash = SHA256.HashData(content);
 
-        var existing = await db
-            .Set<DataEntry>()
-            .SingleOrDefaultAsync(x => x.Hash == hash, cancellationToken);
+        var existing = await db.DataEntries.SingleOrDefaultAsync(x => x.Hash == hash, cancellationToken);
 
         if (existing is not null) return existing;
 
@@ -169,7 +172,7 @@ public sealed class ThumbnailBackfillHostedService(
             Size = content.Length,
         };
 
-        db.Set<DataEntry>().Add(dataEntry);
+        db.DataEntries.Add(dataEntry);
 
         return dataEntry;
     }
