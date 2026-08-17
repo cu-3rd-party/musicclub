@@ -17,7 +17,7 @@
     import {goto} from "$app/navigation";
     import TextType from "$lib/components/songs/text-type.svelte";
     import * as Dialog from "$lib/components/ui/dialog";
-    import CreateSong from "$lib/components/create-song.svelte";
+    import CreateSong from "$lib/components/songs/create-song.svelte";
 
     let showScrollTop = $state(false);
 
