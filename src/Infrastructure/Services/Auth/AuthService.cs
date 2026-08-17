@@ -48,6 +48,7 @@ public class AuthService(IOptions<SecurityOptions> securityOptions, IPermissionS
     public Task<TokenPairDto> RefreshSession(string refreshToken, CancellationToken cancellationToken)
     {
         var handler = new JwtSecurityTokenHandler();
+
         var parameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
@@ -59,23 +60,27 @@ public class AuthService(IOptions<SecurityOptions> securityOptions, IPermissionS
         };
 
         var principal = handler.ValidateToken(refreshToken, parameters, out _);
+
+        var userId = principal.FindFirst(JwtRegisteredClaimNames.Sub)
+            ?.Value;
+
+        if (string.IsNullOrWhiteSpace(userId)) throw new SecurityTokenException("Refresh token has no sub claim.");
+
         var now = DateTimeOffset.UtcNow;
 
-        var newClaims = principal
-            .Claims.Where(c => c.Type is JwtRegisteredClaimNames.Sub or JwtRegisteredClaimNames.Jti)
-            .Select(c => c.Type == JwtRegisteredClaimNames.Jti
-                ? new Claim(JwtRegisteredClaimNames.Jti,
-                    Guid
-                        .NewGuid()
-                        .ToString())
-                : new Claim(c.Type, c.Value))
-            .ToList();
+        var claims = new[]
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, userId),
+            new Claim(JwtRegisteredClaimNames.Jti,
+                Guid
+                    .NewGuid()
+                    .ToString()),
+        };
 
-        var newAccessToken = CreateToken(newClaims, now, AccessTokenTtl);
-        var newRefreshToken = CreateToken(newClaims, now, RefreshTokenTtl);
+        var newAccessToken = CreateToken(claims, now, AccessTokenTtl);
+        var newRefreshToken = CreateToken(claims, now, RefreshTokenTtl);
 
-        var tokenPair = new TokenPairDto(newAccessToken, newRefreshToken, now + AccessTokenTtl);
-        return Task.FromResult(tokenPair);
+        return Task.FromResult(new TokenPairDto(newAccessToken, newRefreshToken, now + AccessTokenTtl));
     }
 
     private string CreateToken(IEnumerable<Claim> claims, DateTimeOffset issuedAt, TimeSpan ttl)

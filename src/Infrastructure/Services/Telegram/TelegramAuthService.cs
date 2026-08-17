@@ -84,11 +84,6 @@ public class TelegramAuthService(
         return await authService.CreateAuthSession(user, cancellationToken);
     }
 
-    public async Task<TokenPairDto> RefreshAsync(string refreshToken, CancellationToken cancellationToken)
-    {
-        return await authService.RefreshSession(refreshToken, cancellationToken);
-    }
-
     public async Task<TelegramDto> CreateDeeplink(CancellationToken cancellationToken)
     {
         var link = new TgAuthLink();

@@ -20,17 +20,24 @@
     import CreateSong from "$lib/components/create-song.svelte";
 
     let showScrollTop = $state(false);
+
     let searchInput = $state("");
     let songs = $state<Song[]>([]);
+
     let loading = $state(true);
+    let loadingMore = $state(false);
     let error = $state<string | null>(null);
+
+    let nextPageToken = $state<string | null>(null);
 
     let favoriteFirst = $state(false);
     let showFull = $state(false);
     let rolesDialogOpen = $state(false);
     let selectedRoleTitles = $state<Set<string>>(new Set());
 
-    const searchQuery = $derived(page.url.searchParams.get("q") ?? "");
+    const searchQuery = $derived(
+        page.url.searchParams.get("q") ?? ""
+    );
 
     const allRoleTitles = $derived(
         Array.from(
@@ -48,7 +55,11 @@
 
             if (favoriteFirst) {
                 result.sort((a, b) =>
-                    b.featured === a.featured ? 0 : b.featured ? 1 : -1
+                    b.featured === a.featured
+                        ? 0
+                        : b.featured
+                            ? 1
+                            : -1
                 );
             }
 
@@ -174,11 +185,15 @@
     }
 
     function observe(element: HTMLElement) {
+        const scrollContainer =
+            document.getElementById("app-container");
+
         const observer = new IntersectionObserver(
             ([entry]) => {
                 showScrollTop = !entry.isIntersecting;
             },
             {
+                root: scrollContainer,
                 threshold: 0
             }
         );
@@ -193,10 +208,75 @@
     }
 
     function scrollToTop() {
-        document.getElementById("app-container").scrollTo({
+        document.getElementById("app-container")?.scrollTo({
             top: 0,
             behavior: "smooth"
         });
+    }
+
+    /*
+     * Sentinel для infinite scroll.
+     *
+     * Когда он появляется в пределах scroll-контейнера,
+     * загружаем следующую страницу.
+     */
+    function observeLoadMore(element: HTMLElement) {
+        const scrollContainer =
+            document.getElementById("app-container");
+
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    loadMoreSongs();
+                }
+            },
+            {
+                root: scrollContainer,
+                threshold: 0,
+                rootMargin: "800px"
+            }
+        );
+
+        observer.observe(element);
+
+        return {
+            destroy() {
+                observer.disconnect();
+            }
+        };
+    }
+
+    async function loadMoreSongs() {
+        if (
+            loading ||
+            loadingMore ||
+            !nextPageToken
+        ) {
+            return;
+        }
+
+        loadingMore = true;
+
+        try {
+            const result = await getSongs({
+                query: searchQuery || undefined,
+                pageSize: 24,
+                pageToken: nextPageToken
+            });
+
+            const existingIds = new Set(songs.map((song) => song.id));
+
+            const newSongs = result.songs.filter(
+                (song) => !existingIds.has(song.id)
+            );
+
+            songs = [...songs, ...newSongs];
+            nextPageToken = result.nextPageToken;
+        } catch (err) {
+            console.error("Не удалось загрузить следующую страницу", err);
+        } finally {
+            loadingMore = false;
+        }
     }
 
     let searchTimer: ReturnType<typeof setTimeout>;
@@ -213,7 +293,7 @@
         }, 300);
     }
 
-    // Восстанавливаем все фильтры из URL.
+    // Восстанавливаем фильтры из URL.
     $effect(() => {
         const params = page.url.searchParams;
 
@@ -222,10 +302,19 @@
         const roles = params.getAll("roles");
         selectedRoleTitles = new Set(roles);
 
-        favoriteFirst = params.get("favoriteFirst") === "1";
-        showFull = params.get("showFull") === "1";
+        favoriteFirst =
+            params.get("favoriteFirst") === "1";
+
+        showFull =
+            params.get("showFull") === "1";
     });
 
+    /*
+     * Загружаем первую страницу.
+     *
+     * Этот effect зависит от searchQuery, поэтому при изменении
+     * поискового запроса список сбрасывается и начинается заново.
+     */
     $effect(() => {
         const query = searchQuery;
 
@@ -235,6 +324,10 @@
             loading = true;
             error = null;
 
+            // Сбрасываем pagination перед новой первой страницей.
+            songs = [];
+            nextPageToken = null;
+
             try {
                 const result = await getSongs({
                     query: query || undefined,
@@ -243,6 +336,7 @@
 
                 if (!cancelled) {
                     songs = result.songs;
+                    nextPageToken = result.nextPageToken;
                 }
             } catch (err) {
                 if (!cancelled) {
@@ -275,7 +369,9 @@
                 placeholder="Название песни"
                 value={searchInput}
                 oninput={(event) =>
-					handleSearchInput(event.currentTarget.value)}
+					handleSearchInput(
+						event.currentTarget.value
+					)}
             />
 
             <InputGroup.Addon align="inline-end">
@@ -293,7 +389,10 @@
                         {/snippet}
                     </DropdownMenu.Trigger>
 
-                    <DropdownMenu.Content align="end" class="w-56">
+                    <DropdownMenu.Content
+                        align="end"
+                        class="w-56"
+                    >
                         <DropdownMenu.Item
                             class="justify-between"
                             onclick={(e) => e.preventDefault()}
@@ -302,18 +401,20 @@
                                 type="button"
                                 class="flex flex-1 items-center gap-1.5"
                                 onclick={(e) => {
-                                    e.stopPropagation();
-                                    rolesDialogOpen = true;
-                                }}
+									e.stopPropagation();
+									rolesDialogOpen = true;
+								}}
                             >
                                 <Funnel/>
 
-                                <span>Свободные роли</span>
+                                <span>
+									Свободные роли
+								</span>
 
                                 {#if selectedRoleTitles.size !== 0}
-                                    <span>
-                                        ({selectedRoleTitles.size})
-                                    </span>
+									<span>
+										({selectedRoleTitles.size})
+									</span>
                                 {/if}
                             </button>
 
@@ -322,9 +423,9 @@
                                     type="button"
                                     class="ml-2 flex size-5 items-center justify-center rounded-sm hover:bg-muted"
                                     onclick={(e) => {
-                                        e.stopPropagation();
-                                        clearRoleFilters();
-                                    }}
+										e.stopPropagation();
+										clearRoleFilters();
+									}}
                                     aria-label="Очистить фильтр ролей"
                                 >
                                     <X class="size-4"/>
@@ -333,7 +434,10 @@
                         </DropdownMenu.Item>
 
                         <DropdownMenu.Item
-                            onclick={() => setFavoriteFirst(!favoriteFirst)}
+                            onclick={() =>
+								setFavoriteFirst(
+									!favoriteFirst
+								)}
                         >
                             <Checkbox
                                 checked={favoriteFirst}
@@ -345,7 +449,8 @@
                         </DropdownMenu.Item>
 
                         <DropdownMenu.Item
-                            onclick={() => setShowFull(!showFull)}
+                            onclick={() =>
+								setShowFull(!showFull)}
                         >
                             <Checkbox
                                 checked={showFull}
@@ -372,14 +477,21 @@
     {:else if songs.length === 0}
         <div class="py-8 text-center text-muted-foreground">
             <TextType
-                text={searchQuery ? "404 NOT FOUND" : "204 NO CONTENT "}
+                text={
+					searchQuery
+						? "404 NOT FOUND"
+						: "204 NO CONTENT "
+				}
                 typingSpeed={100}
                 deletingSpeed={50}
                 showCursor={true}
                 loop={false}
                 cursorCharacter="▎"
                 cursorBlinkDuration={0.5}
-                variableSpeed={{ min: 60, max: 120 }}
+                variableSpeed={{
+					min: 60,
+					max: 120
+				}}
             />
         </div>
     {:else}
@@ -391,16 +503,39 @@
                     songId={song.id}
                     title={song.title}
                     artist={song.artist}
-                    description={song.description ?? undefined}
-                    imageUrl={song.thumbnailUrl ?? undefined}
+                    description={
+						song.description ?? undefined
+					}
+                    imageUrl={
+						song.thumbnailUrl ?? undefined
+					}
                     featured={song.featured}
                     filledAssignments={song.roles.filter(
-						(role) => role.assignment !== null
+						(role) =>
+							role.assignment !== null
 					).length}
                     totalAssignments={song.roles.length}
                 />
             {/each}
         </div>
+
+        <!--
+            Sentinel находится после списка.
+            rootMargin 400px означает, что следующая страница
+            начнёт грузиться ещё до того, как пользователь
+            достигнет самого низа.
+        -->
+        <div
+            class="h-1 w-full shrink-0"
+            use:observeLoadMore
+            aria-hidden="true"
+        ></div>
+
+        {#if loadingMore}
+            <div class="py-6 text-center text-sm text-muted-foreground">
+                Загрузка...
+            </div>
+        {/if}
     {/if}
 
     {#if showScrollTop}
@@ -429,21 +564,28 @@
                     <Dialog.Description
                         class="text-sm text-muted-foreground"
                     >
-                        Выберите роли, которые должны быть свободны.
-                        Будут показаны песни, где выбранные роли не
-                        заняты.
+                        Выберите роли, которые должны быть
+                        свободны. Будут показаны песни, где
+                        выбранные роли не заняты.
                     </Dialog.Description>
                 </Dialog.Header>
 
-                <div class="grid gap-2 max-h-80 overflow-y-auto">
+                <div
+                    class="grid gap-2 max-h-80 overflow-y-auto"
+                >
                     {#each allRoleTitles as title}
                         <label
                             class="flex items-center gap-2 cursor-pointer"
                         >
                             <Checkbox
-                                checked={selectedRoleTitles.has(title)}
+                                checked={selectedRoleTitles.has(
+									title
+								)}
                                 onCheckedChange={(checked) =>
-									toggleRoleTitle(title, checked)}
+									toggleRoleTitle(
+										title,
+										checked
+									)}
                             />
 
                             <span class="text-sm">
@@ -464,7 +606,8 @@
                 <Dialog.Footer>
                     <Button
                         type="button"
-                        onclick={() => (rolesDialogOpen = false)}
+                        onclick={() =>
+							(rolesDialogOpen = false)}
                     >
                         Готово
                     </Button>

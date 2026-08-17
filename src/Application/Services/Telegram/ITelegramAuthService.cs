@@ -26,11 +26,6 @@ public interface ITelegramAuthService
     Task<AuthSessionDto> AuthenticateAsync(string initData, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Exchanges a refresh token for a new token pair.
-    /// </summary>
-    Task<TokenPairDto> RefreshAsync(string refreshToken, CancellationToken cancellationToken);
-
-    /// <summary>
     /// Create a deeplink to auth the user
     /// </summary>
     /// <param name="cancellationToken"></param>
