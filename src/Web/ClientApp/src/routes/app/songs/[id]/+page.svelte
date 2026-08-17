@@ -104,11 +104,6 @@
             >
                 <ArrowLeft class="size-5"/>
             </Button>
-            <!--{#if loading}-->
-            <!--    <Skeleton class="h-6 w-48"/>-->
-            <!--{:else if song}-->
-            <!--    <h1 class="text-lg font-semibold truncate">{song.title}</h1>-->
-            <!--{/if}-->
         </div>
     </div>
 
@@ -159,30 +154,30 @@
                 {error}
             </div>
         {:else if song}
-            {#if song.thumbnailUrl}
-                <div class="relative aspect-video w-full">
-                    <img
-                        src={song.thumbnailUrl}
-                        alt={song.title}
-                        class="h-full w-full object-cover"
-                    />
-                    {#if song.featured}
-                        <Star class="absolute top-2 right-2 size-6"/>
-                    {/if}
-                </div>
-            {:else}
-                <div class="relative aspect-video w-full bg-muted flex items-center justify-center">
-                    <Music class="size-12 text-muted-foreground"/>
-                    {#if song.featured}
-                        <Badge
-                            class="absolute top-3 right-3 bg-yellow-500 text-white border-0"
-                        >
-                            <Star class="size-3 mr-1"/>
-                            Избранное
-                        </Badge>
-                    {/if}
-                </div>
-            {/if}
+        {#if song.thumbnailUrl}
+            <div class="relative aspect-video w-full md:mx-auto md:max-w-3xl lg:max-w-4xl">
+                <img
+                    src={song.thumbnailUrl}
+                    alt={song.title}
+                    class="h-full w-full object-cover md:rounded-lg"
+                />
+                {#if song.featured}
+                    <Star class="absolute top-2 right-2 size-6"/>
+                {/if}
+            </div>
+        {:else}
+            <div class="relative aspect-video w-full bg-muted flex items-center justify-center md:mx-auto md:max-w-3xl lg:max-w-4xl md:rounded-lg">
+                <Music class="size-12 text-muted-foreground"/>
+                {#if song.featured}
+                    <Badge
+                        class="absolute top-3 right-3 bg-yellow-500 text-white border-0"
+                    >
+                        <Star class="size-3 mr-1"/>
+                        Избранное
+                    </Badge>
+                {/if}
+            </div>
+        {/if}
 
             <div class="p-4 space-y-4">
                 <div>
