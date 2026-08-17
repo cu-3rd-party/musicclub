@@ -271,11 +271,11 @@
                                 </span>
 
                                 {#if isYou}
-                                    <Badge variant="ghost">Вы</Badge>
+                                    <Badge variant="ghost">нажми чтоб выйти</Badge>
                                 {:else if role.assignment}
-                                    <Badge variant="default">Занято</Badge>
+                                    <Badge variant="default">занято</Badge>
                                 {:else}
-                                    <Badge variant="secondary">Свободно</Badge>
+                                    <Badge variant="ghost">нажми чтоб зайти</Badge>
                                 {/if}
                             </button>
                         {/each}
