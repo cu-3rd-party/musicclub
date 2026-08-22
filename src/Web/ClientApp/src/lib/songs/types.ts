@@ -43,7 +43,7 @@ export type CreateSongPayload = {
     artist: string;
     description: string | null;
     url: string;
-    thumbnailUrl: string | null;
+    thumbnailDataEntryId: UUID | null;
     featured: boolean;
     availableRoles: string[] | null;
 };

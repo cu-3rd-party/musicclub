@@ -35,7 +35,7 @@ public sealed record CreateSongRequest(
     string Artist,
     string? Description,
     string Url,
-    string? ThumbnailUrl,
+    Guid? ThumbnailDataEntryId,
     bool Featured,
     IReadOnlyList<string>? AvailableRoles);
 
@@ -44,6 +44,6 @@ public sealed record UpdateSongRequest(
     string Artist,
     string? Description,
     string Url,
-    string? ThumbnailUrl,
+    Guid? ThumbnailDataEntryId,
     bool Featured,
     IReadOnlyList<string>? AvailableRoles);

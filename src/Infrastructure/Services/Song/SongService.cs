@@ -7,6 +7,7 @@ using CuMusicClub.Application.Services.Song.Helpers;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Domain.ValueObjects;
 using CuMusicClub.Infrastructure.Data;
+using FluentValidation.Results;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -83,15 +84,19 @@ public partial class SongService(
     {
         var user = await userManager.GetUserAsync(currentUser) ?? throw new ForbiddenAccessException();
         var permissions = await permissionService.GetPermissionValuesAsync(user, cancellationToken);
-        if (!permissions.Contains(Domain.Constants.Permission.ParticipationEditOwn)) throw new ForbiddenAccessException();
+        if (!permissions.Contains(Domain.Constants.Permission.ParticipationEditOwn))
+            throw new ForbiddenAccessException();
 
         if (request.Featured && !permissions.Contains(Domain.Constants.Permission.SongsEditFeatured))
             throw new ForbiddenAccessException();
 
         var linkKind = SongHelpers.DeriveLinkKind(request.Url);
-        var thumbnailUrl = SongThumbnail.Normalize(request.ThumbnailUrl, linkKind, request.Url);
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        if (request.ThumbnailDataEntryId.HasValue &&
+            await db.DataEntries.FirstOrDefaultAsync(d => d.Id == request.ThumbnailDataEntryId, cancellationToken) ==
+            null)
+            throw new ValidationException([new ValidationFailure("thumbnailDataEntryId", "Referenced data entry not found")]);
 
         var song = new Domain.Entities.Song
         {
@@ -101,7 +106,8 @@ public partial class SongService(
             LinkKind = linkKind,
             LinkUrl = request.Url,
             CreatedById = currentUser.GetUserId(),
-            ThumbnailUrl = thumbnailUrl,
+            ThumbnailUrl = $"/data/{request.ThumbnailDataEntryId}",
+            ThumbnailDataEntryId = request.ThumbnailDataEntryId,
             IsFeatured = request.Featured,
             CreatedAt = DateTimeOffset.UtcNow,
             UpdatedAt = DateTimeOffset.UtcNow,
@@ -130,23 +136,30 @@ public partial class SongService(
         var user = await userManager.GetUserAsync(currentUser) ?? throw new ForbiddenAccessException();
         var permissions = await permissionService.GetPermissionValuesAsync(user, cancellationToken);
 
-        if (song.CreatedBy != null && user != song.CreatedBy && !permissions.Contains(Domain.Constants.Permission.SongsEditAny))
+        if (song.CreatedBy != null &&
+            user != song.CreatedBy &&
+            !permissions.Contains(Domain.Constants.Permission.SongsEditAny))
             throw new ForbiddenAccessException();
 
         if (request.Featured && !permissions.Contains(Domain.Constants.Permission.SongsEditFeatured))
             throw new ForbiddenAccessException();
 
         var linkKind = SongHelpers.DeriveLinkKind(request.Url);
-        var thumbnailUrl = SongThumbnail.Normalize(request.ThumbnailUrl, linkKind, request.Url);
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        if (request.ThumbnailDataEntryId.HasValue &&
+            await db.DataEntries.FirstOrDefaultAsync(d => d.Id == request.ThumbnailDataEntryId, cancellationToken) ==
+            null)
+            throw new ValidationException([new ValidationFailure("thumbnailDataEntryId", "Referenced data entry not found")]);
 
         song.Title = request.Title;
         song.Artist = request.Artist;
         song.Description = request.Description;
         song.LinkKind = linkKind;
         song.LinkUrl = request.Url;
-        song.ThumbnailUrl = thumbnailUrl;
+        song.ThumbnailUrl =
+            $"/data/{request.ThumbnailDataEntryId}"; // Да, это захардкоженный путь. Да, он заставляет ходить фронт к беку и обратно. И что ты мне сделаешь?
+        song.ThumbnailDataEntryId = request.ThumbnailDataEntryId;
         if (permissions.Contains(Domain.Constants.Permission.SongsEditFeatured)) song.IsFeatured = request.Featured;
         song.UpdatedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(cancellationToken);
@@ -178,7 +191,9 @@ public partial class SongService(
 
         var user = await userManager.GetUserAsync(currentUser) ?? throw new ForbiddenAccessException();
         var permissions = await permissionService.GetPermissionValuesAsync(user, cancellationToken);
-        if (song.CreatedBy != null && user != song.CreatedBy && !permissions.Contains(Domain.Constants.Permission.SongsEditAny))
+        if (song.CreatedBy != null &&
+            user != song.CreatedBy &&
+            !permissions.Contains(Domain.Constants.Permission.SongsEditAny))
             throw new ForbiddenAccessException();
 
         db.Songs.Remove(song);

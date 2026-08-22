@@ -2,6 +2,7 @@
 using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Common.Interfaces;
 using CuMusicClub.Application.Services.Auth;
+using CuMusicClub.Application.Services.DataEntry;
 using CuMusicClub.Application.Services.Permission;
 using CuMusicClub.Application.Services.Song;
 using CuMusicClub.Application.Services.Telegram;
@@ -11,6 +12,7 @@ using CuMusicClub.Infrastructure.Data.Interceptors;
 using CuMusicClub.Infrastructure.Options;
 using CuMusicClub.Infrastructure.Services;
 using CuMusicClub.Infrastructure.Services.Auth;
+using CuMusicClub.Infrastructure.Services.DataEntry;
 using CuMusicClub.Infrastructure.Services.Permission;
 using CuMusicClub.Infrastructure.Services.Song;
 using CuMusicClub.Infrastructure.Services.Telegram;
@@ -97,6 +99,7 @@ public static class DependencyInjection
         builder.Services.AddScoped<ITelegramAuthService, TelegramAuthService>();
         builder.Services.AddScoped<IPermissionService, PermissionService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
+        builder.Services.AddScoped<IDataEntryService, DataEntryService>();
 
         builder
             .Services

@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using CuMusicClub.Application.Services.DataEntry;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Infrastructure.Data;
 
@@ -68,6 +69,7 @@ public sealed class ThumbnailBackfillHostedService(
 
         await using var scope = scopeFactory.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var dataEntryService = scope.ServiceProvider.GetRequiredService<IDataEntryService>();
 
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -100,7 +102,7 @@ public sealed class ThumbnailBackfillHostedService(
 
                 try
                 {
-                    var dataEntry = await GetOrCreateDataEntryAsync(db, trimmedUrl, cancellationToken);
+                    var dataEntry = await GetOrCreateDataEntryAsync(dataEntryService, trimmedUrl, cancellationToken);
                     song.ThumbnailUrl = $"/data/{dataEntry.Id}";
                     song.ThumbnailDataEntryId = dataEntry.Id;
                     succeeded++;
@@ -131,7 +133,8 @@ public sealed class ThumbnailBackfillHostedService(
                 failed);
     }
 
-    private async Task<DataEntry> GetOrCreateDataEntryAsync(ApplicationDbContext db,
+    private async Task<DataEntry> GetOrCreateDataEntryAsync(
+        IDataEntryService dataEntryService,
         string url,
         CancellationToken cancellationToken)
     {
@@ -153,26 +156,7 @@ public sealed class ThumbnailBackfillHostedService(
 
         var content = await response.Content.ReadAsByteArrayAsync(cancellationToken);
 
-        if (content.Length == 0) throw new InvalidOperationException($"Thumbnail response from '{url}' is empty.");
-
-        var hash = SHA256.HashData(content);
-
-        var existing = await db.DataEntries.SingleOrDefaultAsync(x => x.Hash == hash, cancellationToken);
-
-        if (existing is not null) return existing;
-
-        var dataEntry = new DataEntry
-        {
-            Id = Guid.NewGuid(),
-            Created = DateTime.UtcNow,
-            LastModified = DateTime.UtcNow,
-            Content = content,
-            ContentType = contentType,
-            Hash = hash,
-            Size = content.Length,
-        };
-
-        db.DataEntries.Add(dataEntry);
+        var dataEntry = await dataEntryService.Create(content, contentType, cancellationToken);
 
         return dataEntry;
     }
