@@ -106,7 +106,9 @@ public partial class SongService(
             LinkKind = linkKind,
             LinkUrl = request.Url,
             CreatedById = currentUser.GetUserId(),
-            ThumbnailUrl = $"/data/{request.ThumbnailDataEntryId}",
+            ThumbnailUrl = request.ThumbnailDataEntryId.HasValue
+                ? $"/data/{request.ThumbnailDataEntryId}"
+                : null,
             ThumbnailDataEntryId = request.ThumbnailDataEntryId,
             IsFeatured = request.Featured,
             CreatedAt = DateTimeOffset.UtcNow,
@@ -160,6 +162,7 @@ public partial class SongService(
         song.ThumbnailUrl =
             $"/data/{request.ThumbnailDataEntryId}"; // Да, это захардкоженный путь. Да, он заставляет ходить фронт к беку и обратно. И что ты мне сделаешь?
         song.ThumbnailDataEntryId = request.ThumbnailDataEntryId;
+        if (!request.ThumbnailDataEntryId.HasValue) song.ThumbnailUrl = null;
         if (permissions.Contains(Domain.Constants.Permission.SongsEditFeatured)) song.IsFeatured = request.Featured;
         song.UpdatedAt = DateTimeOffset.UtcNow;
         await db.SaveChangesAsync(cancellationToken);

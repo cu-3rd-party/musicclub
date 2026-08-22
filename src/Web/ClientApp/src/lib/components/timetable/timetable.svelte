@@ -19,7 +19,11 @@
         hourHeight?: number;
     } = $props();
 
-    let selectedDate = $state(date);
+    let selectedDate = $state(new Date());
+
+    $effect(() => {
+        selectedDate = new Date(date);
+    });
 
     function previousDay() {
         const next = new Date(selectedDate);

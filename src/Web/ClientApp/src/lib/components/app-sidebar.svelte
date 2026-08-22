@@ -1,10 +1,8 @@
 <script lang="ts" module>
     import type {AppTypes} from "$app/types";
-    import type {SidebarQuerySession} from "$lib/ask/query-sessions";
     import BookOpenIcon from "@lucide/svelte/icons/book-open";
-    import NetworkIcon from "@lucide/svelte/icons/network";
     import Settings2Icon from "@lucide/svelte/icons/settings-2";
-    import {Database, SearchIcon} from "@lucide/svelte";
+    import {CalendarDaysIcon, MusicIcon, UserIcon} from "@lucide/svelte";
 
     type Pathname = ReturnType<AppTypes["Pathname"]>;
     type NavUrl = "#" | Pathname | `http${string}`;
@@ -29,7 +27,6 @@
         user: SidebarUser;
         navMain: NavMainItem[];
         navSecondary: NavSecondaryItem[];
-        queries: SidebarQuerySession[];
     };
     type NavSecondaryItem = NavItem & {
         // This should be `Component` after @lucide/svelte updates types
@@ -45,30 +42,20 @@
         },
         navMain: [
             {
-                title: "Поиск",
-                url: "/data/ask",
-                icon: SearchIcon,
-            },
-            {
-                title: "Карта знаний",
-                url: "/data/graph",
-                icon: NetworkIcon,
-            },
-            {
-                title: "Материалы",
-                url: "/data",
-                icon: Database,
+                title: "Песни",
+                url: "/app/songs",
+                icon: MusicIcon,
                 isActive: true,
-                items: [
-                    {
-                        title: "Список",
-                        url: "/data",
-                    },
-                    {
-                        title: "Загрузить",
-                        url: "/data/upload",
-                    },
-                ],
+            },
+            {
+                title: "Календарь",
+                url: "/app/calendar",
+                icon: CalendarDaysIcon,
+            },
+            {
+                title: "Профиль",
+                url: "/app/profile",
+                icon: UserIcon,
             },
             {
                 title: "Документация",
@@ -119,49 +106,6 @@
             // 	icon: SendIcon,
             // },
         ],
-        queries: [
-            // {
-            // 	name: "Как подключить внутреннюю базу документов к поиску?",
-            // 	preview: "Архитектура индексации, права доступа, обновление документов.",
-            // 	time: "Сегодня",
-            // 	active: true,
-            // },
-            // {
-            // 	name: "Какие поля нужны для векторного индекса?",
-            // 	preview: "Метаданные, чанки, source id, revision и owner.",
-            // 	time: "Сегодня",
-            // },
-            // {
-            // 	name: "Как ускорить поиск по PDF и DOCX?",
-            // 	preview: "Предобработка, извлечение текста, кэширование и OCR.",
-            // 	time: "Вчера",
-            // },
-            // {
-            // 	name: "Как хранить версии документов?",
-            // 	preview: "Immutable revisions, aliases и откат на предыдущую версию.",
-            // 	time: "Вчера",
-            // },
-            // {
-            // 	name: "Какие ограничения сделать для внешних источников?",
-            // 	preview: "Rate limiting, allowlist, sanitization, audit trail.",
-            // 	time: "2 дня назад",
-            // },
-            // {
-            // 	name: "Как проектировать ответы со ссылками на источники?",
-            // 	preview: "Цитаты, confidence score, deep links и превью документа.",
-            // 	time: "3 дня назад",
-            // },
-            // {
-            // 	name: "Как организовать обновление индекса по событию?",
-            // 	preview: "Очередь задач, дедупликация, retry и фоновые воркеры.",
-            // 	time: "На этой неделе",
-            // },
-            // {
-            // 	name: "Что сохранять в истории запросов пользователей?",
-            // 	preview: "Текст запроса, фильтры, выбранные документы и обратную связь.",
-            // 	time: "На этой неделе",
-            // },
-        ],
     };
 
     export type {NavUrl};
@@ -169,11 +113,9 @@
 </script>
 
 <script lang="ts">
-    import {querySessions} from "$lib/ask/query-sessions";
     import type {UserProfile} from "$lib/auth/types";
     import {onMount} from "svelte";
     import NavMain from "./nav-main.svelte";
-    import NavProjects from "./nav-projects.svelte";
     import NavSecondary from "./nav-secondary.svelte";
     import NavUser from "./nav-user.svelte";
     import * as Sidebar from "$lib/components/ui/sidebar";
@@ -198,8 +140,6 @@
             }
             : appSidebarData.user,
     );
-
-    const sidebarQueries = $derived($querySessions.length > 0 ? $querySessions : appSidebarData.queries);
 
     const THEME_STORAGE_KEY = "theme";
 
@@ -258,7 +198,6 @@
     </Sidebar.Header>
     <Sidebar.Content class="overflow-hidden">
         <NavMain items={navMainItems}/>
-        <NavProjects queries={sidebarQueries}/>
         <NavSecondary items={appSidebarData.navSecondary} class="mt-auto"/>
     </Sidebar.Content>
     <Sidebar.Footer>

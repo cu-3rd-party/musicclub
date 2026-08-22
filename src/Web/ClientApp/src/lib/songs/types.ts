@@ -1,4 +1,4 @@
-import type {UUID} from "node:crypto";
+import type { UUID } from "node:crypto";
 
 export type SongUser = {
     id: UUID;
@@ -53,7 +53,7 @@ export type UpdateSongPayload = {
     artist: string;
     description: string | null;
     url: string;
-    thumbnailUrl: string | null;
+    thumbnailDataEntryId: UUID | null;
     featured: boolean;
     availableRoles: string[] | null;
 };

@@ -1,6 +1,6 @@
-import {browser} from "$app/environment";
+import { browser } from "$app/environment";
 
-import type {AuthSession} from "$lib/auth/types";
+import type { AuthSession } from "$lib/auth/types";
 
 const AUTH_STORAGE_KEY = "auth.session";
 

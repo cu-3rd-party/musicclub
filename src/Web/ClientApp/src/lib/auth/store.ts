@@ -1,4 +1,4 @@
-import {writable} from "svelte/store";
+import { writable } from "svelte/store";
 
 import {
     getCurrentUser,
@@ -13,12 +13,7 @@ import {
     getStoredAuthSession,
     setStoredAuthSession,
 } from "$lib/auth/storage";
-import type {
-    AuthSession,
-    LoginPayload,
-    RegisterPayload,
-    UserProfile,
-} from "$lib/auth/types";
+import type { AuthSession, UserProfile } from "$lib/auth/types";
 
 type AuthState = {
     user: UserProfile | null;
@@ -53,7 +48,7 @@ export async function telegramLogin(
     initData: string,
 ): Promise<UserProfile | null> {
     try {
-        const session = await telegramAuth({init_data: initData});
+        const session = await telegramAuth({ init_data: initData });
         const persistedSession: AuthSession = {
             ...session,
             accessTokenAcquiredAt: new Date().toISOString(),
@@ -82,11 +77,11 @@ export async function ensureAuthenticated(): Promise<boolean> {
     }
 
     const activeSession = getStoredAuthSession() ?? storedSession;
-    authState.set({user: activeSession.user, ready: false});
+    authState.set({ user: activeSession.user, ready: false });
 
     try {
         const user = await getCurrentUser();
-        persistSession({...(getStoredAuthSession() ?? storedSession), user});
+        persistSession({ ...(getStoredAuthSession() ?? storedSession), user });
         return true;
     } catch (error) {
         if (isUnauthorizedError(error) && storedSession.refreshToken) {
@@ -98,7 +93,7 @@ export async function ensureAuthenticated(): Promise<boolean> {
 
             try {
                 const user = await getCurrentUser();
-                persistSession({...refreshed, user});
+                persistSession({ ...refreshed, user });
                 return true;
             } catch {
                 clearAuth();
@@ -111,7 +106,7 @@ export async function ensureAuthenticated(): Promise<boolean> {
             return false;
         }
 
-        authState.set({user: storedSession.user, ready: true});
+        authState.set({ user: storedSession.user, ready: true });
         return true;
     }
 }
@@ -134,7 +129,7 @@ export async function updateProfile(
     const user = await getCurrentUser();
     const storedSession = getStoredAuthSession();
     if (storedSession) {
-        persistSession({...storedSession, user});
+        persistSession({ ...storedSession, user });
     }
     return user;
 }
@@ -142,13 +137,13 @@ export async function updateProfile(
 function persistSession(session: AuthSession): void {
     setStoredAuthSession(session);
     startAccessTokenRefreshLoop();
-    authState.set({user: session.user, ready: true});
+    authState.set({ user: session.user, ready: true });
 }
 
 function clearAuth(): void {
     stopAccessTokenRefreshLoop();
     clearStoredAuthSession();
-    authState.set({user: null, ready: true});
+    authState.set({ user: null, ready: true });
 }
 
 function startAccessTokenRefreshLoop(): void {
@@ -208,7 +203,7 @@ async function refreshStoredSession(
                 accessTokenAcquiredAt: new Date().toISOString(),
             };
             setStoredAuthSession(refreshedSession);
-            authState.set({user: refreshedSession.user, ready: true});
+            authState.set({ user: refreshedSession.user, ready: true });
             return true;
         } catch {
             clearAuth();

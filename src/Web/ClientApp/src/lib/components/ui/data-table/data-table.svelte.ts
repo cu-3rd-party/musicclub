@@ -39,8 +39,7 @@ export function createSvelteTable<TData extends RowData>(
     const resolvedOptions: TableOptionsResolved<TData> = mergeObjects(
         {
             state: {},
-            onStateChange() {
-            },
+            onStateChange() {},
             renderFallbackValue: null,
             mergeOptions: (
                 defaultOptions: TableOptions<TData>,
@@ -81,9 +80,9 @@ export function createSvelteTable<TData extends RowData>(
 
 type MaybeThunk<T extends object> = T | (() => T | null | undefined);
 type Intersection<T extends readonly unknown[]> = (T extends [
-        infer H,
-        ...infer R,
-    ]
+    infer H,
+    ...infer R,
+]
     ? H & Intersection<R>
     : unknown) & {};
 
@@ -125,7 +124,9 @@ export function mergeObjects<Sources extends readonly MaybeThunk<any>[]>(
             for (const s of sources) {
                 const obj = resolve(s);
                 if (obj) {
-                    for (const k of Reflect.ownKeys(obj) as (string | symbol)[]) {
+                    for (const k of Reflect.ownKeys(obj) as (
+                        string | symbol
+                    )[]) {
                         all.add(k);
                     }
                 }

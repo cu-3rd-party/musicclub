@@ -29,7 +29,7 @@
             artist: "",
             description: null,
             url: "",
-            thumbnailId: null,
+            thumbnailDataEntryId: null,
             featured: false,
             availableRoles: null,
         }),
@@ -89,7 +89,7 @@
 
         const dataId = await createData(thumbnailFile);
 
-        return `/api/v1/data/${dataId}`;
+        return dataId;
     }
 
     function addRole() {
@@ -149,7 +149,7 @@
                 .filter(Boolean) ?? [];
 
             // The DataEntry is created ONLY here, when the form is submitted.
-            const thumbnailId = await createThumbnailData();
+            const thumbnailDataEntryId = await createThumbnailData();
 
             await createSong({
                 ...payload,
@@ -158,7 +158,7 @@
                 url: payload.url.trim(),
                 description: payload.description?.trim() || null,
                 availableRoles: roles.length > 0 ? roles : null,
-                thumbnailId,
+                thumbnailDataEntryId,
             });
 
             clearThumbnail();

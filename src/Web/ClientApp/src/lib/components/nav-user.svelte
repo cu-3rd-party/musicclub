@@ -84,7 +84,7 @@
                 </DropdownMenu.Label>
                 <DropdownMenu.Separator/>
                 <DropdownMenu.Group>
-                    <DropdownMenu.Item onclick={() => goto(resolve("/app/account"))}>
+                    <DropdownMenu.Item onclick={() => goto(resolve("/app/profile"))}>
                         <BadgeCheckIcon/>
                         Аккаунт
                     </DropdownMenu.Item>

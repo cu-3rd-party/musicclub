@@ -1,13 +1,12 @@
 import axios from "axios";
 
-import {api} from "$lib/api/client";
+import { api } from "$lib/api/client";
 import type {
     AuthSession,
-    LoginPayload,
-    RegisterPayload,
     TokenPair,
     UserProfile,
-    TelegramInitDataPayload, Deeplink,
+    TelegramInitDataPayload,
+    Deeplink,
 } from "$lib/auth/types";
 
 type ApiErrorPayload = {
@@ -25,15 +24,13 @@ export async function telegramAuth(
 }
 
 export async function createDeeplink(): Promise<Deeplink> {
-    const response = await api.get<Deeplink>(
-        "/api/v1/auth/telegram/link"
-    );
+    const response = await api.get<Deeplink>("/api/v1/auth/telegram/link");
     return response.data;
 }
 
 export async function getDeeplink(link: Deeplink): Promise<AuthSession | null> {
     const response = await api.get<AuthSession>(
-        `/api/v1/auth/telegram/link/${link.uid}`
+        `/api/v1/auth/telegram/link/${link.uid}`,
     );
 
     return response.status === 204 ? null : response.data;
@@ -71,7 +68,7 @@ export async function updateUserProfile(
 export async function logoutCurrentSession(
     refreshToken?: string,
 ): Promise<void> {
-    await api.post("/api/v1/auth/logout", refreshToken ? {refreshToken} : {});
+    await api.post("/api/v1/auth/logout", refreshToken ? { refreshToken } : {});
 }
 
 export async function logoutAllSessions(): Promise<void> {
@@ -94,5 +91,8 @@ export function getApiErrorMessage(
 }
 
 export function isUnauthorizedError(error: unknown): boolean {
-    return axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 404);
+    return (
+        axios.isAxiosError(error) &&
+        (error.response?.status === 401 || error.response?.status === 404)
+    );
 }

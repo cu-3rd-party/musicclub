@@ -1,12 +1,12 @@
-import {readdir} from 'node:fs/promises';
-import {join, extname} from 'node:path';
-import type {LayoutServerLoad} from './$types';
+import { readdir } from "node:fs/promises";
+import { join, extname } from "node:path";
+import type { LayoutServerLoad } from "./$types";
 
-const BG_DIR = 'static/bg';
-const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.avif']);
+const BG_DIR = "static/bg";
+const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".avif"]);
 
 async function* walk(dir: string): AsyncGenerator<string> {
-    for (const entry of await readdir(dir, {withFileTypes: true})) {
+    for (const entry of await readdir(dir, { withFileTypes: true })) {
         const path = join(dir, entry.name);
         if (entry.isDirectory()) {
             yield* walk(path);
@@ -16,7 +16,8 @@ async function* walk(dir: string): AsyncGenerator<string> {
     }
 }
 
-const toPublicPath = (path: string) => '/' + path.replace(/\\/g, '/').replace(/^static\//, '');
+const toPublicPath = (path: string) =>
+    "/" + path.replace(/\\/g, "/").replace(/^static\//, "");
 let bgImagesCache: Promise<string[]> | undefined;
 
 function getBgImages(): Promise<string[]> {
@@ -30,8 +31,8 @@ function getBgImages(): Promise<string[]> {
 }
 
 export const load: LayoutServerLoad = async () => {
-    let bgImages = await getBgImages();
+    const bgImages = await getBgImages();
     return {
-        bgImage: bgImages[Math.floor(Math.random() * bgImages.length)]
-    }
+        bgImage: bgImages[Math.floor(Math.random() * bgImages.length)],
+    };
 };

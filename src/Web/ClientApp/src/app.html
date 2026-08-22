@@ -1,40 +1,40 @@
 <!doctype html>
 <html lang="en" class="dark" style="color-scheme: dark">
-<head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <link
-        rel="icon"
-        type="image/png"
-        sizes="32x32"
-        href="/favicon-32x32.png"
-    />
-    <link
-        rel="icon"
-        type="image/png"
-        sizes="16x16"
-        href="/favicon-16x16.png"
-    />
-    <script>
-        // Load Telegram Web App script only inside Telegram environment
-        (function () {
-            var isTelegram = window.TelegramWebviewProxy ||
-                location.hash.indexOf('tgWebApp') !== -1 ||
-                location.search.indexOf('tgWebApp') !== -1;
-            if (isTelegram) {
-                var s = document.createElement('script');
-                s.src = 'https://telegram.org/js/telegram-web-app.js';
-                s.async = true;
-                document.head.appendChild(s);
-            }
-        })();
-    </script>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link
+            rel="icon"
+            type="image/png"
+            sizes="32x32"
+            href="/favicon-32x32.png"
+        />
+        <link
+            rel="icon"
+            type="image/png"
+            sizes="16x16"
+            href="/favicon-16x16.png"
+        />
+        <script>
+            // Load Telegram Web App script only inside Telegram environment
+            (function () {
+                var isTelegram =
+                    window.TelegramWebviewProxy ||
+                    location.hash.indexOf("tgWebApp") !== -1 ||
+                    location.search.indexOf("tgWebApp") !== -1;
+                if (isTelegram) {
+                    var s = document.createElement("script");
+                    s.src = "https://telegram.org/js/telegram-web-app.js";
+                    s.async = true;
+                    document.head.appendChild(s);
+                }
+            })();
+        </script>
 
-
-    <title>МузКлуб ЦУ!</title>
-    %sveltekit.head%
-</head>
-<body data-sveltekit-preload-data="hover">
-<div style="display: contents">%sveltekit.body%</div>
-</body>
+        <title>МузКлуб ЦУ!</title>
+        %sveltekit.head%
+    </head>
+    <body data-sveltekit-preload-data="hover">
+        <div style="display: contents">%sveltekit.body%</div>
+    </body>
 </html>
