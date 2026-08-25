@@ -30,11 +30,14 @@ public partial class SongServiceTests
             createdById: owner.Id);
 
         using var scope = new SongScope();
+        var content = new byte[3 * 1024]; // 3 kb image
+        Random.Shared.NextBytes(content);
+        var entry = await scope.DataEntryService.Create(content, "image/png", new CancellationToken(false));
         var request = new UpdateSongRequest("Stairway to Heaven",
             "Led Zeppelin",
             "epic solo",
             "https://music.yandex.ru/album/1",
-            "https://cdn.example.com/stairs.jpg",
+            entry.Id,
             false,
             new[]
             {
@@ -48,7 +51,7 @@ public partial class SongServiceTests
         result.Artist.ShouldBe("Led Zeppelin");
         result.Description.ShouldBe("epic solo");
         result.Url.ShouldBe("https://music.yandex.ru/album/1");
-        result.ThumbnailUrl.ShouldBe("https://cdn.example.com/stairs.jpg");
+        result.ThumbnailUrl.ShouldStartWith("/data/");
         result
             .Roles.Select(r => r.Title)
             .ToArray()

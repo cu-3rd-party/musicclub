@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using CuMusicClub.Application.Common.Auth;
+using CuMusicClub.Application.Services.DataEntry;
 using CuMusicClub.Application.Services.Permission;
 using CuMusicClub.Application.Services.Song;
 using CuMusicClub.Domain.Constants;
@@ -24,12 +25,14 @@ public partial class SongServiceTests : TestBase
         private readonly IServiceScope _scope;
 
         public ISongService Songs { get; }
+        public IDataEntryService DataEntryService { get; }
         public UserManager<ApplicationUser> UserManager { get; }
 
         public SongScope()
         {
             _scope = FunctionalTestSetup.ScopeFactory.CreateScope();
             Songs = _scope.ServiceProvider.GetRequiredService<ISongService>();
+            DataEntryService = _scope.ServiceProvider.GetRequiredService<IDataEntryService>();
             UserManager = _scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         }
 
@@ -163,10 +166,10 @@ public partial class SongServiceTests : TestBase
         string artist = "Queen",
         string? url = null,
         bool featured = false,
-        string? thumbnailUrl = null,
+        Guid? thumbnailDataEntryId = null,
         string? description = null,
         string[]? roles = null)
     {
-        return new CreateSongRequest(title, artist, description, url ?? YoutubeUrl, thumbnailUrl, featured, roles);
+        return new CreateSongRequest(title, artist, description, url ?? YoutubeUrl, thumbnailDataEntryId, featured, roles);
     }
 }

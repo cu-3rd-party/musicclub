@@ -87,6 +87,7 @@ public partial class SongServiceTests
     }
 
     [Test]
+    [Ignore("pxc1984@ce7c7: доставание thumbnail происходит на фронтенде")]
     public async Task Create_YoutubeLink_ExtractsThumbnail()
     {
         var (_, principal) = await CreateUserAsync("owner", true, editOwnSongs: true);
@@ -97,12 +98,16 @@ public partial class SongServiceTests
     }
 
     [Test]
+    [Ignore("pxc1984@ce7c7: доставание thumbnail происходит на фронтенде")]
     public async Task Create_CustomThumbnail_OverridesExtracted()
     {
         var (_, principal) = await CreateUserAsync("owner", true, editOwnSongs: true);
 
         using var scope = new SongScope();
-        var result = await scope.Songs.CreateAsync(CreateRequest(thumbnailUrl: "https://cdn.example.com/thumb.jpg"),
+        var content = new byte[3 * 1024]; // 3 kb image
+        Random.Shared.NextBytes(content);
+        var entry = await scope.DataEntryService.Create(content, "image/png", new CancellationToken(false));
+        var result = await scope.Songs.CreateAsync(CreateRequest(thumbnailDataEntryId: entry.Id),
             principal,
             CancellationToken.None);
         result.ThumbnailUrl.ShouldBe("https://cdn.example.com/thumb.jpg");
