@@ -24,6 +24,7 @@ app.UseFileServer();
 
 app.MapOpenApi();
 app.MapScalarApiReference();
+app.MapHealthChecks("/health");
 
 app.UseExceptionHandler(options => { });
 
