@@ -14,7 +14,7 @@
     import * as Dialog from "$lib/components/ui/dialog";
     import type {WithElementRef} from "$lib/utils";
     import type {HTMLFormAttributes} from "svelte/elements";
-    import type {CreateSongPayload} from "$lib/songs/types";
+    import type {CreateSongPayload, Song} from "$lib/songs/types";
     import {createSong} from "$lib/api/songs";
     import {createData} from "$lib/api/data";
     import {Badge} from "$lib/components/ui/badge";
@@ -33,8 +33,10 @@
             featured: false,
             availableRoles: null,
         }),
+        songsArray = $bindable(null),
         ...restProps
     }: WithElementRef<HTMLFormAttributes> & {
+        songsArray: Song[] | null,
         payload?: CreateSongPayload;
     } = $props();
 
@@ -151,7 +153,7 @@
             // The DataEntry is created ONLY here, when the form is submitted.
             const thumbnailDataEntryId = await createThumbnailData();
 
-            await createSong({
+            const created = await createSong({
                 ...payload,
                 title: payload.title.trim(),
                 artist: payload.artist.trim(),
@@ -160,6 +162,10 @@
                 availableRoles: roles.length > 0 ? roles : null,
                 thumbnailDataEntryId,
             });
+
+            if (songsArray != null) {
+                songsArray.push(created);
+            }
 
             clearThumbnail();
             dialogOpen = false;
