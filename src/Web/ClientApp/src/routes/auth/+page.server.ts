@@ -1,5 +1,5 @@
 import type { PageServerLoad } from "./$types";
-import { createDeeplink } from "$lib/api/auth";
+import { createDeeplink } from "$lib/server/auth";
 
 export const load: PageServerLoad = async () => {
     const deeplink = await createDeeplink();

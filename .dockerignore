@@ -1,0 +1,33 @@
+# Git and local tooling
+.git/
+.github/
+.idea/
+.vs/
+.vscode/
+
+# Build outputs
+**/bin/
+**/obj/
+**/Debug/
+**/Release/
+artifacts/
+
+# Frontend local outputs and dependencies
+**/node_modules/
+src/Web/ClientApp/.svelte-kit/
+src/Web/ClientApp/build/
+src/Web/ClientApp/dist/
+
+# Logs and local files
+*.log
+*.local
+*.user
+*.suo
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+.env
+docker-compose.override.yml

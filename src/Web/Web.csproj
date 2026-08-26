@@ -40,7 +40,7 @@
         <None Include="wwwroot\favicon.ico"/>
     </ItemGroup>
 
-    <Target Name="PublishRunWebpack" AfterTargets="ComputeFilesToPublish">
+    <Target Name="PublishRunWebpack" AfterTargets="ComputeFilesToPublish" Condition="'$(PublishRunWebpack)' != 'false'">
         <Exec WorkingDirectory="$(SpaRoot)" Command="npm install"/>
         <Exec WorkingDirectory="$(SpaRoot)" Command="npm run build -- --configuration production"/>
         <ItemGroup>

@@ -45,13 +45,9 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                 type: "uuid",
                 nullable: true);
 
-            migrationBuilder.AlterColumn<Guid>(
-                name: "role",
-                table: "song_role_assignment",
-                type: "uuid",
-                nullable: false,
-                oldClrType: typeof(string),
-                oldType: "text");
+            migrationBuilder.Sql(
+                "ALTER TABLE song_role_assignment ALTER COLUMN role TYPE uuid USING \"role\"::text::uuid;",
+                suppressTransaction: false);
 
             migrationBuilder.AddColumn<Guid>(
                 name: "id",
@@ -125,13 +121,9 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                 name: "id",
                 table: "song_role");
 
-            migrationBuilder.AlterColumn<string>(
-                name: "role",
-                table: "song_role_assignment",
-                type: "text",
-                nullable: false,
-                oldClrType: typeof(Guid),
-                oldType: "uuid");
+            migrationBuilder.Sql(
+                "ALTER TABLE song_role_assignment ALTER COLUMN role TYPE text USING \"role\"::uuid::text;",
+                suppressTransaction: false);
 
             migrationBuilder.AddPrimaryKey(
                 name: "PK_song_role",

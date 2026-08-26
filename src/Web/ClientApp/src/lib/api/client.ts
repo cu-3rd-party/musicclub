@@ -1,7 +1,7 @@
 import axios, { AxiosHeaders } from "axios";
 
 import { getStoredAuthSession } from "$lib/auth/storage";
-import { API_URL } from "$lib/config";
+import {API_URL} from "$lib/config";
 
 export const api = axios.create({
     baseURL: API_URL,

@@ -34,8 +34,10 @@ COPY src/Web/GlobalUsings.cs src/Web/
 COPY src/Web/Program.cs src/Web/
 
 # Build and publish
+# OpenApiGenerateDocuments=false: document generation runs the whole app (including DB init),
+# which must not happen during an image build; docs are served live via MapOpenApi at runtime
 WORKDIR /src/src/Web
-RUN dotnet publish Web.csproj -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish Web.csproj -c Release -o /app/publish /p:UseAppHost=false /p:PublishRunWebpack=false /p:OpenApiGenerateDocuments=false
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
@@ -43,6 +45,11 @@ WORKDIR /app
 
 # Copy published application
 COPY --from=build /app/publish .
+
+# Install wget for health checks (not included in slim runtime images)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends wget \
+    && rm -rf /var/lib/apt/lists/*
 
 # Expose the port the app runs on
 EXPOSE 8080
@@ -53,6 +60,6 @@ ENV ASPNETCORE_ENVIRONMENT=Production
 
 # Health check endpoint
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:8080/health || exit 1
 
 ENTRYPOINT ["dotnet", "CuMusicClub.Web.dll"]

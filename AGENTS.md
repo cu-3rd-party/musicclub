@@ -64,7 +64,7 @@ docker compose logs -f frontend
 ```
 
 **Сервисы:**
-- `nginx` — порт 80 (прокси)
+- `traefik` — порт 80 (прокси)
 - `backend` — порт 8080 (внутри сети), health: `/health`
 - `frontend` — порт 5173
 - `db` — порт 5432
@@ -155,7 +155,7 @@ Claims с `claim_type = "permission"`:
 | `events.edit` | Редактирование событий |
 | `tracklists.edit` | Редактирование треклистов |
 
-Новым пользователям выдаются: `songs.edit_own` + `participation.edit_own`.  
+Новым пользователям выдаются: `songs.edit_own` + `participation.edit_own`.
 Роль `Administrator` получает все permissions.
 
 **Mermaid-диаграмма:** См. [`ER_SCHEME.md`](ER_SCHEME.md)

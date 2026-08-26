@@ -9,10 +9,9 @@ builder.AddWebServices();
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-    await app.InitialiseDatabaseAsync();
-else
-    app.UseHsts();
+await app.InitialiseDatabaseAsync();
+
+if (!app.Environment.IsDevelopment()) app.UseHsts();
 
 app.UseHttpsRedirection();
 app.UseCors(static builder => builder

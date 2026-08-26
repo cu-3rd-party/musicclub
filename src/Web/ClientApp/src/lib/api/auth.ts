@@ -1,6 +1,6 @@
 import axios from "axios";
 
-import { api } from "$lib/api/client";
+import {api} from "$lib/api/client";
 import type {
     AuthSession,
     TokenPair,
@@ -20,11 +20,6 @@ export async function telegramAuth(
         "/api/v1/auth/telegram",
         payload,
     );
-    return response.data;
-}
-
-export async function createDeeplink(): Promise<Deeplink> {
-    const response = await api.get<Deeplink>("/api/v1/auth/telegram/link");
     return response.data;
 }
 

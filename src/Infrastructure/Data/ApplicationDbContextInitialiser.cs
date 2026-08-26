@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Data;
+using System.Security.Claims;
 using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Domain.Constants;
 using CuMusicClub.Domain.Entities;
@@ -45,13 +46,37 @@ public class ApplicationDbContextInitialiser(
 
             await EnsureDatabaseExistsAsync();
 
-            await db.Database.EnsureCreatedAsync();
+            await MigrateOrCreateSchemaAsync();
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "An error occurred while initialising the database.");
             throw;
         }
+    }
+
+    private async Task MigrateOrCreateSchemaAsync()
+    {
+        var pending = (await db.Database.GetPendingMigrationsAsync()).ToList();
+
+        if (pending.Count == 0)
+        {
+            await db.Database.EnsureCreatedAsync();
+            return;
+        }
+
+        // databases created before migrations were introduced have no history table;
+        // migrating them would try to re-create existing tables
+        if (!await AnyTableExistsAsync(MigrationsHistoryTable) && await AnyTableExistsAsync())
+        {
+            logger.LogWarning(
+                "Skipping automatic migration: database schema exists without migrations history. " +
+                "Apply migrations manually or reset the database.");
+            return;
+        }
+
+        logger.LogInformation("Applying {Count} pending database migration(s)...", pending.Count);
+        await db.Database.MigrateAsync();
     }
 
     private async Task EnsureDatabaseExistsAsync()
@@ -72,6 +97,30 @@ public class ApplicationDbContextInitialiser(
         await using var createCommand = connection.CreateCommand();
         createCommand.CommandText = $"CREATE DATABASE \"{databaseName}\"";
         await createCommand.ExecuteNonQueryAsync();
+    }
+
+    private const string MigrationsHistoryTable = "__EFMigrationsHistory";
+
+    private async Task<bool> AnyTableExistsAsync(string? tableName = null)
+    {
+        var connection = (NpgsqlConnection)db.Database.GetDbConnection();
+        var wasOpen = connection.State == ConnectionState.Open;
+        if (!wasOpen) await connection.OpenAsync();
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = tableName is null
+                ? "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' LIMIT 1"
+                : "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = @name";
+            if (tableName is not null) command.Parameters.AddWithValue("name", tableName);
+
+            return await command.ExecuteScalarAsync() is not null;
+        }
+        finally
+        {
+            if (!wasOpen) await connection.CloseAsync();
+        }
     }
 
     public async Task SeedAsync()

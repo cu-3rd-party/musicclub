@@ -1,14 +1,12 @@
 ﻿services:
-    nginx:
-        image: nginx:1.27-alpine
+    traefik:
+        image: traefik:v3.5
         restart: unless-stopped
-        env_file:
-            - .env
+        command: ["--configFile=/etc/traefik/traefik.yml"]
         ports:
             - "${NGINX_PORT:-80}:80"
         volumes:
-            - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-            - ./nginx/conf.d:/etc/nginx/templates:ro
+            - ./traefik:/etc/traefik:ro,Z
         depends_on:
             backend:
                 condition: service_healthy
@@ -19,7 +17,7 @@
         networks:
             - musicclub-network
         healthcheck:
-            test: ["CMD", "nginx", "-t"]
+            test: ["CMD", "traefik", "healthcheck", "--ping"]
             interval: 10s
             timeout: 5s
             retries: 5
@@ -47,6 +45,9 @@
         build:
             context: .
             dockerfile: docker/backend/Dockerfile
+            # nuget.org is unreachable via the default bridge on some networks (black-holed IPs);
+            # building on the host network matches local dotnet restore behavior
+            network: host
         restart: unless-stopped
         env_file:
             - .env
@@ -59,16 +60,17 @@
         networks:
             - musicclub-network
         healthcheck:
-            test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1"]
+            test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8080/health || exit 1"]
             interval: 3s
             timeout: 5s
-            retries: 5
-            start_period: 30s
+            retries: 10
+            start_period: 5s
 
     frontend:
         build:
             context: .
             dockerfile: docker/frontend/Dockerfile
+            network: host
         restart: unless-stopped
         env_file:
             - .env
@@ -79,11 +81,11 @@
         networks:
             - musicclub-network
         healthcheck:
-            test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5173 || exit 1"]
-            interval: 10s
+            test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:5173 || exit 1"]
+            interval: 3s
             timeout: 5s
-            retries: 3
-            start_period: 10s
+            retries: 10
+            start_period: 5s
 
 volumes:
     db_data:
