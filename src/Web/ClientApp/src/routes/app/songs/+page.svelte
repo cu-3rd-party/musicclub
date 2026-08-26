@@ -550,6 +550,7 @@
     {/if}
 
     <CreateSong
+        bind:songsArray={songs}
         class="fixed right-4 bottom-18 z-50 shadow-lg"
     />
 
