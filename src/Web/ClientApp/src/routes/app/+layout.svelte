@@ -8,7 +8,7 @@
 
     const navItems = [
         {label: "Песни", href: "/app/songs", icon: MusicIcon},
-        {label: "Календарь", href: "/app/calendar", icon: CalendarIcon},
+        // {label: "Календарь", href: "/app/calendar", icon: CalendarIcon},
         {label: "Профиль", href: "/app/profile", icon: UserIcon},
     ];
 </script>
