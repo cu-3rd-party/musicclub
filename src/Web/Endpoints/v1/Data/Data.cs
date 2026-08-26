@@ -9,6 +9,7 @@ public static partial class Data
         var authed = group
             .MapGroup("/")
             .RequireAuthorization();
-        authed.MapPost("/", Create);
+        authed.MapPost("/", Create)
+            .DisableAntiforgery();
     }
 }

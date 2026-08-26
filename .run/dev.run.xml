@@ -18,6 +18,7 @@
       <script value="dev" />
     </scripts>
     <node-interpreter value="project" />
+    <package-manager value="pnpm" />
     <envs>
       <env name="API_URL" value="http://localhost:5213" />
     </envs>
