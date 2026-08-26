@@ -1,5 +1,7 @@
 <script lang="ts">
     import type {TimetableEvent} from "$lib/timetable/types";
+    import {resolve} from "$app/paths";
+    import {goto} from "$app/navigation";
 
     let {
         event,
@@ -20,11 +22,12 @@
     );
 </script>
 
-<div
+<button
     class="absolute left-1 right-2 overflow-hidden rounded-md bg-primary p-2 text-sm text-primary-foreground shadow-sm"
     style={`top: ${top}px; height: ${height}px`}
+    onclick={() => goto(resolve(`/app/songs/${event.song.id}`))}
 >
-    <div class="font-medium">
-        {event.title}
-    </div>
-</div>
+    <span class="font-medium">
+        {event.song.title}
+    </span>
+</button>
