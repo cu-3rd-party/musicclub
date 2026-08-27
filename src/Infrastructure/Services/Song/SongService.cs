@@ -4,6 +4,7 @@ using CuMusicClub.Application.Common.Exceptions;
 using CuMusicClub.Application.Services.Permission;
 using CuMusicClub.Application.Services.Song;
 using CuMusicClub.Application.Services.Song.Helpers;
+using CuMusicClub.Application.Services.Telegram;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Domain.ValueObjects;
 using CuMusicClub.Infrastructure.Data;
@@ -17,7 +18,8 @@ namespace CuMusicClub.Infrastructure.Services.Song;
 public partial class SongService(
     IPermissionService permissionService,
     ApplicationDbContext db,
-    UserManager<ApplicationUser> userManager) : ISongService
+    UserManager<ApplicationUser> userManager,
+    ITelegramChatService telegramChatService) : ISongService
 {
     private const int DefaultPageSize = 20;
     private const int MaxPageSize = 100;
@@ -121,6 +123,13 @@ public partial class SongService(
         await db.SaveChangesAsync(cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
+
+        // Отправить объявление в общий чат
+        var message = SongServiceFormatter.BuildSongCreatedMessage(song.Title, song.Artist, song.LinkUrl, song.CreatedBy);
+        if (!string.IsNullOrEmpty(message))
+        {
+            await telegramChatService.SendGeneralMessage(message, cancellationToken);
+        }
 
         return await GetAsync(song.Id, cancellationToken);
     }

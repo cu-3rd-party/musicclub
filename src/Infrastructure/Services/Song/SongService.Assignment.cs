@@ -4,6 +4,7 @@ using CuMusicClub.Application.Services.Song;
 using CuMusicClub.Domain.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 
 namespace CuMusicClub.Infrastructure.Services.Song;
 
@@ -38,7 +39,14 @@ public partial class SongService
         };
         await db.SaveChangesAsync(cancellationToken);
 
-        return await GetAsync(role.Song.Id, cancellationToken);
+        var song = await GetAsync(role.Song.Id, cancellationToken);
+        var existing = await db.SongTopics.FirstOrDefaultAsync(t => t.SongId == song.Id, cancellationToken);
+        if (existing == null && song.IsFull)
+            await new SongServiceTopics(telegramChatService).CreateTopicForFullSongAsync(role.Song, cancellationToken);
+        else if (existing != null)
+            await new SongServiceTopics(telegramChatService).AnnounceParticipantJoinAsync(existing.TopicId, user, role.RoleTitle, cancellationToken);
+
+        return await GetAsync(song.Id, cancellationToken);
     }
 
     public async Task<SongDto> LeaveRoleAsync(ApplicationUser user,
@@ -62,10 +70,14 @@ public partial class SongService
 
         if (role.Assignment == null) throw new BadHttpRequestException("role is unoccupied");
 
+        var song = await GetAsync(role.Song.Id, cancellationToken);
+        var topic = await db.SongTopics.FirstOrDefaultAsync(t => t.SongId == song.Id, cancellationToken);
+        if (topic != null) await new SongServiceTopics(telegramChatService).AnnounceParticipantLeaveAsync(topic.TopicId, user, role.RoleTitle, cancellationToken);
+
         await db
             .SongRoleAssignments.Where(s => s.Id == role.Assignment.Id)
             .ExecuteDeleteAsync(cancellationToken);
 
-        return await GetAsync(role.Song.Id, cancellationToken);
+        return await GetAsync(song.Id, cancellationToken);
     }
 }

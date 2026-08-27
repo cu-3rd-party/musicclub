@@ -13,6 +13,7 @@ public interface IApplicationDbContext
     IQueryable<UserSession> UserSessions { get; }
     IQueryable<TgAuthLink> TgAuthLinks { get; }
     IQueryable<DataEntry> DataEntries { get; }
+    IQueryable<SongTopic> SongTopics { get; }
 
     void Add(object entity);
     void Remove(object entity);

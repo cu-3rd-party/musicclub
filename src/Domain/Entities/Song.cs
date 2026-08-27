@@ -21,4 +21,5 @@ public class Song
 
     public List<SongRole> Roles { get; set; } = [];
     public List<SongRoleAssignment> Assignments { get; set; } = [];
+    public SongTopic? SongTopic { get; set; }
 }

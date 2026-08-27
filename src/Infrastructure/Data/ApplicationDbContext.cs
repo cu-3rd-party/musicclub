@@ -53,6 +53,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         get { return Set<DataEntry>(); }
     }
 
+    public DbSet<SongTopic> SongTopics
+    {
+        get { return Set<SongTopic>(); }
+    }
+
     IQueryable<ApplicationUser> IApplicationDbContext.Users
     {
         get { return Users; }
@@ -96,6 +101,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     IQueryable<DataEntry> IApplicationDbContext.DataEntries
     {
         get { return DataEntries; }
+    }
+
+    IQueryable<SongTopic> IApplicationDbContext.SongTopics
+    {
+        get { return SongTopics; }
     }
 
     void IApplicationDbContext.Add(object entity)

@@ -97,6 +97,7 @@ public static class DependencyInjection
 
         builder.Services.AddScoped<ISongService, SongService>();
         builder.Services.AddScoped<ITelegramAuthService, TelegramAuthService>();
+        builder.Services.AddScoped<ITelegramChatService, TelegramChatService>();
         builder.Services.AddScoped<IPermissionService, PermissionService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
         builder.Services.AddScoped<IDataEntryService, DataEntryService>();

@@ -11,9 +11,18 @@ public sealed record SongDto(
     SongUserDto CreatedBy,
     IReadOnlyList<RoleDto> Roles,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt)
+{
+    public bool IsFull
+    {
+        get
+        {
+            return Roles.All(r => r.Assignment != null);
+        }
+    }
+}
 
-public sealed record SongUserDto(Guid Id, string DisplayName, string? Username, string? AvatarUrl);
+public sealed record SongUserDto(Guid Id, string DisplayName, string? UserName, string? AvatarUrl, long? TgUserId = null);
 
 public sealed record RoleAssignmentDto(Guid Id, SongUserDto User, DateTimeOffset JoinedAt);
 
