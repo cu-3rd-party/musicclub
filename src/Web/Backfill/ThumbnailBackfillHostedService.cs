@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using CuMusicClub.Application.Services.DataEntry;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Infrastructure.Data;
@@ -8,31 +7,14 @@ namespace CuMusicClub.Web.Backfill;
 public sealed class ThumbnailBackfillHostedService(
     IServiceScopeFactory scopeFactory,
     IHttpClientFactory httpClientFactory,
-    ILogger<ThumbnailBackfillHostedService> logger) : IHostedService
+    ILogger<ThumbnailBackfillHostedService> logger) : BackgroundService
 {
     private const int BatchSize = 50;
     private static readonly TimeSpan Interval = TimeSpan.FromSeconds(10); // могу себе позволить
 
     private readonly HttpClient _httpClient = httpClientFactory.CreateClient();
-    private CancellationTokenSource? _cts;
 
-    public Task StartAsync(CancellationToken cancellationToken)
-    {
-        _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        _ = RunAsync(_cts.Token);
-        return Task.CompletedTask;
-    }
-
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        if (_cts is not null)
-        {
-            await _cts.CancelAsync();
-            _cts.Dispose();
-        }
-    }
-
-    private async Task RunAsync(CancellationToken cancellationToken)
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
         {

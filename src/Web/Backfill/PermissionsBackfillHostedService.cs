@@ -3,36 +3,17 @@ using CuMusicClub.Domain.Constants;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Infrastructure.Data;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
 
 namespace CuMusicClub.Web.Backfill;
 
 public sealed class PermissionsBackfillHostedService(
     IServiceScopeFactory scopeFactory,
-    ILogger<PermissionsBackfillHostedService> logger) : IHostedService
+    ILogger<PermissionsBackfillHostedService> logger) : BackgroundService
 {
     private const int BatchSize = 50;
     private static readonly TimeSpan Interval = TimeSpan.FromSeconds(10);
 
-    private CancellationTokenSource? _cts;
-
-    public Task StartAsync(CancellationToken cancellationToken)
-    {
-        _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        _ = RunAsync(_cts.Token);
-        return Task.CompletedTask;
-    }
-
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        if (_cts is not null)
-        {
-            await _cts.CancelAsync();
-            _cts.Dispose();
-        }
-    }
-
-    private async Task RunAsync(CancellationToken cancellationToken)
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
         while (!cancellationToken.IsCancellationRequested)
         {

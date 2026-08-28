@@ -62,8 +62,7 @@ public class AuthService(IOptions<SecurityOptions> securityOptions, IPermissionS
 
         var principal = handler.ValidateToken(refreshToken, parameters, out _);
 
-        var userId = principal.FindFirst(JwtRegisteredClaimNames.Sub)
-            ?.Value;
+        var userId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
         if (string.IsNullOrWhiteSpace(userId)) return null;
 

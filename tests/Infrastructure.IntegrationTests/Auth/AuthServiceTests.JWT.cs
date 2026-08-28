@@ -5,11 +5,14 @@ public partial class AuthServiceTests
     [Test]
     public async Task Refreshing_AccessTokens()
     {
-        var (user, principal) = await CreateUserAsync("default");
+        var (user, _) = await CreateUserAsync("default");
         using var scope = new AuthScope();
-        var access = await scope.Auth.CreateAuthSession(user, CancellationToken.None);
+        var cancellationToken = CancellationToken.None;
+        var access = await scope.Auth.CreateAuthSession(user, cancellationToken);
 
-        var refreshSession = scope.Auth.RefreshSession(access.RefreshToken, CancellationToken.None);
+        var refreshSession = scope.Auth.RefreshSession(access.RefreshToken, cancellationToken);
         refreshSession.ShouldNotBeNull("refreshSession == null");
+        refreshSession.RefreshToken.ShouldNotBeNull();
+        refreshSession.AccessToken.ShouldNotBeNull();
     }
 }
