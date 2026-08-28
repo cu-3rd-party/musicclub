@@ -7,6 +7,10 @@ namespace CuMusicClub.Infrastructure.Services.Song;
 
 public static partial class SongServiceFormatter
 {
+    /// <summary>
+    /// Константа, которую задает тг - 128 символов. Но мы используем 100, а вообще желательно это понизить, но надо еще
+    /// посмотреть как оно будет работать с песнями ибо бывают длинные названия
+    /// </summary>
     private const int ForumTopicNameLimit = 100;
 
     public static string BuildSongTopicTitle(string title, string artist)
@@ -15,7 +19,15 @@ public static partial class SongServiceFormatter
         return TruncateRunes(name, ForumTopicNameLimit);
     }
 
-    public static string BuildSongTopicMessage(
+    /// <summary>
+    /// Собирает сообщение, которое должно быть отправлено в новосозданный когда песня заполнилась
+    /// </summary>
+    /// <param name="title"></param>
+    /// <param name="artist"></param>
+    /// <param name="link"></param>
+    /// <param name="participants"></param>
+    /// <returns></returns>
+    public static string BuildSongFullTopicMessage(
         string title,
         string artist,
         string? link,
@@ -34,6 +46,14 @@ public static partial class SongServiceFormatter
         return b.ToString();
     }
 
+    /// <summary>
+    /// Собирает сообщение, которое должно быть отправлено в чат когда песню добавили в бота
+    /// </summary>
+    /// <param name="title"></param>
+    /// <param name="artist"></param>
+    /// <param name="link"></param>
+    /// <param name="createdBy"></param>
+    /// <returns></returns>
     public static string BuildSongCreatedMessage(string title, string artist, string? link, ApplicationUser? createdBy)
     {
         var b = new StringBuilder();
@@ -52,6 +72,13 @@ public static partial class SongServiceFormatter
         return b.ToString();
     }
 
+    /// <summary>
+    /// Собирает сообщение, которое должно быть отправлено в общий чат чтоб уведомить о заполненной песне
+    /// </summary>
+    /// <param name="title"></param>
+    /// <param name="artist"></param>
+    /// <param name="link"></param>
+    /// <returns></returns>
     public static string BuildSongFullMessage(string title, string artist, string? link)
     {
         var main = BuildSongName(title, artist, null);
@@ -63,39 +90,62 @@ public static partial class SongServiceFormatter
         return b.ToString();
     }
 
-    public static string BuildParticipantMentions(IReadOnlyList<RoleAssignmentDto> participants)
+    /// <summary>
+    /// Вызывает BuildParticipantMention на каждом пользователе из списка
+    /// </summary>
+    /// <param name="participants"></param>
+    /// <param name="separator"></param>
+    /// <returns></returns>
+    public static string BuildParticipantMentions(IReadOnlyList<RoleAssignmentDto> participants, string separator = ", ")
     {
         if (participants.Count == 0)
             return "";
 
         var items = new List<string>(participants.Count);
+        items.AddRange(participants.Select(p => BuildParticipantMention(p.User)));
 
-        foreach (var p in participants)
-        {
-            items.Add(BuildParticipantMention(p.User));
-        }
-
-        return string.Join(", ", items);
+        return string.Join(separator, items);
     }
 
+    /// <summary>
+    /// Оверлоад на BuildParticipantMention чтоб проще было
+    /// </summary>
+    /// <param name="user"></param>
+    /// <returns></returns>
     public static string BuildParticipantMention(ApplicationUser user)
     {
-        var userDto = new SongUserDto(user.Id, user.DisplayName, user.UserName, user.AvatarUrl, user.TgUserId);
-        return BuildParticipantMention(userDto);
-    }
-
-    public static string BuildParticipantMention(SongUserDto user)
-    {
-
-        var escaped = WebUtility.HtmlEncode(user.DisplayName.Trim());
+        var escaped = EscapeAndTrim(user.DisplayName.Trim());
 
         // TgUserId может быть null, если пользователь не привязал Telegram
-        if (user.TgUserId.HasValue)
-            return $"<a href=\"tg://user?id={user.TgUserId}\">{escaped}</a>";
-
-        return escaped;
+        return user.TgUserId.HasValue ? $"<a href=\"tg://user?id={user.TgUserId}\">{escaped}</a>" : escaped;
     }
 
+    /// <summary>
+    /// Собираем (по возможности) корректное упоминание юзера через прямую ссылку на его аккаунт по тг айди
+    /// Важно, то, что производит эта функция можно использовать только внутри тг. Браузер не сможет открыть ссылки вида
+    /// tg://user?id=..., там можно использовать только ссылки по юзернейму вида https://web.telegram.org/k/#@igamamaev
+    /// </summary>
+    /// <param name="user"></param>
+    /// <returns></returns>
+    public static string BuildParticipantMention(SongUserDto user)
+    {
+        var appUser = new ApplicationUser
+        {
+            TgUserId = user.TgUserId,
+            DisplayName = user.DisplayName,
+            UserName = user.UserName,
+            // TODO: заполнить все возможные поля
+        };
+        return BuildParticipantMention(appUser);
+    }
+
+    /// <summary>
+    /// Собирает базовое комбинированное название песни
+    /// </summary>
+    /// <param name="title">Never gonna give you up</param>
+    /// <param name="artist">Rick Astley</param>
+    /// <param name="defaultValue">произошла ошибка</param>
+    /// <returns>Never gonna give you up — Rick Astley</returns>
     private static string BuildSongName(string title, string artist, string? defaultValue)
     {
         title = EscapeAndTrim(title);
@@ -110,6 +160,18 @@ public static partial class SongServiceFormatter
         };
     }
 
+    /// <summary>
+    /// : test — test
+    ///
+    /// Участники: <a href="tg://user?id=774301386">Игорь</a>
+    ///
+    /// <a href="https://www.youtube.com/watch?v=nRKJBpFFsuI&list=RDiqsnJJK8GA4&index=2">Послушать</a>
+    /// </summary>
+    /// <param name="b">куда собираем</param>
+    /// <param name="main">BuildSongName(title, artist, "Песня")</param>
+    /// <param name="link">ссылка на прослушивание песни</param>
+    /// <param name="mentions">уже собранный через ... строка с упоминанием участников песни</param>
+    /// <param name="participantsLabel">Участники</param>
     private static void AppendMessageBody(
         StringBuilder b,
         string main,
@@ -136,11 +198,16 @@ public static partial class SongServiceFormatter
         {
             b.AppendLine();
             b.AppendLine();
-            b.Append(BuildSongLink(link));
+            b.Append($"<a href=\"{EnsureProtocolPresent(link)}\">Послушать</a>");
         }
     }
 
-    private static string BuildSongLink(string link)
+    /// <summary>
+    /// Удостоверяемся, что ссылка начинается с https:// или http://
+    /// </summary>
+    /// <param name="link">ссылка для которой это добавляем</param>
+    /// <returns></returns>
+    private static string EnsureProtocolPresent(string link)
     {
         // Если ссылка уже содержит http/https, используем как есть
         if (link.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
@@ -158,6 +225,12 @@ public static partial class SongServiceFormatter
         return WebUtility.HtmlEncode(text?.Trim() ?? "");
     }
 
+    /// <summary>
+    /// Очень аккуратно обрезаем строку в юникоде до нужной длины
+    /// </summary>
+    /// <param name="text">"Привет, мир!"</param>
+    /// <param name="maxRunes">3</param>
+    /// <returns>При</returns>
     private static string TruncateRunes(string text, int maxRunes)
     {
         if (string.IsNullOrEmpty(text))

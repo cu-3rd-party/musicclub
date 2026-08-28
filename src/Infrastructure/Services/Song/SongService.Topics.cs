@@ -31,12 +31,11 @@ public class SongServiceTopics(
                 a.JoinedAt))
             .ToList();
 
-        var message = SongServiceFormatter.BuildSongTopicMessage(song.Title, song.Artist, song.LinkUrl, participants);
+        var generalMessage = SongServiceFormatter.BuildSongFullMessage(song.Title, song.Artist, song.LinkUrl);
+        var topicMessage = SongServiceFormatter.BuildSongFullTopicMessage(song.Title, song.Artist, song.LinkUrl, participants);
 
-        if (!string.IsNullOrEmpty(message))
-        {
-            await telegramChatService.SendTopicMessage(topic.TopicId, message, cancellationToken);
-        }
+        if (!string.IsNullOrEmpty(generalMessage)) await telegramChatService.SendGeneralMessage(generalMessage, cancellationToken);
+        if (!string.IsNullOrEmpty(topicMessage)) await telegramChatService.SendTopicMessage(topic.TopicId, topicMessage, cancellationToken);
 
         return topic;
     }

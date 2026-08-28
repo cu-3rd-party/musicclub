@@ -21,6 +21,7 @@
     <package-manager value="pnpm" />
     <envs>
       <env name="API_URL" value="http://localhost:5213" />
+      <env name="API_SSR_URL" value="http://localhost:5213" />
     </envs>
     <method v="2" />
   </configuration>
