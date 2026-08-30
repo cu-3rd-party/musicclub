@@ -1,4 +1,4 @@
-name: Deploy to VDS
+name: Deploy
 
 on:
   push:
@@ -12,13 +12,46 @@ jobs:
     environment: deploy
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH key
+        env:
+          host: ${{ secrets.VDS_HOST }}
+          key: ${{ secrets.VDS_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$key" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$host" >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+          chmod 700 ~/.ssh
+
+      - name: Sync source
+        env:
+          host: ${{ secrets.VDS_HOST }}
+          username: ${{ secrets.VDS_USERNAME }}
+          deploy_path: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          mkdir -p "$deploy_path"
+          rsync -avz --delete --progress \
+            docker-compose.yml \
+            src \
+            traefik \
+            docker \
+            CuMusicClub.slnx \
+            Directory.Build.props \
+            Directory.Packages.props \
+            "$username@$host:$deploy_path"
+
       - name: Deploy to VDS
         uses: appleboy/ssh-action@v1.0.0
+        env:
+          env: ${{ secrets.ENV }}
         with:
           host: ${{ secrets.VDS_HOST }}
           username: ${{ secrets.VDS_USERNAME }}
           key: ${{ secrets.VDS_SSH_KEY }}
           script: |
-            cd /opt/musicclub
-            cd source && git fetch && git reset --hard origin/master && git clean -fdx && cd -
-            docker compose -f docker-compose.yml up -d --build
+            printf '%s\n' "$env" > "$deploy_path/.env"
+            cd "$deploy_path" && docker compose -f docker-compose.yml up -d --build

@@ -1,96 +1,96 @@
 ﻿services:
-    traefik:
-        image: traefik:v3.5
-        restart: unless-stopped
-        command: ["--configFile=/etc/traefik/traefik.yml"]
-        ports:
-            - "${NGINX_PORT:-80}:80"
-        volumes:
-            - ./traefik:/etc/traefik:ro,Z
-        depends_on:
-            backend:
-                condition: service_healthy
-            frontend:
-                condition: service_healthy
-            db:
-                condition: service_healthy
-        networks:
-            - musicclub-network
-        healthcheck:
-            test: ["CMD", "traefik", "healthcheck", "--ping"]
-            interval: 10s
-            timeout: 5s
-            retries: 5
-            start_period: 5s
+  traefik:
+    image: traefik:v3.5
+    restart: unless-stopped
+    command: [ "--configFile=/etc/traefik/traefik.yml" ]
+    ports:
+      - "${NGINX_PORT:-80}:80"
+    volumes:
+      - ./traefik:/etc/traefik:ro,Z
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    networks:
+      - musicclub-network
+    healthcheck:
+      test: [ "CMD", "traefik", "healthcheck", "--ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
-    db:
-        image: postgres:18-alpine
-        restart: unless-stopped
-        ports:
-            - "${DB_PORT:-5432}:5432"
-        env_file:
-            - .env
-        volumes:
-            - db_data:/var/lib/postgresql/data
-        networks:
-            - musicclub-network
-        healthcheck:
-            test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-db}"]
-            interval: 3s
-            timeout: 1s
-            retries: 10
-            start_period: 5s
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    env_file:
+      - .env
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - musicclub-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-db}" ]
+      interval: 3s
+      timeout: 1s
+      retries: 10
+      start_period: 5s
 
-    backend:
-        build:
-            context: .
-            dockerfile: docker/backend/Dockerfile
-            # nuget.org is unreachable via the default bridge on some networks (black-holed IPs);
-            # building on the host network matches local dotnet restore behavior
-            network: host
-        restart: unless-stopped
-        env_file:
-            - .env
-        environment:
-            # оч прикольный оверрайд, позволяет не задавать ConnectionStrings__CuMusicClubDb и задавать только POSTGRES_* переменные
-            - ConnectionStrings__CuMusicClubDb=Server=db;Port=5432;Database=${POSTGRES_DB:-db};Username=${POSTGRES_USER:-admin};Password=${POSTGRES_PASSWORD:-password}
-        depends_on:
-            db:
-                condition: service_healthy
-        networks:
-            - musicclub-network
-        healthcheck:
-            test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8080/health || exit 1"]
-            interval: 3s
-            timeout: 5s
-            retries: 10
-            start_period: 5s
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+      # nuget.org is unreachable via the default bridge on some networks (black-holed IPs);
+      # building on the host network matches local dotnet restore behavior
+      network: host
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # оч прикольный оверрайд, позволяет не задавать ConnectionStrings__CuMusicClubDb и задавать только POSTGRES_* переменные
+      - ConnectionStrings__CuMusicClubDb=Server=db;Port=5432;Database=${POSTGRES_DB:-db};Username=${POSTGRES_USER:-admin};Password=${POSTGRES_PASSWORD:-password}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - musicclub-network
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8080/health || exit 1" ]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
 
-    frontend:
-        build:
-            context: .
-            dockerfile: docker/frontend/Dockerfile
-            network: host
-        restart: unless-stopped
-        env_file:
-            - .env
-        environment:
-            - API_URL=${API_URL:-http://localhost:80/api}
-            - HOST=0.0.0.0
-            - PORT=5173
-        networks:
-            - musicclub-network
-        healthcheck:
-            test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:5173 || exit 1"]
-            interval: 3s
-            timeout: 5s
-            retries: 10
-            start_period: 5s
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+      network: host
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - API_URL=${API_URL:-http://localhost:80/api}
+      - HOST=0.0.0.0
+      - PORT=5173
+    networks:
+      - musicclub-network
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:5173 || exit 1" ]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
 
 volumes:
-    db_data:
-        driver: local
+  db_data:
+    driver: local
 
 networks:
-    musicclub-network:
-        driver: bridge
+  musicclub-network:
+    driver: bridge

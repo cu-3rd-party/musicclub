@@ -1,17 +1,17 @@
 entryPoints:
-    web:
-        address: ":80"
-        transport:
-            respondingTimeouts:
-                readTimeout: 300s
+  web:
+    address: ":80"
+    transport:
+      respondingTimeouts:
+        readTimeout: 300s
 
 providers:
-    file:
-        directory: /etc/traefik
-        watch: true
+  file:
+    directory: /etc/traefik
+    watch: true
 
 ping:
-    entryPoint: traefik
+  entryPoint: traefik
 
 log:
-    level: INFO
+  level: INFO
