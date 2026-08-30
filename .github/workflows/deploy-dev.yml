@@ -1,4 +1,4 @@
-name: Deploy
+name: Deploy dev
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment: deploy
+    environment: dev
 
     steps:
       - name: Checkout code
@@ -17,8 +17,8 @@ jobs:
 
       - name: Set up SSH key
         env:
-          host: ${{ secrets.VDS_HOST }}
-          key: ${{ secrets.VDS_SSH_KEY }}
+          host: ${{ secrets.HOST }}
+          key: ${{ secrets.SSH_KEY }}
         run: |
           mkdir -p ~/.ssh
           echo "$key" > ~/.ssh/id_ed25519
@@ -28,13 +28,8 @@ jobs:
           chmod 700 ~/.ssh
 
       - name: Sync source
-        env:
-          host: ${{ secrets.VDS_HOST }}
-          username: ${{ secrets.VDS_USERNAME }}
-          deploy_path: ${{ secrets.DEPLOY_PATH }}
         run: |
-          mkdir -p "$deploy_path"
-          rsync -avz --delete --progress \
+          rsync -avz --delete \
             docker-compose.yml \
             src \
             traefik \
@@ -42,16 +37,14 @@ jobs:
             CuMusicClub.slnx \
             Directory.Build.props \
             Directory.Packages.props \
-            "$username@$host:$deploy_path"
+            "${{ secrets.USERNAME }}@${{ secrets.HOST }}:${{ secrets.DEPLOY_PATH }}"
 
       - name: Deploy to VDS
         uses: appleboy/ssh-action@v1.0.0
-        env:
-          env: ${{ secrets.ENV }}
         with:
-          host: ${{ secrets.VDS_HOST }}
-          username: ${{ secrets.VDS_USERNAME }}
-          key: ${{ secrets.VDS_SSH_KEY }}
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
           script: |
-            printf '%s\n' "$env" > "$deploy_path/.env"
-            cd "$deploy_path" && docker compose -f docker-compose.yml up -d --build
+            printf '%s\n' "${{ secrets.ENV }}" > "${{ secrets.DEPLOY_PATH }}/.env"
+            cd "${{ secrets.DEPLOY_PATH }}" && docker compose -f docker-compose.yml up -d --build

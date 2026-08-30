@@ -31,7 +31,7 @@
     env_file:
       - .env
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql
     networks:
       - musicclub-network
     healthcheck:
