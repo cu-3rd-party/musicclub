@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using CuMusicClub.Application.Services.Auth;
+using CuMusicClub.Application.Services.Telegram;
 using CuMusicClub.Domain.Constants;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Infrastructure.Data;
@@ -16,12 +17,14 @@ public partial class AuthServiceTests : TestBase
         private readonly IServiceScope _scope;
         public IAuthService Auth { get; }
         public UserManager<ApplicationUser> UserManager { get; }
+        public ITelegramAuthService TelegramAuth { get; }
 
         public AuthScope()
         {
             _scope = FunctionalTestSetup.ScopeFactory.CreateScope();
             Auth = _scope.ServiceProvider.GetRequiredService<IAuthService>();
             UserManager = _scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            TelegramAuth = _scope.ServiceProvider.GetRequiredService<ITelegramAuthService>();
         }
 
         public void Dispose()

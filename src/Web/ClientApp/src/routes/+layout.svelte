@@ -4,6 +4,7 @@
     import {goto} from "$app/navigation";
     import {resolve} from "$app/paths";
     import {page} from "$app/state";
+    import { retrieveRawInitData } from '@tma.js/sdk';
 
     import {ensureAuthenticated, telegramLogin} from "$lib/auth/store";
 
@@ -14,18 +15,8 @@
     let hasBeenAuthenticated = $state(false);
     let telegramLoginAttempted = false;
 
-    const TELEGRAM_WAIT_TIMEOUT_MS = 5000;
-
     function isTelegram(): boolean {
         return !!window["Telegram"]?.WebApp; // чтоб тайпскрипт не ругался попусту
-    }
-
-    function detectTelegramEnvironment(): boolean {
-        return (
-            typeof window["TelegramWebviewProxy"] !== "undefined" ||
-            window.location.hash.indexOf("tgWebApp") !== -1 ||
-            window.location.search.indexOf("tgWebApp") !== -1
-        );
     }
 
     function isAuthRoute(pathname: string): boolean {
@@ -62,23 +53,23 @@
 
         // 2. No session but opened through Telegram → request telegramAuth and go to "/"
         //    once the user profile is acquired.
+        console.log(`isTelegram: ${isTelegram()}`);
         if (!telegramLoginAttempted && isTelegram()) {
-            const initData = window["Telegram"]?.WebApp?.initData ?? "";
-            if (initData) {
-                const user = await telegramLogin(initData);
-                telegramLoginAttempted = true;
-                if (currentRun !== guardRun) {
-                    return;
-                }
+            const initData = retrieveRawInitData();
+            console.log(initData);
+            const user = await telegramLogin(initData);
+            telegramLoginAttempted = true;
+            if (currentRun !== guardRun) {
+                return;
+            }
 
-                if (user) {
-                    hasBeenAuthenticated = true;
-                    checkingAuth = false;
-                    if (pathname !== "/") {
-                        await goto(resolve("/"));
-                    }
-                    return;
+            if (user) {
+                hasBeenAuthenticated = true;
+                checkingAuth = false;
+                if (pathname !== "/") {
+                    await goto(resolve("/"));
                 }
+                return;
             }
         }
 

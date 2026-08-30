@@ -70,7 +70,17 @@ public class TelegramAuthService(
         if (!parsed.TryGetValue("user", out var userValues))
             throw new BadHttpRequestException("no user in init data string");
 
-        var user = JsonSerializer.Deserialize<User>(userValues.ToString());
+        var userJson = Uri.UnescapeDataString(userValues.ToString());
+
+        var options = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
+
+        var user = JsonSerializer.Deserialize<User>(userJson, options);
+
+        if (user == null) throw new BadHttpRequestException("Failed to deserialize user data");
+
         return user;
     }
 
@@ -118,9 +128,8 @@ public class TelegramAuthService(
             DisplayName = tgUser.FirstName,
         };
         var result = await userManager.CreateAsync(user);
-        logger.LogDebug($"result is {result.Succeeded.ToString()}"); // says result is True, i see the user in the database
-        await permissionService.GrantDefaultAsync(user, cancellationToken);
-        await db.SaveChangesAsync(cancellationToken); // unneccessary, but doesn't harm
+        await permissionService.GrantDefaultAsync(user,
+            cancellationToken); // adding db.savecontextasync crashes the program because PK collide
         return user;
     }
 }

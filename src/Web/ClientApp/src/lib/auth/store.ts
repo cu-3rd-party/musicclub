@@ -48,7 +48,7 @@ export async function telegramLogin(
     initData: string,
 ): Promise<UserProfile | null> {
     try {
-        const session = await telegramAuth({ init_data: initData });
+        const session = await telegramAuth({ initData });
         const persistedSession: AuthSession = {
             ...session,
             accessTokenAcquiredAt: new Date().toISOString(),

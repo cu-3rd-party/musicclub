@@ -41,5 +41,5 @@ export type RegisterPayload = {
 };
 
 export type TelegramInitDataPayload = {
-    init_data: string;
+    initData: string;
 };
