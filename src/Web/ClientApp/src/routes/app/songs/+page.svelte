@@ -23,69 +23,104 @@
 
     let searchInput = $state("");
     let songs = $state<Song[]>([]);
-
-    let loading = $state(true);
+    let nextPageToken = $state<string | null>(null);
     let loadingMore = $state(false);
     let error = $state<string | null>(null);
 
-    let nextPageToken = $state<string | null>(null);
-
-    let favoriteFirst = $state(false);
-    let showFull = $state(false);
     let rolesDialogOpen = $state(false);
-    let selectedRoleTitles = $state<Set<string>>(new Set());
 
+    /*
+     * URL is the source of truth for filters.
+     * No effect is needed to synchronize local state with it.
+     */
     const searchQuery = $derived(
         page.url.searchParams.get("q") ?? ""
     );
 
-    const allRoleTitles = $derived(
-        Array.from(
-            new Set(
-                songs.flatMap((song) =>
-                    song.roles.map((role) => role.title)
-                )
-            )
-        ).sort()
+    const favoriteFirst = $derived(
+        page.url.searchParams.get("favoriteFirst") === "1"
     );
 
-    const filteredSongs = $derived(
-        (() => {
-            let result = [...songs];
-
-            if (favoriteFirst) {
-                result.sort((a, b) =>
-                    b.featured === a.featured
-                        ? 0
-                        : b.featured
-                            ? 1
-                            : -1
-                );
-            }
-
-            if (!showFull) {
-                result = result.filter(
-                    (song) =>
-                        song.roles.length === 0 ||
-                        song.roles.some(
-                            (role) => role.assignment === null
-                        )
-                );
-            }
-
-            if (selectedRoleTitles.size > 0) {
-                result = result.filter((song) =>
-                    song.roles.some(
-                        (role) =>
-                            selectedRoleTitles.has(role.title) &&
-                            role.assignment === null
-                    )
-                );
-            }
-
-            return result;
-        })()
+    const showFull = $derived(
+        page.url.searchParams.get("showFull") === "1"
     );
+
+    const selectedRoleTitles = $derived(
+        new Set(page.url.searchParams.getAll("roles"))
+    );
+
+    const songsRequest = $derived(
+        getSongs({
+            query: searchQuery || undefined,
+            pageSize: 128
+        })
+    );
+
+    let loadedQuery = $state("");
+
+    async function loadMoreSongs() {
+        if (
+            loadingMore ||
+            !nextPageToken ||
+            loadedQuery !== searchQuery
+        ) {
+            return;
+        }
+
+        loadingMore = true;
+
+        try {
+            const result = await getSongs({
+                query: searchQuery || undefined,
+                pageSize: 128,
+                pageToken: nextPageToken
+            });
+
+            const existingIds = new Set(
+                songs.map((song) => song.id)
+            );
+
+            const newSongs = result.songs.filter(
+                (song) => !existingIds.has(song.id)
+            );
+
+            songs = [...songs, ...newSongs];
+            nextPageToken = result.nextPageToken;
+        } catch (err) {
+            console.error(
+                "Не удалось загрузить следующую страницу",
+                err
+            );
+        } finally {
+            loadingMore = false;
+        }
+    }
+
+    async function applySongsRequest(
+        request: Promise<{
+            songs: Song[];
+            nextPageToken: string | null;
+        }>
+    ) {
+        error = null;
+
+        try {
+            const result = await request;
+
+            if (loadedQuery !== searchQuery) {
+                loadedQuery = searchQuery;
+                songs = result.songs;
+                nextPageToken = result.nextPageToken;
+                return;
+            }
+
+            songs = result.songs;
+            nextPageToken = result.nextPageToken;
+        } catch (err) {
+            error = "Не удалось загрузить песни";
+            console.error(err);
+        }
+    }
 
     function updateFilterUrl(
         updates: {
@@ -140,7 +175,24 @@
         });
     }
 
-    function toggleRoleTitle(title: string, checked: boolean) {
+    let searchTimer: ReturnType<typeof setTimeout>;
+
+    function handleSearchInput(value: string) {
+        searchInput = value;
+
+        clearTimeout(searchTimer);
+
+        searchTimer = setTimeout(() => {
+            updateFilterUrl({
+                q: value
+            });
+        }, 300);
+    }
+
+    function toggleRoleTitle(
+        title: string,
+        checked: boolean
+    ) {
         const newSet = new Set(selectedRoleTitles);
 
         if (checked) {
@@ -149,40 +201,77 @@
             newSet.delete(title);
         }
 
-        selectedRoleTitles = newSet;
-
         updateFilterUrl({
             roles: newSet
         });
     }
 
     function clearRoleFilters() {
-        selectedRoleTitles = new Set();
-
         updateFilterUrl({
             roles: new Set()
         });
     }
 
-    function hasActiveRoleFilters() {
-        return selectedRoleTitles.size > 0;
-    }
-
     function setFavoriteFirst(value: boolean) {
-        favoriteFirst = value;
-
         updateFilterUrl({
             favoriteFirst: value
         });
     }
 
     function setShowFull(value: boolean) {
-        showFull = value;
-
         updateFilterUrl({
             showFull: value
         });
     }
+
+    const allRoleTitles = $derived(
+        Array.from(
+            new Set(
+                songs.flatMap((song) =>
+                    song.roles.map((role) => role.title)
+                )
+            )
+        ).sort()
+    );
+
+    const filteredSongs = $derived(
+        (() => {
+            let result = [...songs];
+
+            if (favoriteFirst) {
+                result.sort((a, b) =>
+                    b.featured === a.featured
+                        ? 0
+                        : b.featured
+                            ? 1
+                            : -1
+                );
+            }
+
+            if (!showFull) {
+                result = result.filter(
+                    (song) =>
+                        song.roles.length === 0 ||
+                        song.roles.some(
+                            (role) =>
+                                role.assignment === null
+                        )
+                );
+            }
+
+            if (selectedRoleTitles.size > 0) {
+                result = result.filter((song) =>
+                    song.roles.some(
+                        (role) =>
+                            selectedRoleTitles.has(role.title) &&
+                            role.assignment === null
+                    )
+                );
+            }
+
+            return result;
+        })()
+    );
 
     function observe(element: HTMLElement) {
         const scrollContainer =
@@ -207,19 +296,6 @@
         };
     }
 
-    function scrollToTop() {
-        document.getElementById("app-container")?.scrollTo({
-            top: 0,
-            behavior: "smooth"
-        });
-    }
-
-    /*
-     * Sentinel для infinite scroll.
-     *
-     * Когда он появляется в пределах scroll-контейнера,
-     * загружаем следующую страницу.
-     */
     function observeLoadMore(element: HTMLElement) {
         const scrollContainer =
             document.getElementById("app-container");
@@ -246,116 +322,14 @@
         };
     }
 
-    async function loadMoreSongs() {
-        if (
-            loading ||
-            loadingMore ||
-            !nextPageToken
-        ) {
-            return;
-        }
-
-        loadingMore = true;
-
-        try {
-            const result = await getSongs({
-                query: searchQuery || undefined,
-                pageSize: 128,
-                pageToken: nextPageToken
+    function scrollToTop() {
+        document
+            .getElementById("app-container")
+            ?.scrollTo({
+                top: 0,
+                behavior: "smooth"
             });
-
-            const existingIds = new Set(songs.map((song) => song.id));
-
-            const newSongs = result.songs.filter(
-                (song) => !existingIds.has(song.id)
-            );
-
-            songs = [...songs, ...newSongs];
-            nextPageToken = result.nextPageToken;
-        } catch (err) {
-            console.error("Не удалось загрузить следующую страницу", err);
-        } finally {
-            loadingMore = false;
-        }
     }
-
-    let searchTimer: ReturnType<typeof setTimeout>;
-
-    function handleSearchInput(value: string) {
-        searchInput = value;
-
-        clearTimeout(searchTimer);
-
-        searchTimer = setTimeout(() => {
-            updateFilterUrl({
-                q: value
-            });
-        }, 300);
-    }
-
-    // Восстанавливаем фильтры из URL.
-    $effect(() => {
-        const params = page.url.searchParams;
-
-        searchInput = params.get("q") ?? "";
-
-        const roles = params.getAll("roles");
-        selectedRoleTitles = new Set(roles);
-
-        favoriteFirst =
-            params.get("favoriteFirst") === "1";
-
-        showFull =
-            params.get("showFull") === "1";
-    });
-
-    /*
-     * Загружаем первую страницу.
-     *
-     * Этот effect зависит от searchQuery, поэтому при изменении
-     * поискового запроса список сбрасывается и начинается заново.
-     */
-    $effect(() => {
-        const query = searchQuery;
-
-        let cancelled = false;
-
-        async function loadSongs() {
-            loading = true;
-            error = null;
-
-            // Сбрасываем pagination перед новой первой страницей.
-            songs = [];
-            nextPageToken = null;
-
-            try {
-                const result = await getSongs({
-                    query: query || undefined,
-                    pageSize: 24
-                });
-
-                if (!cancelled) {
-                    songs = result.songs;
-                    nextPageToken = result.nextPageToken;
-                }
-            } catch (err) {
-                if (!cancelled) {
-                    error = "Не удалось загрузить песни";
-                    console.error(err);
-                }
-            } finally {
-                if (!cancelled) {
-                    loading = false;
-                }
-            }
-        }
-
-        loadSongs();
-
-        return () => {
-            cancelled = true;
-        };
-    });
 </script>
 
 <main class="w-full h-full flex flex-col px-4">
@@ -369,9 +343,9 @@
                 placeholder="Название песни"
                 value={searchInput}
                 oninput={(event) =>
-					handleSearchInput(
-						event.currentTarget.value
-					)}
+                    handleSearchInput(
+                        event.currentTarget.value
+                    )}
             />
 
             <InputGroup.Addon align="inline-end">
@@ -401,31 +375,31 @@
                                 type="button"
                                 class="flex flex-1 items-center gap-1.5"
                                 onclick={(e) => {
-									e.stopPropagation();
-									rolesDialogOpen = true;
-								}}
+                                    e.stopPropagation();
+                                    rolesDialogOpen = true;
+                                }}
                             >
                                 <Funnel/>
 
                                 <span>
-									Свободные роли
-								</span>
+                                    Свободные роли
+                                </span>
 
                                 {#if selectedRoleTitles.size !== 0}
-									<span>
-										({selectedRoleTitles.size})
-									</span>
+                                    <span>
+                                        ({selectedRoleTitles.size})
+                                    </span>
                                 {/if}
                             </button>
 
-                            {#if hasActiveRoleFilters()}
+                            {#if selectedRoleTitles.size > 0}
                                 <button
                                     type="button"
                                     class="ml-2 flex size-5 items-center justify-center rounded-sm hover:bg-muted"
                                     onclick={(e) => {
-										e.stopPropagation();
-										clearRoleFilters();
-									}}
+                                        e.stopPropagation();
+                                        clearRoleFilters();
+                                    }}
                                     aria-label="Очистить фильтр ролей"
                                 >
                                     <X class="size-4"/>
@@ -435,30 +409,28 @@
 
                         <DropdownMenu.Item
                             onclick={() =>
-								setFavoriteFirst(
-									!favoriteFirst
-								)}
+                                setFavoriteFirst(
+                                    !favoriteFirst
+                                )}
                         >
                             <Checkbox
                                 checked={favoriteFirst}
                             />
 
                             <span class="text-sm">
-								Сначала избранные
-							</span>
+                                Сначала избранные
+                            </span>
                         </DropdownMenu.Item>
 
                         <DropdownMenu.Item
                             onclick={() =>
-								setShowFull(!showFull)}
+                                setShowFull(!showFull)}
                         >
-                            <Checkbox
-                                checked={showFull}
-                            />
+                            <Checkbox checked={showFull}/>
 
                             <span class="text-sm">
-								Показывать заполненные
-							</span>
+                                Показывать заполненные
+                            </span>
                         </DropdownMenu.Item>
                     </DropdownMenu.Content>
                 </DropdownMenu.Root>
@@ -466,77 +438,97 @@
         </InputGroup.Root>
     </div>
 
-    {#if loading}
+    {#await songsRequest}
         <div class="py-8 text-center text-muted-foreground">
             Загрузка...
         </div>
-    {:else if error}
-        <div class="py-8 text-center text-destructive">
-            {error}
-        </div>
-    {:else if songs.length === 0}
-        <div class="py-8 text-center text-muted-foreground">
-            <TextType
-                text={
-					searchQuery
-						? "404 NOT FOUND"
-						: "204 NO CONTENT "
-				}
-                typingSpeed={100}
-                deletingSpeed={50}
-                showCursor={true}
-                loop={false}
-                cursorCharacter="▎"
-                cursorBlinkDuration={0.5}
-                variableSpeed={{
-					min: 60,
-					max: 120
-				}}
-            />
-        </div>
-    {:else}
-        <div
-            class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
-        >
-            {#each filteredSongs as song (song.id)}
-                <SongCard
-                    songId={song.id}
-                    title={song.title}
-                    artist={song.artist}
-                    description={
-						song.description ?? undefined
-					}
-                    imageUrl={
-						song.thumbnailUrl ?? undefined
-					}
-                    featured={song.featured}
-                    filledAssignments={song.roles.filter(
-						(role) =>
-							role.assignment !== null
-					).length}
-                    totalAssignments={song.roles.length}
-                />
-            {/each}
-        </div>
+    {:then result}
+        {@const currentSongs = result.songs}
 
         <!--
-            Sentinel находится после списка.
-            rootMargin 400px означает, что следующая страница
-            начнёт грузиться ещё до того, как пользователь
-            достигнет самого низа.
+            Keep the first-page result synchronized with local
+            pagination state without an effect.
         -->
-        <div
-            class="h-1 w-full shrink-0"
-            use:observeLoadMore
-            aria-hidden="true"
-        ></div>
-
-        {#if loadingMore}
-            <div class="py-6 text-center text-sm text-muted-foreground">
-                Загрузка...
-            </div>
+        {#if loadedQuery !== searchQuery}
+            {@const _ = (() => {
+                loadedQuery = searchQuery;
+                songs = currentSongs;
+                nextPageToken = result.nextPageToken;
+                error = null;
+                return null;
+            })()}
         {/if}
-    {/if}
+
+        {#if error}
+            <div class="py-8 text-center text-destructive">
+                {error}
+            </div>
+        {:else if songs.length === 0}
+            <div class="py-8 text-center text-muted-foreground">
+                <TextType
+                    text={
+                        searchQuery
+                            ? "404 NOT FOUND"
+                            : "204 NO CONTENT "
+                    }
+                    typingSpeed={100}
+                    deletingSpeed={50}
+                    showCursor={true}
+                    loop={false}
+                    cursorCharacter="▎"
+                    cursorBlinkDuration={0.5}
+                    variableSpeed={{
+                        min: 60,
+                        max: 120
+                    }}
+                />
+            </div>
+        {:else}
+            <div
+                class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+            >
+                {#each filteredSongs as song (song.id)}
+                    <SongCard
+                        songId={song.id}
+                        title={song.title}
+                        artist={song.artist}
+                        description={
+                            song.description ?? undefined
+                        }
+                        imageUrl={
+                            song.thumbnailUrl ?? undefined
+                        }
+                        featured={song.featured}
+                        filledAssignments={song.roles.filter(
+                            (role) =>
+                                role.assignment !== null
+                        ).length}
+                        totalAssignments={song.roles.length}
+                    />
+                {/each}
+            </div>
+
+            <div
+                class="h-1 w-full shrink-0"
+                use:observeLoadMore
+                aria-hidden="true"
+            ></div>
+
+            {#if loadingMore}
+                <div
+                    class="py-6 text-center text-sm text-muted-foreground"
+                >
+                    Загрузка...
+                </div>
+            {/if}
+        {/if}
+    {:catch err}
+        <div class="py-8 text-center text-destructive">
+            Не удалось загрузить песни
+        </div>
+
+        {@const _ = console.error(err)}
+    {/await}
 
     {#if showScrollTop}
         <Button
@@ -581,18 +573,18 @@
                         >
                             <Checkbox
                                 checked={selectedRoleTitles.has(
-									title
-								)}
+                                    title
+                                )}
                                 onCheckedChange={(checked) =>
-									toggleRoleTitle(
-										title,
-										checked
-									)}
+                                    toggleRoleTitle(
+                                        title,
+                                        checked
+                                    )}
                             />
 
                             <span class="text-sm">
-								{title}
-							</span>
+                                {title}
+                            </span>
                         </label>
                     {/each}
 
@@ -609,7 +601,7 @@
                     <Button
                         type="button"
                         onclick={() =>
-							(rolesDialogOpen = false)}
+                            (rolesDialogOpen = false)}
                     >
                         Готово
                     </Button>
