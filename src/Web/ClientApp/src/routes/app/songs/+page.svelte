@@ -260,7 +260,7 @@
         try {
             const result = await getSongs({
                 query: searchQuery || undefined,
-                pageSize: 24,
+                pageSize: 128,
                 pageToken: nextPageToken
             });
 
@@ -331,7 +331,7 @@
             try {
                 const result = await getSongs({
                     query: query || undefined,
-                    pageSize: 24
+                    pageSize: 128
                 });
 
                 if (!cancelled) {
