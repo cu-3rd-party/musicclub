@@ -41,7 +41,7 @@ public class AuthService(
         {
             Id = Guid.NewGuid(),
             CreatedAt = now,
-            IpAddress = headers?["X-Real-IP"].FirstOrDefault()
+            IpAddress = headers?["X-Real-Ip"].FirstOrDefault()
                         ?? headers?["X-Forwarded-For"].FirstOrDefault()?.Split(',').First()?.Trim()
                         ?? httpContext?.Connection.RemoteIpAddress?.ToString(),
             LastActivityAt = now,
