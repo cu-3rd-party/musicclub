@@ -260,7 +260,7 @@
         try {
             const result = await getSongs({
                 query: searchQuery || undefined,
-                pageSize: 128,
+                pageSize: 24,
                 pageToken: nextPageToken
             });
 
