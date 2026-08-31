@@ -102,14 +102,10 @@
 
         if (!query) return [];
 
-        const added = new Set(
-            (availableRoles ?? []).map((r) => r.toLowerCase())
-        );
-
         return existingRoles
             .filter((r) => {
                 const lower = r.toLowerCase();
-                return lower.includes(query) && !added.has(lower);
+                return lower.includes(query);
             })
             .slice(0, 5);
     })());
