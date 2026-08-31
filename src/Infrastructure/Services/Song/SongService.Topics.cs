@@ -40,6 +40,19 @@ public class SongServiceTopics(
         return topic;
     }
 
+    public async Task AnnounceThumbnailUpdated(long topicId,
+        string? url,
+        ApplicationUser user,
+        CancellationToken cancellationToken = default)
+    {
+        var participantUser = new SongUserDto(user.Id, user.DisplayName, user.UserName, user.AvatarUrl, user.TgUserId);
+        var mention = SongServiceFormatter.BuildParticipantMention(participantUser);
+        if (url != null)
+            await telegramChatService.SendTopicPhoto(topicId, url, $"{mention} обновил превьюшку песни", cancellationToken);
+        else
+            await telegramChatService.SendTopicMessage(topicId, $"{mention} удалил превьюшку песни", cancellationToken);
+    }
+
     public async Task AnnounceRoleAddedAsync(long topicId,
         string roleTitle,
         CancellationToken cancellationToken = default)

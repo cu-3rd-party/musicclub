@@ -138,6 +138,7 @@ public partial class SongService(
     {
         var song = await db
                        .Songs.Include(s => s.CreatedBy)
+                       .Include(song => song.SongTopic!)
                        .FirstOrDefaultAsync(s => s.Id == songId, cancellationToken) ??
                    throw new NotFoundException(songId.ToString(), nameof(Domain.Entities.Song));
 
@@ -167,6 +168,7 @@ public partial class SongService(
         song.LinkUrl = request.Url;
         song.ThumbnailUrl =
             $"/data/{request.ThumbnailDataEntryId}"; // Да, это захардкоженный путь. Да, он заставляет ходить фронт к беку и обратно. И что ты мне сделаешь?
+        var announceThumbnailChange = song.ThumbnailDataEntryId != request.ThumbnailDataEntryId;
         song.ThumbnailDataEntryId = request.ThumbnailDataEntryId;
         if (!request.ThumbnailDataEntryId.HasValue) song.ThumbnailUrl = null;
         if (permissions.Contains(Domain.Constants.Permission.SongsEditFeatured)) song.IsFeatured = request.Featured;
@@ -187,6 +189,12 @@ public partial class SongService(
         }
 
         await transaction.CommitAsync(cancellationToken);
+
+        if (announceThumbnailChange && song.SongTopic != null)
+            await new SongServiceTopics(telegramChatService).AnnounceThumbnailUpdated(song.SongTopic.TopicId,
+                song.ThumbnailUrl,
+                user,
+                cancellationToken);
 
         return await GetAsync(songId, cancellationToken);
     }

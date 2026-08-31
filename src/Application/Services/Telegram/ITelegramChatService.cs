@@ -35,6 +35,8 @@ public interface ITelegramChatService
     /// <param name="cancellationToken">Токен отмены</param>
     Task SendTopicMessage(long topicId, string message, CancellationToken cancellationToken = default);
 
+    Task SendTopicPhoto(long topicId, string url, string? message, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Отправить сообщение в основной чат объявлений
     /// </summary>

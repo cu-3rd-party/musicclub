@@ -5,6 +5,7 @@ using CuMusicClub.Infrastructure.Options;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Telegram.Bot;
+using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
 
 namespace CuMusicClub.Infrastructure.Services.Telegram;
@@ -61,6 +62,28 @@ public class TelegramChatService(
     public async Task SendTopicMessage(long topicId, string message, CancellationToken cancellationToken = default)
     {
         await _bot.SendMessage(_chatId, message, parseMode: ParseMode.Html, messageThreadId: (int)topicId, cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
+    /// Добавляет https://dev.musicclub.cu3rd.ru/api/v1 перед url (или что стоит в TelegramOptions__BaseUrl)
+    /// </summary>
+    /// <param name="topicId"></param>
+    /// <param name="url"></param>
+    /// <param name="message"></param>
+    /// <param name="cancellationToken"></param>
+    /// <exception cref="NotImplementedException"></exception>
+    public async Task SendTopicPhoto(long topicId,
+        string url,
+        string? message,
+        CancellationToken cancellationToken = default)
+    {
+        var inputFile = new InputFileUrl(telegramOptions.Value.ImageBaseUrl + url);
+        await _bot.SendPhoto(_chatId,
+            inputFile,
+            message,
+            parseMode: ParseMode.Html,
+            messageThreadId: (int) topicId,
+            cancellationToken: cancellationToken);
     }
 
     public async Task SendGeneralMessage(string message, CancellationToken cancellationToken = default)
