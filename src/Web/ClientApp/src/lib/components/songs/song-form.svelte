@@ -23,6 +23,7 @@
         featured = $bindable(false),
         availableRoles = $bindable<string[] | null>(null),
         thumbnailUrl = $bindable<string | null>(null),
+        existingRoles = [],
         submitLabel = "Создать",
         submittingLabel = "Создание...",
         onsubmit,
@@ -34,6 +35,7 @@
         featured?: boolean;
         availableRoles?: string[] | null;
         thumbnailUrl?: string | null;
+        existingRoles?: string[];
         submitLabel?: string;
         submittingLabel?: string;
         onsubmit: (payload: {
@@ -51,6 +53,36 @@
     let thumbnailFile = $state<File | null>(null);
     let thumbnailPreviewUrl = $state<string | null>(null);
     let submitting = $state(false);
+    let roleInputFocused = $state(false);
+    let highlightedIndex = $state(-1);
+
+    const roleSuggestions = $derived((() => {
+        const query = roleInput.trim().toLowerCase();
+
+        if (!query) return [];
+
+        const added = new Set(
+            (availableRoles ?? []).map((r) => r.toLowerCase())
+        );
+
+        return existingRoles
+            .filter((r) => {
+                const lower = r.toLowerCase();
+                return lower.includes(query) && !added.has(lower);
+            })
+            .slice(0, 5);
+    })());
+
+    function selectRoleSuggestion(role: string) {
+        const existing = availableRoles ?? [];
+
+        if (!existing.some((r) => r.toLowerCase() === role.toLowerCase())) {
+            availableRoles = [...existing, role];
+        }
+
+        roleInput = "";
+        highlightedIndex = -1;
+    }
 
     $effect(() => {
         return () => {
@@ -143,7 +175,23 @@
     function handleRoleKeydown(event: KeyboardEvent) {
         if (event.key === "Enter" || event.key === ",") {
             event.preventDefault();
-            addRole();
+
+            if (roleSuggestions.length > 0 && highlightedIndex >= 0) {
+                selectRoleSuggestion(roleSuggestions[highlightedIndex]);
+            } else {
+                addRole();
+            }
+        } else if (event.key === "ArrowDown") {
+            event.preventDefault();
+            highlightedIndex = Math.min(
+                highlightedIndex + 1,
+                roleSuggestions.length - 1
+            );
+        } else if (event.key === "ArrowUp") {
+            event.preventDefault();
+            highlightedIndex = Math.max(highlightedIndex - 1, -1);
+        } else if (event.key === "Escape") {
+            highlightedIndex = -1;
         }
     }
 
@@ -220,7 +268,7 @@
 
     {#if availableRoles?.length}
         <div class="flex flex-wrap gap-2">
-            {#each availableRoles as role}
+            {#each availableRoles as role (role)}
                 <Badge variant="secondary">
                     <span class="break-all">{role}</span>
 
@@ -237,14 +285,47 @@
         </div>
     {/if}
 
-    <div class="flex gap-2">
-        <InputGroup.Root class="min-w-0 flex-1">
-            <InputGroup.Input
-                placeholder="гитара"
-                bind:value={roleInput}
-                onkeydown={handleRoleKeydown}
-            />
-        </InputGroup.Root>
+    <div class="relative flex gap-2">
+        <div class="relative min-w-0 flex-1">
+            <InputGroup.Root>
+                <InputGroup.Input
+                    placeholder="гитара"
+                    bind:value={roleInput}
+                    onkeydown={handleRoleKeydown}
+                    onfocus={() => {
+                        roleInputFocused = true;
+                        highlightedIndex = -1;
+                    }}
+                    onblur={() => {
+                        roleInputFocused = false;
+                    }}
+                />
+            </InputGroup.Root>
+
+            {#if roleInputFocused && roleSuggestions.length > 0}
+                <div
+                    class="bg-popover text-popover-foreground absolute top-full z-50 mt-1 w-full overflow-hidden rounded-md border shadow-md"
+                >
+                    {#each roleSuggestions as role, i (role)}
+                        <button
+                            type="button"
+                            class="flex w-full items-center px-3 py-1.5 text-sm {i === highlightedIndex
+                                ? 'bg-accent text-accent-foreground'
+                                : 'hover:bg-accent hover:text-accent-foreground'}"
+                            onmousedown={(e) => {
+                                e.preventDefault();
+                                selectRoleSuggestion(role);
+                            }}
+                            onmouseenter={() => {
+                                highlightedIndex = i;
+                            }}
+                        >
+                            {role}
+                        </button>
+                    {/each}
+                </div>
+            {/if}
+        </div>
 
         <Button
             type="button"

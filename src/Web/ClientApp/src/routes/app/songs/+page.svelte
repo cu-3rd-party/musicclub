@@ -551,6 +551,7 @@
 
     <CreateSong
         bind:songsArray={songs}
+        existingRoles={allRoleTitles}
         class="fixed right-4 bottom-18 z-50 shadow-lg"
     />
 

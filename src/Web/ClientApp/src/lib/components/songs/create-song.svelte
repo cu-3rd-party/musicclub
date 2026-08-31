@@ -1,20 +1,19 @@
 <script lang="ts">
     import {Plus} from "@lucide/svelte";
-    import {Button, buttonVariants} from "$lib/components/ui/button";
+    import {buttonVariants} from "$lib/components/ui/button";
     import * as Dialog from "$lib/components/ui/dialog";
-    import type {WithElementRef} from "$lib/utils";
-    import type {HTMLFormAttributes} from "svelte/elements";
     import type {CreateSongPayload, Song} from "$lib/songs/types";
     import {createSong} from "$lib/api/songs";
     import SongForm from "./song-form.svelte";
 
     let {
-        ref = $bindable(null),
         class: className,
         songsArray = $bindable(null),
-        ...restProps
-    }: WithElementRef<HTMLFormAttributes> & {
+        existingRoles = [],
+    }: {
+        class?: string,
         songsArray: Song[] | null,
+        existingRoles?: string[],
     } = $props();
 
     let dialogOpen = $state(false);
@@ -49,6 +48,8 @@
         </Dialog.Header>
 
         <SongForm
+            {existingRoles}
+            availableRoles={["гитара", "барабаны", "вокал"]}
             submitLabel="Создать"
             submittingLabel="Создание..."
             onsubmit={handleSubmit}
