@@ -117,7 +117,7 @@ public class AuthService(
         var jti = principal.FindFirst("jti")
             ?.Value;
         if (jti == null) return null;
-        var refreshTokenObj = await db.RefreshTokens.FirstOrDefaultAsync(t => t.Jti == Guid.Parse(jti) && !t.Revoked && t.Exp < DateTimeOffset.UtcNow,
+        var refreshTokenObj = await db.RefreshTokens.FirstOrDefaultAsync(t => t.Jti == Guid.Parse(jti) && !t.Revoked && t.Exp > DateTimeOffset.UtcNow,
             cancellationToken: cancellationToken);
         if (refreshTokenObj == null) return null;
         var userSession = await db.UserSessions.FirstOrDefaultAsync(s => s.RefreshTokenJti == refreshTokenObj.Jti, cancellationToken);
