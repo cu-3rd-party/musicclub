@@ -10,6 +10,7 @@
     import {getStoredAuthSession} from "$lib/auth/storage";
     import {ArrowLeft, ExternalLink, Music, Star, User,} from "@lucide/svelte";
     import type {UUID} from "node:crypto";
+    import EditSong from "$lib/components/songs/edit-song.svelte";
 
     let song = $state<Song | null>(null);
     let loading = $state(true);
@@ -104,6 +105,15 @@
             >
                 <ArrowLeft class="size-5"/>
             </Button>
+
+            {#if song}
+                <div class="ml-auto">
+                    <EditSong
+                        {song}
+                        onupdated={(updated) => (song = updated)}
+                    />
+                </div>
+            {/if}
         </div>
     </div>
 

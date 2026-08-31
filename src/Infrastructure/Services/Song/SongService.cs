@@ -126,10 +126,7 @@ public partial class SongService(
 
         // Отправить объявление в общий чат
         var message = SongServiceFormatter.BuildSongCreatedMessage(song.Title, song.Artist, song.LinkUrl, song.CreatedBy);
-        if (!string.IsNullOrEmpty(message))
-        {
-            await telegramChatService.SendGeneralMessage(message, cancellationToken);
-        }
+        if (!string.IsNullOrEmpty(message)) await telegramChatService.SendGeneralMessage(message, cancellationToken);
 
         return await GetAsync(song.Id, cancellationToken);
     }

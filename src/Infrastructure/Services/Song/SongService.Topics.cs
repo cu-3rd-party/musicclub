@@ -40,6 +40,32 @@ public class SongServiceTopics(
         return topic;
     }
 
+    public async Task AnnounceRoleAddedAsync(long topicId,
+        string roleTitle,
+        CancellationToken cancellationToken = default)
+    {
+        await telegramChatService.SendTopicMessage(topicId,
+            $"Была добавлена новая роль {roleTitle}",
+            cancellationToken);
+    }
+
+    public async Task AnnounceRoleRemovedAsync(long topicId,
+        string roleTitle,
+        ApplicationUser? user = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (user == null)
+            await telegramChatService.SendTopicMessage(topicId,
+                $"Была удалена роль {roleTitle}",
+                cancellationToken);
+        else
+        {
+            var participantUser = new SongUserDto(user.Id, user.DisplayName, user.UserName, user.AvatarUrl, user.TgUserId);
+            var mention = SongServiceFormatter.BuildParticipantMention(participantUser);
+            await telegramChatService.SendTopicMessage(topicId, $"Была удалена роль {roleTitle} вместе с {mention}, занимающим ее.", cancellationToken);
+        }
+    }
+
     /// <summary>
     /// Sends a notification to an existing topic when a participant joins.
     /// </summary>

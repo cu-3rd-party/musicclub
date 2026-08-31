@@ -9,26 +9,48 @@ public partial class SongService
         IReadOnlyCollection<string> desiredRoles,
         CancellationToken cancellationToken)
     {
-        var currentRoles = await db
-            .SongRoles.Where(r => r.SongId == songId)
+        var song = await db
+            .Songs.Include(s => s.SongTopic)
+            .Include(s => s.Roles)
+            .ThenInclude(r => r.Assignment)
+            .ThenInclude(a => a!.User)
+            .FirstAsync(s => s.Id == songId, cancellationToken);
+
+        var currentRoleTitles = song.Roles
             .Select(r => r.RoleTitle)
-            .ToListAsync(cancellationToken);
+            .ToHashSet(StringComparer.Ordinal);
 
         var desiredSet = desiredRoles.ToHashSet(StringComparer.Ordinal);
 
-        var toRemove = currentRoles
-            .Where(role => !desiredSet.Contains(role))
+        var toRemove = song.Roles
+            .Where(role => !desiredSet.Contains(role.RoleTitle))
             .ToList();
-        if (toRemove.Count > 0)
-            await db
-                .SongRoles.Where(r => r.SongId == songId && toRemove.Contains(r.RoleTitle))
-                .ExecuteDeleteAsync(cancellationToken);
 
-        foreach (var role in desiredSet.Where(role => !currentRoles.Contains(role)))
+        var toAdd = desiredSet
+            .Where(role => !currentRoleTitles.Contains(role))
+            .ToList();
+
+        foreach (var songRole in toRemove)
+        {
+            await new SongServiceTopics(telegramChatService).AnnounceRoleRemovedAsync(song.SongTopic!.TopicId,
+                songRole.RoleTitle,
+                songRole.Assignment?.User,
+                cancellationToken);
+        }
+
+        foreach (var role in toAdd)
+        {
+            await new SongServiceTopics(telegramChatService).AnnounceRoleAddedAsync(song.SongTopic!.TopicId,
+                role,
+                cancellationToken);
+
             db.SongRoles.Add(new SongRole
             {
                 SongId = songId,
                 RoleTitle = role,
             });
+        }
+
+        db.SongRoles.RemoveRange(toRemove);
     }
 }
