@@ -6,45 +6,84 @@ on:
       - master
   workflow_dispatch:
 
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
-  build-and-deploy:
+  deploy:
+    name: Deploy to dev
     runs-on: ubuntu-latest
     environment: dev
+    timeout-minutes: 15
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up SSH key
+      - name: Configure SSH
         env:
-          host: ${{ secrets.HOST }}
-          key: ${{ secrets.SSH_KEY }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          HOST: ${{ secrets.HOST }}
         run: |
-          mkdir -p ~/.ssh
-          echo "$key" > ~/.ssh/id_ed25519
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$host" >> ~/.ssh/known_hosts
-          chmod 644 ~/.ssh/known_hosts
-          chmod 700 ~/.ssh
 
-      - name: Sync source
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Sync application
+        env:
+          HOST: ${{ secrets.HOST }}
+          USERNAME: ${{ secrets.USERNAME }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
-          rsync -avz --delete \
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=yes" \
             docker-compose.yml \
-            src \
-            traefik \
-            docker \
+            src/ \
+            traefik/ \
+            docker/ \
             CuMusicClub.slnx \
             Directory.Build.props \
             Directory.Packages.props \
-            "${{ secrets.USERNAME }}@${{ secrets.HOST }}:${{ secrets.DEPLOY_PATH }}"
+            "${USERNAME}@${HOST}:${DEPLOY_PATH}/"
 
-      - name: Deploy to VDS
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            printf '%s\n' "${{ secrets.ENV }}" > "${{ secrets.DEPLOY_PATH }}/.env"
-            cd "${{ secrets.DEPLOY_PATH }}" && docker compose -f docker-compose.yml up -d --build
+      - name: Write environment
+        env:
+          ENV_FILE: ${{ secrets.ENV }}
+          HOST: ${{ secrets.HOST }}
+          USERNAME: ${{ secrets.USERNAME }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          printf '%s\n' "$ENV_FILE" | \
+            ssh -i ~/.ssh/id_ed25519 \
+              -o StrictHostKeyChecking=yes \
+              "${USERNAME}@${HOST}" \
+              "cat > '${DEPLOY_PATH}/.env' && chmod 600 '${DEPLOY_PATH}/.env'"
+
+      - name: Deploy
+        env:
+          HOST: ${{ secrets.HOST }}
+          USERNAME: ${{ secrets.USERNAME }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 \
+            -o StrictHostKeyChecking=yes \
+            "${USERNAME}@${HOST}" << EOF
+              set -euo pipefail
+
+              cd "${DEPLOY_PATH}"
+
+              docker compose \
+                -f docker-compose.yml \
+                up -d \
+                --build \
+                --remove-orphans
+
+              docker image prune -f
+          EOF
