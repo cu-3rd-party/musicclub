@@ -9,6 +9,8 @@ public class UserSession
     public string? ScreenResolution { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset LastActivityAt { get; set; }
+    public Guid? RefreshTokenJti { get; set; }
 
     public ApplicationUser? User { get; set; }
+    public RefreshToken? RefreshToken { get; set; }
 }

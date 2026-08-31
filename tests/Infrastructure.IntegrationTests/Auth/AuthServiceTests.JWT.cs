@@ -10,7 +10,7 @@ public partial class AuthServiceTests
         var cancellationToken = CancellationToken.None;
         var access = await scope.Auth.CreateAuthSession(user, cancellationToken);
 
-        var refreshSession = scope.Auth.RefreshSession(access.RefreshToken, cancellationToken);
+        var refreshSession = await scope.Auth.RefreshSession(access.RefreshToken, cancellationToken);
         refreshSession.ShouldNotBeNull("refreshSession == null");
         refreshSession.RefreshToken.ShouldNotBeNull();
         refreshSession.AccessToken.ShouldNotBeNull();

@@ -22,5 +22,12 @@ api.interceptors.request.use((config) => {
         config.headers.set("Authorization", `Bearer ${session.accessToken}`);
     }
 
+    if (config.url?.startsWith("/api/v1/auth")) {
+        config.headers.set(
+            "X-Screen-Resolution",
+            `${screen.width}x${screen.height}`,
+        );
+    }
+
     return config;
 });

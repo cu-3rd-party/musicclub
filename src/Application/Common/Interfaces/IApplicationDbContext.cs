@@ -11,6 +11,7 @@ public interface IApplicationDbContext
     IQueryable<SongRole> SongRoles { get; }
     IQueryable<SongRoleAssignment> SongRoleAssignments { get; }
     IQueryable<UserSession> UserSessions { get; }
+    IQueryable<RefreshToken> RefreshTokens { get; }
     IQueryable<TgAuthLink> TgAuthLinks { get; }
     IQueryable<DataEntry> DataEntries { get; }
     IQueryable<SongTopic> SongTopics { get; }

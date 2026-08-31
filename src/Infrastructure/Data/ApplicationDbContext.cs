@@ -43,6 +43,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         get { return Set<UserSession>(); }
     }
 
+    public DbSet<RefreshToken> RefreshTokens
+    {
+        get { return Set<RefreshToken>(); }
+    }
+
     public DbSet<TgAuthLink> TgAuthLinks
     {
         get { return Set<TgAuthLink>(); }
@@ -91,6 +96,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     IQueryable<UserSession> IApplicationDbContext.UserSessions
     {
         get { return UserSessions; }
+    }
+
+    IQueryable<RefreshToken> IApplicationDbContext.RefreshTokens
+    {
+        get { return RefreshTokens; }
     }
 
     IQueryable<TgAuthLink> IApplicationDbContext.TgAuthLinks

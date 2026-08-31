@@ -15,7 +15,7 @@ public static partial class Auth
     {
         if (string.IsNullOrWhiteSpace(request?.RefreshToken)) return TypedResults.BadRequest();
 
-        var tokenPair = authService.RefreshSession(request.RefreshToken, cancellationToken);
+        var tokenPair = await authService.RefreshSession(request.RefreshToken, cancellationToken);
         if (tokenPair == null) return TypedResults.BadRequest();
         return TypedResults.Ok(tokenPair);
     }
