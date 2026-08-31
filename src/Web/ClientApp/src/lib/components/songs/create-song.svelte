@@ -9,11 +9,9 @@
     let {
         class: className,
         songsArray = $bindable(null),
-        existingRoles = [],
     }: {
         class?: string,
         songsArray: Song[] | null,
-        existingRoles?: string[],
     } = $props();
 
     let dialogOpen = $state(false);
@@ -48,7 +46,6 @@
         </Dialog.Header>
 
         <SongForm
-            {existingRoles}
             availableRoles={["гитара", "барабаны", "вокал"]}
             submitLabel="Создать"
             submittingLabel="Создание..."
