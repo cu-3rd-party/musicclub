@@ -17,8 +17,6 @@
     let loading = $state(true);
     let error = $state<string | null>(null);
     let removableUserIds = $state<Set<string>>(new Set());
-    let callingRoadie = $state(false);
-    let roadieRequested = $state(false);
     let roadieError = $state<string | null>(null);
 
     const songId = $derived(page.params.id as UUID);
@@ -91,21 +89,6 @@
             month: "long",
             year: "numeric",
         });
-    }
-
-    async function requestRoadie() {
-        if (!song || callingRoadie) return;
-        callingRoadie = true;
-        roadieError = null;
-        try {
-            await callRoadie(song.id);
-            roadieRequested = true;
-        } catch (err) {
-            roadieError = "Не удалось вызвать роуди. Попробуйте позже.";
-            console.error(err);
-        } finally {
-            callingRoadie = false;
-        }
     }
 </script>
 
