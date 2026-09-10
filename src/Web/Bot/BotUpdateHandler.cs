@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.RegularExpressions;
 using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Common.Options;
@@ -132,7 +133,7 @@ public class BotUpdateHandler(
         var (_, userMessage) = GetCommandArgsStr(message.Text);
         var text = string.IsNullOrEmpty(userMessage)
             ? $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a> вызывает роуди!"
-            : userMessage;
+            : WebUtility.HtmlEncode(userMessage);
 
         text = song
             .Roles.Where(x => x.Assignment?.User.TgUserId != null)
@@ -142,7 +143,7 @@ public class BotUpdateHandler(
                 (current, userToMention) => current + $"<a href=\"tg://user?id={userToMention.TgUserId}\">\u2060</a>");
 
         await bot.SendMessage(message.Chat.Id,
-            text,
+            $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a> {text}",
             messageThreadId: (int) topicId,
             parseMode: ParseMode.Html,
             cancellationToken: cancellationToken);
@@ -238,10 +239,10 @@ public class BotUpdateHandler(
         var (_, userMessage) = GetCommandArgsStr(message.Text);
         var text = string.IsNullOrEmpty(userMessage)
             ? $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a> вызывает своего роуди {telegramChatService.BuildUserMention(roadie!)}!"
-            : userMessage;
+            : WebUtility.HtmlEncode(userMessage);
 
         await bot.SendMessage(message.Chat.Id,
-            text,
+            $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a> {text}",
             messageThreadId: message.MessageThreadId,
             parseMode: ParseMode.Html,
             cancellationToken: cancellationToken);
@@ -257,7 +258,7 @@ public class BotUpdateHandler(
         var (_, userMessage) = GetCommandArgsStr(message.Text);
         var text = string.IsNullOrEmpty(userMessage)
             ? $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a> вызывает роуди!"
-            : userMessage;
+            : WebUtility.HtmlEncode(userMessage);
 
         var roadies = await roadieService.ListRoadies(cancellationToken);
         var pingCount = 0;
@@ -271,7 +272,7 @@ public class BotUpdateHandler(
         text += $"\n\nБыло вызвано {pingCount} роуди";
 
         await bot.SendMessage(message.Chat.Id,
-            text,
+            $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a> {text}",
             messageThreadId: message.MessageThreadId,
             parseMode: ParseMode.Html,
             cancellationToken: cancellationToken);
