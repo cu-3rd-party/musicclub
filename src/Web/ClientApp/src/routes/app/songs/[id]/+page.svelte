@@ -225,17 +225,6 @@
                         <ExternalLink class="size-4 mr-2"/>
                         Открыть ссылку
                     </Button>
-
-                    {#if currentUser}
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onclick={requestRoadie}
-                            disabled={callingRoadie || roadieRequested}
-                        >
-                            {roadieRequested ? "Роуди вызван" : callingRoadie ? "Вызываем..." : "Вызвать роуди"}
-                        </Button>
-                    {/if}
                 </div>
 
                 {#if roadieError}
