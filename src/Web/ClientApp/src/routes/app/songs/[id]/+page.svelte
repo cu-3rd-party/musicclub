@@ -146,6 +146,19 @@
                     </div>
                 </div>
                 <Separator/>
+                <div class="mt-2.5">
+                    <div class="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                        <div class="flex items-center gap-3">
+                            <Skeleton class="size-8 rounded-full"/>
+                            <div class="space-y-1">
+                                <Skeleton class="h-4 w-16"/>
+                                <Skeleton class="h-3 w-24"/>
+                            </div>
+                        </div>
+                        <Skeleton class="h-5 w-16"/>
+                    </div>
+                </div>
+                <Separator/>
                 <div class="space-y-2">
                     <div class="flex items-center gap-3">
                         <Skeleton class="size-10 rounded-full"/>
@@ -232,6 +245,9 @@
                             />
                         {/each}
                     </div>
+
+                    <Separator/>
+
                     <div class="mt-2.5">
                         <RoadieItem
                             songId={song.id}

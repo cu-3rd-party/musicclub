@@ -1,9 +1,10 @@
 <script lang="ts">
-    import {User} from "@lucide/svelte";
+    import {LogOut, User} from "@lucide/svelte";
     import * as Avatar from "$lib/components/ui/avatar";
     import {Badge} from "$lib/components/ui/badge";
+    import {Button} from "$lib/components/ui/button";
     import * as Command from "$lib/components/ui/command";
-    import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
+    import * as Popover from "$lib/components/ui/popover";
     import {Skeleton} from "$lib/components/ui/skeleton";
     import {getRoleCandidates, joinSongRole, leaveSongRole} from "$lib/api/songs";
     import type {Song, SongRole, SongUser} from "$lib/songs/types";
@@ -42,7 +43,7 @@
         member !== null && currentUser !== null && removableUserIds.has(member.id)
     );
 
-    // При открытии дропдауна и при изменении поиска (с дебаунсом) грузим кандидатов.
+    // При открытии поповера и при изменении поиска (с дебаунсом) грузим кандидатов.
     $effect(() => {
         if (!assignOpen || !isVacant || !canAssign) return;
 
@@ -103,17 +104,9 @@
 
 {#if isVacant}
     {#if canAssign}
-        <DropdownMenu.Root
-            bind:open={assignOpen}
-            onOpenChange={(open) => {
-                if (open) {
-                    query = "";
-                    candidates = [];
-                }
-            }}
-        >
-            <DropdownMenu.Trigger
-                class="flex w-full items-center justify-between p-3 rounded-lg bg-muted/50 text-left transition-colors hover:bg-muted cursor-pointer disabled:opacity-60"
+        <Popover.Root bind:open={assignOpen}>
+            <Popover.Trigger
+                class="flex w-full items-center justify-between gap-3 rounded-lg bg-muted/50 p-3 text-left transition-colors hover:bg-muted cursor-pointer disabled:opacity-60"
                 disabled={acting}
                 aria-label={`Назначить на роль ${role.title}`}
             >
@@ -128,59 +121,80 @@
                         <p class="text-xs text-muted-foreground">Свободно</p>
                     </div>
                 </span>
-                <Badge variant="ghost">нажми чтоб зайти</Badge>
-            </DropdownMenu.Trigger>
+                <Badge variant="ghost">Назначить</Badge>
+            </Popover.Trigger>
 
-            <DropdownMenu.Content class="w-72 p-1">
+            <Popover.Content align="end" class="w-72">
+                <Popover.Header>
+                    <Popover.Title>{role.title}</Popover.Title>
+                    <Popover.Description>Кого назначить на роль</Popover.Description>
+                </Popover.Header>
+
                 <Command.Root>
-                    <Command.Input bind:value={query} placeholder="Поиск участника..."/>
-                    <Command.List>
-                        {#if loadingCandidates}
-                            {#each [0, 1, 2] as item (item)}
-                                <div
-                                    class="flex items-center gap-2 px-2 py-1.5"
-                                >
-                                    <Skeleton class="size-6 rounded-full"/>
-                                    <Skeleton class="h-4 w-24"/>
-                                </div>
-                            {/each}
-                        {:else if candidates.length === 0}
-                            <Command.Empty>Никого нельзя назначить</Command.Empty>
-                        {:else}
-                            {#each candidates as user (user.id)}
-                                <Command.Item
-                                    value={user.displayName}
-                                    onSelect={() => assign(user)}
-                                    disabled={acting}
-                                >
-                                    <Avatar.Root class="size-6">
-                                        <Avatar.Image
-                                            src={user.avatarUrl}
-                                            alt={user.displayName}
-                                        />
-                                        <Avatar.Fallback class="text-xs">
-                                            {getInitials(user.displayName)}
-                                        </Avatar.Fallback>
-                                    </Avatar.Root>
-                                    <span class="truncate">{user.displayName}</span>
-                                    {#if user.id === currentUser?.id}
-                                        <Badge
-                                            variant="ghost"
-                                            class="ml-auto shrink-0"
-                                        >
-                                            вы
-                                        </Badge>
-                                    {/if}
-                                </Command.Item>
-                            {/each}
-                        {/if}
-                    </Command.List>
+                    {#if loadingCandidates && query === ""}
+                        <div class="space-y-1 px-1 pb-1">
+                            <Skeleton class="h-8 w-full rounded-md"/>
+                            <div class="space-y-1">
+                                {#each [0, 1, 2, 3] as item (item)}
+                                    <div
+                                        class="flex items-center gap-2 px-2 py-1.5"
+                                    >
+                                        <Skeleton class="size-6 rounded-full"/>
+                                        <Skeleton class="h-4 w-24"/>
+                                    </div>
+                                {/each}
+                            </div>
+                        </div>
+                    {:else}
+                        <Command.Input bind:value={query} placeholder="Поиск участника..."/>
+                        <Command.List>
+                            {#if loadingCandidates}
+                                {#each [0, 1, 2] as item (item)}
+                                    <div
+                                        class="flex items-center gap-2 px-2 py-1.5"
+                                    >
+                                        <Skeleton class="size-6 rounded-full"/>
+                                        <Skeleton class="h-4 w-24"/>
+                                    </div>
+                                {/each}
+                            {:else if candidates.length === 0}
+                                <Command.Empty>Никого нельзя назначить</Command.Empty>
+                            {:else}
+                                {#each candidates as user (user.id)}
+                                    <Command.Item
+                                        value={user.displayName}
+                                        onSelect={() => assign(user)}
+                                        disabled={acting}
+                                    >
+                                        <Avatar.Root class="size-6">
+                                            <Avatar.Image
+                                                src={user.avatarUrl}
+                                                alt={user.displayName}
+                                            />
+                                            <Avatar.Fallback class="text-xs">
+                                                {getInitials(user.displayName)}
+                                            </Avatar.Fallback>
+                                        </Avatar.Root>
+                                        <span class="truncate">{user.displayName}</span>
+                                        {#if user.id === currentUser?.id}
+                                            <Badge
+                                                variant="ghost"
+                                                class="ml-auto shrink-0"
+                                            >
+                                                вы
+                                            </Badge>
+                                        {/if}
+                                    </Command.Item>
+                                {/each}
+                            {/if}
+                        </Command.List>
+                    {/if}
                 </Command.Root>
-            </DropdownMenu.Content>
-        </DropdownMenu.Root>
+            </Popover.Content>
+        </Popover.Root>
     {:else}
         <div
-            class="flex w-full items-center justify-between p-3 rounded-lg bg-muted/50 text-left cursor-default"
+            class="flex w-full items-center justify-between gap-3 rounded-lg bg-muted/50 p-3 text-left cursor-default"
         >
             <span class="flex items-center gap-3">
                 <Avatar.Root class="size-8">
@@ -193,43 +207,68 @@
                     <p class="text-xs text-muted-foreground">Свободно</p>
                 </div>
             </span>
-            <Badge variant="ghost">свободно</Badge>
+            <Badge variant="ghost">Свободно</Badge>
         </div>
     {/if}
 {:else if member}
     {#if canRemoveMember}
-        <button
-            type="button"
-            class="flex w-full items-center justify-between p-3 rounded-lg bg-muted/50 text-left transition-colors hover:bg-muted cursor-pointer disabled:opacity-60"
-            onclick={remove}
-            disabled={acting}
-            title={isYou ? "Нажми чтоб выйти" : "Нажми чтоб снять с роли"}
-            aria-label={isYou ? "Выйти из роли" : `Снять ${member.displayName} с роли`}
-        >
-            <span class="flex items-center gap-3">
-                <Avatar.Root class="size-8">
-                    <Avatar.Image
-                        src={member.avatarUrl}
-                        alt={member.displayName}
-                    />
-                    <Avatar.Fallback class="text-xs">
-                        {getInitials(member.displayName)}
-                    </Avatar.Fallback>
-                </Avatar.Root>
-                <div>
-                    <p class="text-sm font-medium">{role.title}</p>
-                    <p class="text-xs text-muted-foreground">{member.displayName}</p>
-                </div>
-            </span>
-            {#if isYou}
-                <Badge variant="ghost">нажми чтоб выйти</Badge>
-            {:else}
-                <Badge variant="default">занято</Badge>
-            {/if}
-        </button>
+        <Popover.Root>
+            <Popover.Trigger
+                class="flex w-full items-center justify-between gap-3 rounded-lg bg-muted/50 p-3 text-left transition-colors hover:bg-muted cursor-pointer disabled:opacity-60"
+                disabled={acting}
+                aria-label={`Управление ролью ${role.title}`}
+            >
+                <span class="flex items-center gap-3">
+                    <Avatar.Root class="size-8">
+                        <Avatar.Image
+                            src={member.avatarUrl}
+                            alt={member.displayName}
+                        />
+                        <Avatar.Fallback class="text-xs">
+                            {getInitials(member.displayName)}
+                        </Avatar.Fallback>
+                    </Avatar.Root>
+                    <div>
+                        <p class="text-sm font-medium">{role.title}</p>
+                        <p class="text-xs text-muted-foreground">{member.displayName}</p>
+                    </div>
+                </span>
+                <Badge variant={isYou ? "ghost" : "default"}>
+                    {isYou ? "Это вы" : "Занято"}
+                </Badge>
+            </Popover.Trigger>
+
+            <Popover.Content align="end" class="w-64">
+                <Popover.Header class="flex flex-row items-center gap-3">
+                    <Avatar.Root class="size-9">
+                        <Avatar.Image
+                            src={member.avatarUrl}
+                            alt={member.displayName}
+                        />
+                        <Avatar.Fallback>
+                            {getInitials(member.displayName)}
+                        </Avatar.Fallback>
+                    </Avatar.Root>
+                    <div class="flex flex-col gap-0.5">
+                        <Popover.Title>{role.title}</Popover.Title>
+                        <Popover.Description>{member.displayName}</Popover.Description>
+                    </div>
+                </Popover.Header>
+
+                <Button
+                    variant="destructive"
+                    class="w-full"
+                    onclick={remove}
+                    disabled={acting}
+                >
+                    <LogOut/>
+                    {isYou ? "Выйти" : "Снять с роли"}
+                </Button>
+            </Popover.Content>
+        </Popover.Root>
     {:else}
         <div
-            class="flex w-full items-center justify-between p-3 rounded-lg bg-muted/50 text-left cursor-default"
+            class="flex w-full items-center justify-between gap-3 rounded-lg bg-muted/50 p-3 text-left cursor-default"
         >
             <span class="flex items-center gap-3">
                 <Avatar.Root class="size-8">
@@ -246,7 +285,7 @@
                     <p class="text-xs text-muted-foreground">{member.displayName}</p>
                 </div>
             </span>
-            <Badge variant="default">занято</Badge>
+            <Badge variant="default">Занято</Badge>
         </div>
     {/if}
 {/if}

@@ -1,9 +1,10 @@
 <script lang="ts">
-    import {User} from "@lucide/svelte";
+    import {LogOut, User} from "@lucide/svelte";
     import * as Avatar from "$lib/components/ui/avatar";
     import {Badge} from "$lib/components/ui/badge";
+    import {Button} from "$lib/components/ui/button";
     import * as Command from "$lib/components/ui/command";
-    import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
+    import * as Popover from "$lib/components/ui/popover";
     import {Skeleton} from "$lib/components/ui/skeleton";
     import {assignRoadie, getRoadieCandidates, removeRoadie} from "$lib/api/songs";
     import type {Song, SongUser} from "$lib/songs/types";
@@ -35,7 +36,7 @@
         (currentUser.permissions ?? []).includes(Permission.RoadieManage)
     );
 
-    // При открытии дропдауна и при изменении поиска (с дебаунсом) грузим кандидатов.
+    // При открытии поповера и при изменении поиска (с дебаунсом) грузим кандидатов.
     $effect(() => {
         if (!assignOpen || !isVacant || !canManage) return;
 
@@ -94,17 +95,9 @@
 
 {#if isVacant}
     {#if canManage}
-        <DropdownMenu.Root
-            bind:open={assignOpen}
-            onOpenChange={(open) => {
-                if (open) {
-                    query = "";
-                    candidates = [];
-                }
-            }}
-        >
-            <DropdownMenu.Trigger
-                class="flex w-full items-center justify-between p-3 rounded-lg bg-muted/50 text-left transition-colors hover:bg-muted cursor-pointer disabled:opacity-60"
+        <Popover.Root bind:open={assignOpen}>
+            <Popover.Trigger
+                class="flex w-full items-center justify-between gap-3 rounded-lg bg-muted/50 p-3 text-left transition-colors hover:bg-muted cursor-pointer disabled:opacity-60"
                 disabled={acting}
                 aria-label="Назначить роуди"
             >
@@ -119,23 +112,43 @@
                         <p class="text-xs text-muted-foreground">Свободно</p>
                     </div>
                 </span>
-                <Badge variant="ghost">нажми чтоб зайти</Badge>
-            </DropdownMenu.Trigger>
+                <Badge variant="ghost">Назначить</Badge>
+            </Popover.Trigger>
 
-            <DropdownMenu.Content class="w-72 p-1">
+            <Popover.Content align="end" class="w-72">
+                <Popover.Header>
+                    <Popover.Title>Назначить роуди</Popover.Title>
+                    <Popover.Description>Кто будет отвечать за аппарат</Popover.Description>
+                </Popover.Header>
+
                 <Command.Root>
-                    <Command.Input bind:value={query} placeholder="Поиск роуди..."/>
-                    <Command.List>
-                        {#if loadingCandidates}
-                            {#each [0, 1, 2] as item (item)}
-                                <div
-                                    class="flex items-center gap-2 px-2 py-1.5"
-                                >
-                                    <Skeleton class="size-6 rounded-full"/>
-                                    <Skeleton class="h-4 w-24"/>
-                                </div>
-                            {/each}
-                        {:else if candidates.length === 0}
+                    {#if loadingCandidates && query === ""}
+                        <div class="space-y-1 px-1 pb-1">
+                            <Skeleton class="h-8 w-full rounded-md"/>
+                            <div class="space-y-1">
+                                {#each [0, 1, 2, 3] as item (item)}
+                                    <div
+                                        class="flex items-center gap-2 px-2 py-1.5"
+                                    >
+                                        <Skeleton class="size-6 rounded-full"/>
+                                        <Skeleton class="h-4 w-24"/>
+                                    </div>
+                                {/each}
+                            </div>
+                        </div>
+                    {:else}
+                        <Command.Input bind:value={query} placeholder="Поиск роуди..."/>
+                        <Command.List>
+                            {#if loadingCandidates}
+                                {#each [0, 1, 2] as item (item)}
+                                    <div
+                                        class="flex items-center gap-2 px-2 py-1.5"
+                                    >
+                                        <Skeleton class="size-6 rounded-full"/>
+                                        <Skeleton class="h-4 w-24"/>
+                                    </div>
+                                {/each}
+                            {:else if candidates.length === 0}
                             <Command.Empty>Никого нельзя назначить</Command.Empty>
                         {:else}
                             {#each candidates as user (user.id)}
@@ -166,12 +179,13 @@
                             {/each}
                         {/if}
                     </Command.List>
+                    {/if}
                 </Command.Root>
-            </DropdownMenu.Content>
-        </DropdownMenu.Root>
+            </Popover.Content>
+        </Popover.Root>
     {:else}
         <div
-            class="flex w-full items-center justify-between p-3 rounded-lg bg-muted/50 text-left cursor-default"
+            class="flex w-full items-center justify-between gap-3 rounded-lg bg-muted/50 p-3 text-left cursor-default"
         >
             <span class="flex items-center gap-3">
                 <Avatar.Root class="size-8">
@@ -184,39 +198,68 @@
                     <p class="text-xs text-muted-foreground">Свободно</p>
                 </div>
             </span>
-            <Badge variant="ghost">свободно</Badge>
+            <Badge variant="ghost">Свободно</Badge>
         </div>
     {/if}
 {:else if roadie}
     {#if canManage}
-        <button
-            type="button"
-            class="flex w-full items-center justify-between p-3 rounded-lg bg-muted/50 text-left transition-colors hover:bg-muted cursor-pointer disabled:opacity-60"
-            onclick={remove}
-            disabled={acting}
-            title={isYou ? "Нажми чтоб снять себя с роли" : "Нажми чтоб снять с роли"}
-            aria-label="Снять роуди с песни"
-        >
-            <span class="flex items-center gap-3">
-                <Avatar.Root class="size-8">
-                    <Avatar.Image
-                        src={roadie.avatarUrl}
-                        alt={roadie.displayName}
-                    />
-                    <Avatar.Fallback class="text-xs">
-                        {getInitials(roadie.displayName)}
-                    </Avatar.Fallback>
-                </Avatar.Root>
-                <div>
-                    <p class="text-sm font-medium">Роуди</p>
-                    <p class="text-xs text-muted-foreground">{roadie.displayName}</p>
-                </div>
-            </span>
-            <Badge variant="ghost">нажми чтоб снять</Badge>
-        </button>
+        <Popover.Root>
+            <Popover.Trigger
+                class="flex w-full items-center justify-between gap-3 rounded-lg bg-muted/50 p-3 text-left transition-colors hover:bg-muted cursor-pointer disabled:opacity-60"
+                disabled={acting}
+                aria-label="Управление роуди"
+            >
+                <span class="flex items-center gap-3">
+                    <Avatar.Root class="size-8">
+                        <Avatar.Image
+                            src={roadie.avatarUrl}
+                            alt={roadie.displayName}
+                        />
+                        <Avatar.Fallback class="text-xs">
+                            {getInitials(roadie.displayName)}
+                        </Avatar.Fallback>
+                    </Avatar.Root>
+                    <div>
+                        <p class="text-sm font-medium">Роуди</p>
+                        <p class="text-xs text-muted-foreground">{roadie.displayName}</p>
+                    </div>
+                </span>
+                <Badge variant={isYou ? "ghost" : "default"}>
+                    {isYou ? "Это вы" : "Занято"}
+                </Badge>
+            </Popover.Trigger>
+
+            <Popover.Content align="end" class="w-64">
+                <Popover.Header class="flex flex-row items-center gap-3">
+                    <Avatar.Root class="size-9">
+                        <Avatar.Image
+                            src={roadie.avatarUrl}
+                            alt={roadie.displayName}
+                        />
+                        <Avatar.Fallback>
+                            {getInitials(roadie.displayName)}
+                        </Avatar.Fallback>
+                    </Avatar.Root>
+                    <div class="flex flex-col gap-0.5">
+                        <Popover.Title>Роуди</Popover.Title>
+                        <Popover.Description>{roadie.displayName}</Popover.Description>
+                    </div>
+                </Popover.Header>
+
+                <Button
+                    variant="destructive"
+                    class="w-full"
+                    onclick={remove}
+                    disabled={acting}
+                >
+                    <LogOut/>
+                    {isYou ? "Выйти" : "Снять с роли"}
+                </Button>
+            </Popover.Content>
+        </Popover.Root>
     {:else}
         <div
-            class="flex w-full items-center justify-between p-3 rounded-lg bg-muted/50 text-left cursor-default"
+            class="flex w-full items-center justify-between gap-3 rounded-lg bg-muted/50 p-3 text-left cursor-default"
         >
             <span class="flex items-center gap-3">
                 <Avatar.Root class="size-8">
@@ -233,7 +276,7 @@
                     <p class="text-xs text-muted-foreground">{roadie.displayName}</p>
                 </div>
             </span>
-            <Badge variant="default">занято</Badge>
+            <Badge variant="default">Занято</Badge>
         </div>
     {/if}
 {/if}
