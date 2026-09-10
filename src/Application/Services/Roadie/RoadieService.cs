@@ -128,13 +128,20 @@ public class RoadieService(
         if (roadieUsers.Count == 0)
             return 0;
 
-        var load = roadies.Query().ToList()
+        var allRoadies = roadies.Query().ToList();
+        var roadieSongIds = allRoadies.Select(r => r.SongId).ToHashSet();
+        var load = allRoadies
             .GroupBy(r => r.RoadieId)
             .ToDictionary(g => g.Key, g => g.Count());
 
         var count = 0;
         foreach (var ticket in overdue)
         {
+            // У песни уже есть роуди (или на него уже назначена другая заявка в этом проходе) —
+            // пропускаем: не вешаем второго роуди и не шлём повторное уведомление.
+            if (!roadieSongIds.Add(ticket.SongId))
+                continue;
+
             var candidates = roadieUsers.Where(u => u.TgUserId != null).ToList();
             if (candidates.Count == 0)
                 candidates = roadieUsers.ToList();

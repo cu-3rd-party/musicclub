@@ -420,6 +420,53 @@ public class RoadieServiceTests
             _telegram.Verify(t => t.SendRoadieMessage(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
             _telegram.Verify(t => t.SendTopicMessage(444, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
         }
+
+        [Test]
+        public async Task MultipleOpenTicketsForSameSong_AssignsOnlyOneRoadieAndNotifiesOnce()
+        {
+            var roadie = new ApplicationUser { Id = Guid.NewGuid(), DisplayName = "Roadie", TgUserId = 2001 };
+            _users
+                .Setup(r => r.GetUsersByPermissionAsync(CuMusicClub.Domain.Constants.Permission.RoadieManage, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new[] { roadie, });
+
+            var song = BuildSong();
+            var ticket1 = OpenTicket(song.Id);
+            var ticket2 = OpenTicket(song.Id);
+            _tickets
+                .Setup(r => r.GetOpenTicketsOlderThanAsync(It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new[] { ticket1, ticket2, });
+            _roadies
+                .Setup(r => r.Query())
+                .Returns(new List<SongRoadie>().AsQueryable());
+
+            var topic = new SongTopic { Song = song, SongId = song.Id, TopicId = 555 };
+            _songTopics
+                .Setup(r => r.FindBySongIdAsync(song.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(topic);
+            _telegram
+                .Setup(t => t.SendDirectMessage(It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+            _telegram
+                .Setup(t => t.SendTopicMessage(It.IsAny<long>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+
+            SongRoadie? assigned = null;
+            _roadies
+                .Setup(r => r.AddAsync(It.IsAny<SongRoadie>(), It.IsAny<CancellationToken>()))
+                .Callback<SongRoadie, CancellationToken>((s, _) => assigned = s)
+                .Returns(Task.CompletedTask);
+
+            var count = await _service.AutoAssignOpenTicketsAsync(CancellationToken.None);
+
+            count.ShouldBe(1);
+            ticket1.AcceptedById.ShouldBe(roadie.Id);
+            ticket2.AcceptedById.ShouldBeNull();
+            assigned.ShouldNotBeNull();
+            assigned!.SongId.ShouldBe(song.Id);
+            _roadies.Verify(r => r.AddAsync(It.IsAny<SongRoadie>(), It.IsAny<CancellationToken>()), Times.Once);
+            _telegram.Verify(t => t.SendDirectMessage(2001, It.IsAny<string>(), It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
     }
 
     [TestFixture]
