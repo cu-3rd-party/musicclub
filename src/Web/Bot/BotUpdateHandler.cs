@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.RegularExpressions;
 using CuMusicClub.Application.Common.Auth;
+using CuMusicClub.Application.Common.Exceptions;
 using CuMusicClub.Application.Common.Options;
 using CuMusicClub.Application.Services.Roadie;
 using CuMusicClub.Application.Services.Telegram;
@@ -194,7 +195,19 @@ public class BotUpdateHandler(
             return;
         }
 
-        await roadieService.CreateTicketAsync(song.Id, applicationUser, RoadieTicketType.Help, cancellationToken);
+        try
+        {
+            await roadieService.CreateTicketAsync(song.Id, applicationUser, RoadieTicketType.Help, cancellationToken);
+        }
+        catch (ForbiddenAccessException e)
+        {
+            await bot.SendMessage(message.Chat.Id,
+                $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a>, у тебя не хватило прав создать тикет(",
+                messageThreadId: message.MessageThreadId,
+                parseMode: ParseMode.Html,
+                cancellationToken: cancellationToken);
+            return;
+        }
         await bot.SendMessage(message.Chat.Id,
             $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a>, в чат роуди улетел запрос на помощь группе, ожидай.",
             messageThreadId: message.MessageThreadId,
