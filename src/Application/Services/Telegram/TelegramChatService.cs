@@ -174,6 +174,9 @@ public class TelegramChatService(
 
     public string BuildSongSystemLink(Domain.Entities.Song song)
     {
-        return $"https://{botOptions.Value.WebAppUrl}/app/songs/{song.Id}";
+        var url = botOptions.Value.WebAppUrl;
+        if (url.StartsWith("https://"))
+            url = url["https://".Length..];
+        return $"{url}/app/songs/{song.Id}";
     }
 }
