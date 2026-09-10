@@ -177,7 +177,7 @@ public class RoadieService(
             var topic = await songTopics.FindBySongIdAsync(ticket.SongId, cancellationToken);
             if (topic is not null)
                 await telegram.SendTopicMessage(topic.TopicId,
-                    $"🎸 Ваш роуди — {WebUtility.HtmlEncode(chosen.DisplayName)}.", cancellationToken);
+                    $"🎸 Ваш роуди — {telegram.BuildUserMention(chosen)}.", cancellationToken);
         }
 
         await tickets.SaveChangesAsync(cancellationToken);
