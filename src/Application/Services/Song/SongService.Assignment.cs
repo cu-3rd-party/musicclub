@@ -14,10 +14,10 @@ public partial class SongService
         Guid roleId,
         CancellationToken cancellationToken)
     {
-        var permissions = await permissionService.GetPermissionValuesAsync(user, cancellationToken);
-
         var requester = await users.FindByIdAsync(claimsPrincipal.GetUserId()) ?? throw new UnauthorizedAccessException();
         var isSelf = requester.Id == user.Id;
+
+        var permissions = await permissionService.GetPermissionValuesAsync(requester, cancellationToken);
         if ((isSelf && !permissions.Contains(Domain.Constants.Permission.ParticipationEditOwn)) ||
             (!isSelf && !permissions.Contains(Domain.Constants.Permission.ParticipationEditAny)))
             throw new ForbiddenAccessException();
@@ -60,10 +60,10 @@ public partial class SongService
         Guid roleId,
         CancellationToken cancellationToken)
     {
-        var permissions = await permissionService.GetPermissionValuesAsync(user, cancellationToken);
-
         var requester = await users.FindByIdAsync(claimsPrincipal.GetUserId()) ?? throw new UnauthorizedAccessException();
         var isSelf = requester.Id == user.Id;
+
+        var permissions = await permissionService.GetPermissionValuesAsync(requester, cancellationToken);
         if ((isSelf && !permissions.Contains(Domain.Constants.Permission.ParticipationEditOwn)) ||
             (!isSelf && !permissions.Contains(Domain.Constants.Permission.ParticipationEditAny)))
             throw new ForbiddenAccessException();

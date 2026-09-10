@@ -532,5 +532,51 @@ public class SongServiceTests
             _songRoleAssignments.Verify(r =>
                 r.RemoveByIdAsync(assignment.Id, It.IsAny<CancellationToken>()), Times.Once);
         }
+
+        [Test]
+        public async Task SideUserWithEditAny_CanRemoveAnotherUser()
+        {
+            // Требуется право ParticipationEditAny у того, кто снимает (requester),
+            // а не у того, кого снимают (target).
+            var requester = CurrentUser(CuMusicClub.Domain.Constants.Permission.ParticipationEditAny);
+
+            var target = new ApplicationUser
+            {
+                Id = Guid.NewGuid(),
+                UserName = "target",
+                DisplayName = "Target",
+            };
+
+            var song = BuildSong();
+            var assignment = new SongRoleAssignment
+            {
+                Id = Guid.NewGuid(),
+                SongId = song.Id,
+                RoleId = Guid.NewGuid(),
+                UserId = target.Id,
+            };
+            var role = new SongRole
+            {
+                Id = Guid.NewGuid(),
+                SongId = song.Id,
+                Song = song,
+                RoleTitle = "Vocal",
+                Assignment = assignment,
+            };
+            _songRoles
+                .Setup(r => r.FindByIdWithSongAndAssignmentAsync(role.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(role);
+            _songs
+                .Setup(r => r.FindByIdWithDetailsAsync(song.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(song);
+            _users
+                .Setup(u => u.GetPreferencesAsync(target.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync((UserPreferences?)null);
+
+            await _service.LeaveRoleAsync(target, Principal(), role.Id, CancellationToken.None);
+
+            _songRoleAssignments.Verify(r =>
+                r.RemoveByIdAsync(assignment.Id, It.IsAny<CancellationToken>()), Times.Once);
+        }
     }
 }
