@@ -29,6 +29,7 @@ export type Song = {
     featured: boolean;
     createdBy: SongUser;
     roles: SongRole[];
+    roadie: SongUser | null;
     createdAt: string;
     updatedAt: string;
 };

@@ -9,7 +9,9 @@ public sealed class SongRoadieRepository(DbContext dbContext)
 {
     public async Task<SongRoadie?> FindBySongIdAsync(Guid songId, CancellationToken ct = default)
     {
-        return await DbSet.FirstOrDefaultAsync(r => r.SongId == songId, ct);
+        return await DbSet
+            .Include(r => r.Roadie)
+            .FirstOrDefaultAsync(r => r.SongId == songId, ct);
     }
 
     public async Task<IReadOnlyList<Guid>> GetAssembledSongIdsWithoutRoadieAsync(CancellationToken ct = default)

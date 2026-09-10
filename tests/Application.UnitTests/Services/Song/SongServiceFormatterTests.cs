@@ -184,7 +184,7 @@ public class SongServiceFormatterTests
                     DateTimeOffset.UtcNow),
             };
 
-            var result = SongServiceFormatter.BuildSongFullTopicMessage("Song", "Artist", "https://example.com", participants);
+            var result = SongServiceFormatter.BuildSongFullTopicMessage("Song", "Artist", "https://example.com", "https://example.com/song", participants);
 
             result.ShouldContain("Тема для песни готова");
             result.ShouldContain("tg://user?id=111");
@@ -194,7 +194,7 @@ public class SongServiceFormatterTests
         [Test]
         public void OnlyLink_ReturnsTopicWithLink()
         {
-            var result = SongServiceFormatter.BuildSongFullTopicMessage("", "", "https://example.com", Array.Empty<RoleAssignmentDto>());
+            var result = SongServiceFormatter.BuildSongFullTopicMessage("", "", "https://example.com", "https://example.com/song", Array.Empty<RoleAssignmentDto>());
             result.ShouldContain("Тема для песни готова");
             result.ShouldContain("https://example.com");
         }

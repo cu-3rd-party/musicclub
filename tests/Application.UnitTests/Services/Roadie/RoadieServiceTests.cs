@@ -1,5 +1,3 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using CuMusicClub.Application.Common.Exceptions;
 using CuMusicClub.Application.Services.Permission;
 using CuMusicClub.Application.Services.Roadie;
@@ -47,15 +45,6 @@ public class RoadieServiceTests
             _permissions.Object,
             _telegram.Object,
             _songTopics.Object);
-    }
-
-    protected ClaimsPrincipal Principal()
-    {
-        var claims = new[]
-        {
-            new Claim(JwtRegisteredClaimNames.Sub, _userId.ToString()),
-        };
-        return new ClaimsPrincipal(new ClaimsIdentity(claims));
     }
 
     protected ApplicationUser CurrentUser(params string[] permissions)
@@ -116,7 +105,7 @@ public class RoadieServiceTests
         [Test]
         public async Task Participant_CreatesTicket_AndNotifiesRoadieChatAndTopic()
         {
-            CurrentUser();
+            var user = CurrentUser();
             var song = BuildSong(assignments: new[] { Assignment(_userId) });
             _songs
                 .Setup(r => r.FindByIdWithDetailsAsync(song.Id, It.IsAny<CancellationToken>()))
@@ -141,7 +130,7 @@ public class RoadieServiceTests
                 .Callback<RoadieTicket, CancellationToken>((t, _) => added = t)
                 .Returns(Task.CompletedTask);
 
-            var result = await _service.CreateTicketAsync(song.Id, Principal(), RoadieTicketType.Help, CancellationToken.None);
+            var result = await _service.CreateTicketAsync(song.Id, user, RoadieTicketType.Help, CancellationToken.None);
 
             added.ShouldNotBeNull();
             added!.SongId.ShouldBe(song.Id);
@@ -157,14 +146,14 @@ public class RoadieServiceTests
         [Test]
         public async Task NotParticipant_ThrowsForbidden()
         {
-            CurrentUser();
+            var user = CurrentUser();
             var song = BuildSong(createdById: Guid.NewGuid());
             _songs
                 .Setup(r => r.FindByIdWithDetailsAsync(song.Id, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(song);
 
             await Should.ThrowAsync<ForbiddenAccessException>(() =>
-                _service.CreateTicketAsync(song.Id, Principal(), RoadieTicketType.Help, CancellationToken.None));
+                _service.CreateTicketAsync(song.Id, user, RoadieTicketType.Help, CancellationToken.None));
 
             _tickets.Verify(r => r.AddAsync(It.IsAny<RoadieTicket>(), It.IsAny<CancellationToken>()), Times.Never);
         }
@@ -172,12 +161,13 @@ public class RoadieServiceTests
         [Test]
         public async Task OpenTicketExists_ReturnsExisting_WithoutDuplicateOrNotification()
         {
-            CurrentUser();
+            var user = CurrentUser();
             var song = BuildSong(assignments: new[] { Assignment(_userId) });
             _songs
                 .Setup(r => r.FindByIdWithDetailsAsync(song.Id, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(song);
             var existing = OpenTicket(song.Id);
+            existing.RoadieTicketType = RoadieTicketType.Help;
             _tickets
                 .Setup(r => r.HasOpenTicketAsync(song.Id, It.IsAny<RoadieTicketType>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(true);
@@ -185,7 +175,7 @@ public class RoadieServiceTests
                 .Setup(r => r.Query())
                 .Returns(new[] { existing, }.AsQueryable());
 
-            var result = await _service.CreateTicketAsync(song.Id, Principal(), RoadieTicketType.Help, CancellationToken.None);
+            var result = await _service.CreateTicketAsync(song.Id, user, RoadieTicketType.Help, CancellationToken.None);
 
             result.Id.ShouldBe(existing.Id);
             result.IsOpen.ShouldBeTrue();
@@ -429,6 +419,252 @@ public class RoadieServiceTests
             (assigned!.RoadieId == noTgA.Id || assigned.RoadieId == noTgB.Id).ShouldBeTrue();
             _telegram.Verify(t => t.SendRoadieMessage(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
             _telegram.Verify(t => t.SendTopicMessage(444, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        }
+    }
+
+    [TestFixture]
+    public class RoadieManagementTests : RoadieServiceTests
+    {
+        private ApplicationUser UserWithPermissions(Guid id, string name, params string[] permissions)
+        {
+            var user = new ApplicationUser { Id = id, UserName = name, DisplayName = name };
+            _permissions
+                .Setup(p => p.GetPermissionValuesAsync(user, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(permissions);
+            return user;
+        }
+
+        [Test]
+        public async Task Assign_NonRoadieActor_ThrowsForbidden()
+        {
+            var actor = UserWithPermissions(Guid.NewGuid(), "Actor");
+            var target = UserWithPermissions(Guid.NewGuid(), "Target", CuMusicClub.Domain.Constants.Permission.RoadieManage);
+            var song = BuildSong();
+
+            await Should.ThrowAsync<ForbiddenAccessException>(() =>
+                _service.AssignRoadieAsync(song.Id, target, actor, CancellationToken.None));
+
+            _roadies.Verify(r => r.AddAsync(It.IsAny<SongRoadie>(), It.IsAny<CancellationToken>()), Times.Never);
+            _roadies.Verify(r => r.Remove(It.IsAny<SongRoadie>()), Times.Never);
+        }
+
+        [Test]
+        public async Task Assign_TargetNotRoadie_ThrowsForbidden()
+        {
+            var actor = UserWithPermissions(Guid.NewGuid(), "Actor", CuMusicClub.Domain.Constants.Permission.RoadieManage);
+            var target = UserWithPermissions(Guid.NewGuid(), "Target");
+            var song = BuildSong();
+            _songs
+                .Setup(r => r.FindByIdAsync(song.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(song);
+
+            await Should.ThrowAsync<ForbiddenAccessException>(() =>
+                _service.AssignRoadieAsync(song.Id, target, actor, CancellationToken.None));
+
+            _roadies.Verify(r => r.AddAsync(It.IsAny<SongRoadie>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Test]
+        public async Task Assign_SongNotFound_ThrowsNotFound()
+        {
+            var actor = UserWithPermissions(Guid.NewGuid(), "Actor", CuMusicClub.Domain.Constants.Permission.RoadieManage);
+            var target = UserWithPermissions(Guid.NewGuid(), "Target", CuMusicClub.Domain.Constants.Permission.RoadieManage);
+            _songs
+                .Setup(r => r.FindByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((CuMusicClub.Domain.Entities.Song?)null);
+
+            await Should.ThrowAsync<NotFoundException>(() =>
+                _service.AssignRoadieAsync(Guid.NewGuid(), target, actor, CancellationToken.None));
+
+            _roadies.Verify(r => r.AddAsync(It.IsAny<SongRoadie>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Test]
+        public async Task Assign_NoExistingRoadie_AddsSongRoadie()
+        {
+            var actor = UserWithPermissions(Guid.NewGuid(), "Actor", CuMusicClub.Domain.Constants.Permission.RoadieManage);
+            var target = UserWithPermissions(Guid.NewGuid(), "Target", CuMusicClub.Domain.Constants.Permission.RoadieManage);
+            var song = BuildSong();
+            _songs
+                .Setup(r => r.FindByIdAsync(song.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(song);
+            _roadies
+                .Setup(r => r.FindBySongIdAsync(song.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync((SongRoadie?)null);
+
+            SongRoadie? added = null;
+            _roadies
+                .Setup(r => r.AddAsync(It.IsAny<SongRoadie>(), It.IsAny<CancellationToken>()))
+                .Callback<SongRoadie, CancellationToken>((sr, _) => added = sr)
+                .Returns(Task.CompletedTask);
+
+            await _service.AssignRoadieAsync(song.Id, target, actor, CancellationToken.None);
+
+            added.ShouldNotBeNull();
+            added!.SongId.ShouldBe(song.Id);
+            added.RoadieId.ShouldBe(target.Id);
+            _roadies.Verify(r => r.Remove(It.IsAny<SongRoadie>()), Times.Never);
+            _roadies.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Test]
+        public async Task Assign_ExistingRoadie_ReplacesIt()
+        {
+            var actor = UserWithPermissions(Guid.NewGuid(), "Actor", CuMusicClub.Domain.Constants.Permission.RoadieManage);
+            var target = UserWithPermissions(Guid.NewGuid(), "Target", CuMusicClub.Domain.Constants.Permission.RoadieManage);
+            var song = BuildSong();
+            var existing = new SongRoadie
+            {
+                SongId = song.Id,
+                RoadieId = Guid.NewGuid(),
+                AssignedAt = DateTimeOffset.UtcNow,
+            };
+            _songs
+                .Setup(r => r.FindByIdAsync(song.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(song);
+            _roadies
+                .Setup(r => r.FindBySongIdAsync(song.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existing);
+
+            SongRoadie? added = null;
+            _roadies
+                .Setup(r => r.AddAsync(It.IsAny<SongRoadie>(), It.IsAny<CancellationToken>()))
+                .Callback<SongRoadie, CancellationToken>((sr, _) => added = sr)
+                .Returns(Task.CompletedTask);
+
+            await _service.AssignRoadieAsync(song.Id, target, actor, CancellationToken.None);
+
+            added.ShouldNotBeNull();
+            added!.RoadieId.ShouldBe(target.Id);
+            _roadies.Verify(r => r.Remove(existing), Times.Once);
+            _roadies.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Test]
+        public async Task Remove_NonRoadieActor_ThrowsForbidden()
+        {
+            var actor = UserWithPermissions(Guid.NewGuid(), "Actor");
+
+            await Should.ThrowAsync<ForbiddenAccessException>(() =>
+                _service.RemoveRoadieAsync(Guid.NewGuid(), actor, CancellationToken.None));
+
+            _roadies.Verify(r => r.Remove(It.IsAny<SongRoadie>()), Times.Never);
+            _roadies.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Test]
+        public async Task Remove_SongNotFound_ThrowsNotFound()
+        {
+            var actor = UserWithPermissions(Guid.NewGuid(), "Actor", CuMusicClub.Domain.Constants.Permission.RoadieManage);
+            _songs
+                .Setup(r => r.FindByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((CuMusicClub.Domain.Entities.Song?)null);
+
+            await Should.ThrowAsync<NotFoundException>(() =>
+                _service.RemoveRoadieAsync(Guid.NewGuid(), actor, CancellationToken.None));
+
+            _roadies.Verify(r => r.Remove(It.IsAny<SongRoadie>()), Times.Never);
+        }
+
+        [Test]
+        public async Task Remove_NoRoadieAssigned_IsNoOp()
+        {
+            var actor = UserWithPermissions(Guid.NewGuid(), "Actor", CuMusicClub.Domain.Constants.Permission.RoadieManage);
+            var song = BuildSong();
+            _songs
+                .Setup(r => r.FindByIdAsync(song.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(song);
+            _roadies
+                .Setup(r => r.FindBySongIdAsync(song.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync((SongRoadie?)null);
+
+            await _service.RemoveRoadieAsync(song.Id, actor, CancellationToken.None);
+
+            _roadies.Verify(r => r.Remove(It.IsAny<SongRoadie>()), Times.Never);
+            _roadies.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        }
+
+        [Test]
+        public async Task Remove_RoadieAssigned_RemovesIt()
+        {
+            var actor = UserWithPermissions(Guid.NewGuid(), "Actor", CuMusicClub.Domain.Constants.Permission.RoadieManage);
+            var song = BuildSong();
+            var existing = new SongRoadie
+            {
+                SongId = song.Id,
+                RoadieId = Guid.NewGuid(),
+                AssignedAt = DateTimeOffset.UtcNow,
+            };
+            _songs
+                .Setup(r => r.FindByIdAsync(song.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(song);
+            _roadies
+                .Setup(r => r.FindBySongIdAsync(song.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existing);
+
+            await _service.RemoveRoadieAsync(song.Id, actor, CancellationToken.None);
+
+            _roadies.Verify(r => r.Remove(existing), Times.Once);
+            _roadies.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Test]
+        public async Task Candidates_NoQuery_ReturnsAllSortedByDisplayName()
+        {
+            var bravo = new ApplicationUser { Id = Guid.NewGuid(), DisplayName = "Bravo" };
+            var alpha = new ApplicationUser { Id = Guid.NewGuid(), DisplayName = "alpha" };
+            _users
+                .Setup(r => r.GetUsersByPermissionAsync(CuMusicClub.Domain.Constants.Permission.RoadieManage, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new[] { bravo, alpha });
+
+            var result = (await _service.GetRoadieCandidatesAsync(null, CancellationToken.None)).ToList();
+
+            result.Count.ShouldBe(2);
+            result[0].DisplayName.ShouldBe("alpha");
+            result[1].DisplayName.ShouldBe("Bravo");
+        }
+
+        [Test]
+        public async Task Candidates_Query_FiltersByDisplayNameCaseInsensitive()
+        {
+            var alice = new ApplicationUser { Id = Guid.NewGuid(), DisplayName = "Alice" };
+            var bob = new ApplicationUser { Id = Guid.NewGuid(), DisplayName = "Bob" };
+            _users
+                .Setup(r => r.GetUsersByPermissionAsync(CuMusicClub.Domain.Constants.Permission.RoadieManage, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new[] { alice, bob });
+
+            var result = (await _service.GetRoadieCandidatesAsync("ALI", CancellationToken.None)).ToList();
+
+            result.Count.ShouldBe(1);
+            result[0].DisplayName.ShouldBe("Alice");
+        }
+
+        [Test]
+        public async Task Candidates_Query_FiltersByUsername()
+        {
+            var alice = new ApplicationUser { Id = Guid.NewGuid(), DisplayName = "Alice", UserName = "alice_roadie" };
+            var bob = new ApplicationUser { Id = Guid.NewGuid(), DisplayName = "Bob" };
+            _users
+                .Setup(r => r.GetUsersByPermissionAsync(CuMusicClub.Domain.Constants.Permission.RoadieManage, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new[] { alice, bob });
+
+            var result = (await _service.GetRoadieCandidatesAsync("roadie", CancellationToken.None)).ToList();
+
+            result.Count.ShouldBe(1);
+            result[0].DisplayName.ShouldBe("Alice");
+        }
+
+        [Test]
+        public async Task Candidates_NoMatch_ReturnsEmpty()
+        {
+            var alice = new ApplicationUser { Id = Guid.NewGuid(), DisplayName = "Alice" };
+            _users
+                .Setup(r => r.GetUsersByPermissionAsync(CuMusicClub.Domain.Constants.Permission.RoadieManage, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new[] { alice });
+
+            var result = (await _service.GetRoadieCandidatesAsync("zzz", CancellationToken.None)).ToList();
+
+            result.Count.ShouldBe(0);
         }
     }
 }

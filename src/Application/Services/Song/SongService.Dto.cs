@@ -16,7 +16,7 @@ public partial class SongService
             user.TgUserId);
     }
 
-    private static SongDto ToSongDto(Domain.Entities.Song song, IReadOnlyList<SongRole> roles)
+    private static SongDto ToSongDto(Domain.Entities.Song song, IReadOnlyList<SongRole> roles, ApplicationUser? roadie = null)
     {
         var roleDtos = roles
             .Select(r => new RoleDto(r.Id,
@@ -41,6 +41,13 @@ public partial class SongService
             song.IsFeatured,
             MapCreatedBy(song.CreatedBy),
             roleDtos,
+            roadie is null
+                ? null
+                : new SongUserDto(roadie.Id,
+                    roadie.DisplayName,
+                    roadie.UserName,
+                    roadie.AvatarUrl,
+                    roadie.TgUserId),
             song.CreatedAt,
             song.UpdatedAt);
     }

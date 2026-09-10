@@ -10,6 +10,7 @@ public sealed record SongDto(
     bool Featured,
     SongUserDto CreatedBy,
     IReadOnlyList<RoleDto> Roles,
+    SongUserDto? Roadie,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt)
 {

@@ -87,3 +87,33 @@ export async function getRoleCandidates(
 
     return response.data;
 }
+
+export async function getRoadieCandidates(
+    songId: UUID,
+    query?: string,
+): Promise<RoleCandidates> {
+    const response = await api.get<RoleCandidates>(
+        `/api/v1/songs/${songId}/roadie/candidates`,
+        { params: { query } },
+    );
+
+    return response.data;
+}
+
+export async function assignRoadie(
+    songId: UUID,
+    payload: RolePayload,
+): Promise<Song> {
+    const response = await api.post<Song>(
+        `/api/v1/songs/${songId}/roadie`,
+        payload,
+    );
+
+    return response.data;
+}
+
+export async function removeRoadie(songId: UUID): Promise<Song> {
+    const response = await api.delete<Song>(`/api/v1/songs/${songId}/roadie`);
+
+    return response.data;
+}

@@ -193,6 +193,76 @@ public class RoadieService(
         return roadie?.Roadie;
     }
 
+    public async Task AssignRoadieAsync(Guid songId,
+        ApplicationUser targetUser,
+        ApplicationUser actor,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureRoadieManagerAsync(actor, cancellationToken);
+
+        var targetPerms = await permissions.GetPermissionValuesAsync(targetUser, cancellationToken);
+        if (!targetPerms.Contains(CuMusicClub.Domain.Constants.Permission.RoadieManage))
+            throw new ForbiddenAccessException();
+
+        var song = await songs.FindByIdAsync(songId, cancellationToken)
+                   ?? throw new NotFoundException(songId.ToString(), nameof(Song));
+
+        var existing = await roadies.FindBySongIdAsync(songId, cancellationToken);
+        if (existing is not null)
+            roadies.Remove(existing);
+
+        await roadies.AddAsync(new SongRoadie
+        {
+            SongId = song.Id,
+            RoadieId = targetUser.Id,
+            AssignedAt = DateTimeOffset.UtcNow,
+        }, cancellationToken);
+        await roadies.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task RemoveRoadieAsync(Guid songId,
+        ApplicationUser actor,
+        CancellationToken cancellationToken = default)
+    {
+        await EnsureRoadieManagerAsync(actor, cancellationToken);
+
+        var song = await songs.FindByIdAsync(songId, cancellationToken)
+                   ?? throw new NotFoundException(songId.ToString(), nameof(Song));
+
+        var existing = await roadies.FindBySongIdAsync(songId, cancellationToken);
+        if (existing is null)
+            return;
+
+        roadies.Remove(existing);
+        await roadies.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ApplicationUser>> GetRoadieCandidatesAsync(string? query,
+        CancellationToken cancellationToken = default)
+    {
+        var candidates = await users.GetUsersByPermissionAsync(CuMusicClub.Domain.Constants.Permission.RoadieManage,
+            cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(query))
+            return candidates
+                .OrderBy(u => u.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+        var lowered = query.Trim().ToLowerInvariant();
+        return candidates
+            .Where(u => u.DisplayName.ToLower().Contains(lowered) ||
+                        (u.UserName != null && u.UserName.ToLower().Contains(lowered)))
+            .OrderBy(u => u.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private async Task EnsureRoadieManagerAsync(ApplicationUser actor, CancellationToken cancellationToken)
+    {
+        var perms = await permissions.GetPermissionValuesAsync(actor, cancellationToken);
+        if (!perms.Contains(CuMusicClub.Domain.Constants.Permission.RoadieManage))
+            throw new ForbiddenAccessException();
+    }
+
     private static RoadieTicketDto ToDto(RoadieTicket ticket, CuMusicClub.Domain.Entities.Song song)
     {
         return new RoadieTicketDto(

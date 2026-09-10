@@ -5,22 +5,20 @@
     import * as Command from "$lib/components/ui/command";
     import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
     import {Skeleton} from "$lib/components/ui/skeleton";
-    import {getRoleCandidates, joinSongRole, leaveSongRole} from "$lib/api/songs";
-    import type {Song, SongRole, SongUser} from "$lib/songs/types";
+    import {assignRoadie, getRoadieCandidates, removeRoadie} from "$lib/api/songs";
+    import type {Song, SongUser} from "$lib/songs/types";
     import {Permission} from "$lib/permissions/resolve";
     import type {UUID} from "node:crypto";
 
     let {
         songId,
-        role,
+        roadie,
         currentUser,
-        removableUserIds,
         onupdated,
     }: {
         songId: UUID;
-        role: SongRole;
+        roadie: SongUser | null;
         currentUser: {id: UUID; permissions: string[]} | null;
-        removableUserIds: Set<string>;
         onupdated?: (song: Song) => void;
     } = $props();
 
@@ -30,21 +28,16 @@
     let loadingCandidates = $state(false);
     let acting = $state(false);
 
-    const isVacant = $derived(role.assignment === null);
-    const member = $derived(role.assignment?.user ?? null);
-    const isYou = $derived(member?.id === currentUser?.id);
-    const canAssign = $derived(
+    const isVacant = $derived(roadie === null);
+    const isYou = $derived(roadie?.id === currentUser?.id);
+    const canManage = $derived(
         currentUser !== null &&
-        ((currentUser.permissions ?? []).includes(Permission.ParticipationEditOwn) ||
-            (currentUser.permissions ?? []).includes(Permission.ParticipationEditAny))
-    );
-    const canRemoveMember = $derived(
-        member !== null && currentUser !== null && removableUserIds.has(member.id)
+        (currentUser.permissions ?? []).includes(Permission.RoadieManage)
     );
 
     // При открытии дропдауна и при изменении поиска (с дебаунсом) грузим кандидатов.
     $effect(() => {
-        if (!assignOpen || !isVacant || !canAssign) return;
+        if (!assignOpen || !isVacant || !canManage) return;
 
         const handle = setTimeout(() => {
             loadCandidates();
@@ -56,11 +49,9 @@
     async function loadCandidates() {
         loadingCandidates = true;
         try {
-            const result = await getRoleCandidates(
+            const result = await getRoadieCandidates(
                 songId,
-                role.id,
                 query || undefined,
-                "assign",
             );
             candidates = result.users;
         } finally {
@@ -72,7 +63,7 @@
         if (acting) return;
         acting = true;
         try {
-            const updated = await joinSongRole(role.id, {actorUserId: user.id});
+            const updated = await assignRoadie(songId, {actorUserId: user.id});
             onupdated?.(updated);
             assignOpen = false;
         } finally {
@@ -81,10 +72,10 @@
     }
 
     async function remove() {
-        if (!member || acting) return;
+        if (acting) return;
         acting = true;
         try {
-            const updated = await leaveSongRole(role.id, {actorUserId: member.id});
+            const updated = await removeRoadie(songId);
             onupdated?.(updated);
         } finally {
             acting = false;
@@ -102,7 +93,7 @@
 </script>
 
 {#if isVacant}
-    {#if canAssign}
+    {#if canManage}
         <DropdownMenu.Root
             bind:open={assignOpen}
             onOpenChange={(open) => {
@@ -115,7 +106,7 @@
             <DropdownMenu.Trigger
                 class="flex w-full items-center justify-between p-3 rounded-lg bg-muted/50 text-left transition-colors hover:bg-muted cursor-pointer disabled:opacity-60"
                 disabled={acting}
-                aria-label={`Назначить на роль ${role.title}`}
+                aria-label="Назначить роуди"
             >
                 <span class="flex items-center gap-3">
                     <Avatar.Root class="size-8">
@@ -124,7 +115,7 @@
                         </Avatar.Fallback>
                     </Avatar.Root>
                     <div>
-                        <p class="text-sm font-medium">{role.title}</p>
+                        <p class="text-sm font-medium">Роуди</p>
                         <p class="text-xs text-muted-foreground">Свободно</p>
                     </div>
                 </span>
@@ -133,7 +124,7 @@
 
             <DropdownMenu.Content class="w-72 p-1">
                 <Command.Root>
-                    <Command.Input bind:value={query} placeholder="Поиск участника..."/>
+                    <Command.Input bind:value={query} placeholder="Поиск роуди..."/>
                     <Command.List>
                         {#if loadingCandidates}
                             {#each [0, 1, 2] as item (item)}
@@ -189,43 +180,39 @@
                     </Avatar.Fallback>
                 </Avatar.Root>
                 <div>
-                    <p class="text-sm font-medium">{role.title}</p>
+                    <p class="text-sm font-medium">Роуди</p>
                     <p class="text-xs text-muted-foreground">Свободно</p>
                 </div>
             </span>
             <Badge variant="ghost">свободно</Badge>
         </div>
     {/if}
-{:else if member}
-    {#if canRemoveMember}
+{:else if roadie}
+    {#if canManage}
         <button
             type="button"
             class="flex w-full items-center justify-between p-3 rounded-lg bg-muted/50 text-left transition-colors hover:bg-muted cursor-pointer disabled:opacity-60"
             onclick={remove}
             disabled={acting}
-            title={isYou ? "Нажми чтоб выйти" : "Нажми чтоб снять с роли"}
-            aria-label={isYou ? "Выйти из роли" : `Снять ${member.displayName} с роли`}
+            title={isYou ? "Нажми чтоб снять себя с роли" : "Нажми чтоб снять с роли"}
+            aria-label="Снять роуди с песни"
         >
             <span class="flex items-center gap-3">
                 <Avatar.Root class="size-8">
                     <Avatar.Image
-                        src={member.avatarUrl}
-                        alt={member.displayName}
+                        src={roadie.avatarUrl}
+                        alt={roadie.displayName}
                     />
                     <Avatar.Fallback class="text-xs">
-                        {getInitials(member.displayName)}
+                        {getInitials(roadie.displayName)}
                     </Avatar.Fallback>
                 </Avatar.Root>
                 <div>
-                    <p class="text-sm font-medium">{role.title}</p>
-                    <p class="text-xs text-muted-foreground">{member.displayName}</p>
+                    <p class="text-sm font-medium">Роуди</p>
+                    <p class="text-xs text-muted-foreground">{roadie.displayName}</p>
                 </div>
             </span>
-            {#if isYou}
-                <Badge variant="ghost">нажми чтоб выйти</Badge>
-            {:else}
-                <Badge variant="default">занято</Badge>
-            {/if}
+            <Badge variant="ghost">нажми чтоб снять</Badge>
         </button>
     {:else}
         <div
@@ -234,16 +221,16 @@
             <span class="flex items-center gap-3">
                 <Avatar.Root class="size-8">
                     <Avatar.Image
-                        src={member.avatarUrl}
-                        alt={member.displayName}
+                        src={roadie.avatarUrl}
+                        alt={roadie.displayName}
                     />
                     <Avatar.Fallback class="text-xs">
-                        {getInitials(member.displayName)}
+                        {getInitials(roadie.displayName)}
                     </Avatar.Fallback>
                 </Avatar.Root>
                 <div>
-                    <p class="text-sm font-medium">{role.title}</p>
-                    <p class="text-xs text-muted-foreground">{member.displayName}</p>
+                    <p class="text-sm font-medium">Роуди</p>
+                    <p class="text-xs text-muted-foreground">{roadie.displayName}</p>
                 </div>
             </span>
             <Badge variant="default">занято</Badge>

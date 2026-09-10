@@ -5,13 +5,14 @@
     import * as Avatar from "$lib/components/ui/avatar";
     import {Separator} from "$lib/components/ui/separator";
     import {Skeleton} from "$lib/components/ui/skeleton";
-    import {getSong, getRoleCandidates, callRoadie} from "$lib/api/songs";
+    import {getSong, getRoleCandidates} from "$lib/api/songs";
     import type {Song} from "$lib/songs/types";
     import {getStoredAuthSession} from "$lib/auth/storage";
     import {ArrowLeft, ExternalLink, Music, Star,} from "@lucide/svelte";
     import type {UUID} from "node:crypto";
     import EditSong from "$lib/components/songs/edit-song.svelte";
     import RoleItem from "$lib/components/songs/role-item.svelte";
+    import RoadieItem from "$lib/components/songs/roadie-item.svelte";
 
     let song = $state<Song | null>(null);
     let loading = $state(true);
@@ -230,6 +231,14 @@
                                 onupdated={(updated) => (song = updated)}
                             />
                         {/each}
+                    </div>
+                    <div class="mt-2.5">
+                        <RoadieItem
+                            songId={song.id}
+                            roadie={song.roadie}
+                            currentUser={currentUser}
+                            onupdated={(updated) => (song = updated)}
+                        />
                     </div>
                 </div>
 

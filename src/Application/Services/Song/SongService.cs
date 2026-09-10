@@ -55,7 +55,8 @@ public partial class SongService(
         var song = await songs.FindByIdWithDetailsAsync(songId, cancellationToken) ??
                    throw new NotFoundException(songId.ToString(), nameof(Domain.Entities.Song));
 
-        var songDto = ToSongDto(song, song.Roles);
+        var roadie = await roadieService.GetRoadie(song, cancellationToken);
+        var songDto = ToSongDto(song, song.Roles, roadie);
 
         return songDto;
     }
