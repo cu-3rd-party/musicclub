@@ -21,16 +21,14 @@ public class RoadieService(
     private static readonly TimeSpan AutoAssignAge = TimeSpan.FromHours(24);
 
     public async Task<RoadieTicketDto> CreateTicketAsync(Guid songId,
-        ClaimsPrincipal currentUser,
-        RoadieTicketType ticketType,
+        ApplicationUser currentUser,
+        RoadieTicketType ticketType = RoadieTicketType.Help,
         CancellationToken cancellationToken = default)
     {
         var song = await songs.FindByIdWithDetailsAsync(songId, cancellationToken)
                    ?? throw new NotFoundException(songId.ToString(), nameof(Song));
 
-        var requesterId = currentUser.GetUserId();
-        var requester = await users.FindByIdAsync(requesterId)
-                        ?? throw new UnauthorizedAccessException();
+        var requesterId = currentUser.Id;
 
         var isParticipant = song.CreatedById == requesterId
                             || song.Assignments.Any(a => a.UserId == requesterId);
@@ -38,10 +36,10 @@ public class RoadieService(
             throw new ForbiddenAccessException();
 
         // Дубль открытой заявки — возвращаем существующую, без повторных уведомлений.
-        if (await tickets.HasOpenTicketAsync(songId, ticketType: RoadieTicketType.Help, ct: cancellationToken))
+        if (await tickets.HasOpenTicketAsync(songId, ticketType: ticketType, ct: cancellationToken))
         {
             var existing = tickets.Query()
-                .FirstOrDefault(t => t.SongId == songId && t.AcceptedById == null && t.RoadieTicketType == RoadieTicketType.Help);
+                .FirstOrDefault(t => t.SongId == songId && t.AcceptedById == null && t.RoadieTicketType == ticketType);
             if (existing is not null)
                 return ToDto(existing, song);
         }
@@ -50,7 +48,7 @@ public class RoadieService(
         {
             Id = Guid.NewGuid(),
             SongId = songId,
-            RoadieTicketType = RoadieTicketType.Help,
+            RoadieTicketType = ticketType,
             CreatedById = requesterId,
             CreatedAt = DateTimeOffset.UtcNow,
         };
@@ -187,6 +185,12 @@ public class RoadieService(
     public async Task<IEnumerable<ApplicationUser>> ListRoadies(CancellationToken cancellationToken = default)
     {
         return await users.GetUsersByPermissionAsync(CuMusicClub.Domain.Constants.Permission.RoadieManage, cancellationToken);
+    }
+
+    public async Task<ApplicationUser?> GetRoadie(Domain.Entities.Song song, CancellationToken cancellationToken = default)
+    {
+        var roadie = await roadies.FindBySongIdAsync(song.Id, cancellationToken);
+        return roadie?.Roadie;
     }
 
     private static RoadieTicketDto ToDto(RoadieTicket ticket, CuMusicClub.Domain.Entities.Song song)

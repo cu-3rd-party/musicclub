@@ -46,7 +46,7 @@ public partial class SongService
         var existing = await songTopics.FindBySongIdAsync(song.Id, cancellationToken);
         if (existing == null && song.IsFull)
         {
-            await roadieService.CreateTicketAsync(song.Id, claimsPrincipal, RoadieTicketType.Assignment, cancellationToken);
+            await roadieService.CreateTicketAsync(song.Id, requester, RoadieTicketType.Assignment, cancellationToken);
             await new SongServiceTopics(telegramChatService).CreateTopicForFullSongAsync(role.Song, cancellationToken);
         }
         else if (existing != null)

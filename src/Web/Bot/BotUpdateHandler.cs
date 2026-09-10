@@ -15,6 +15,7 @@ namespace CuMusicClub.Web.Bot;
 
 public class BotUpdateHandler(
     ITgAuthLinkRepository tgAuthLinks,
+    IApplicationUserRepository userRepository,
     ITelegramAuthService tgAuthService,
     ITelegramChatService telegramChatService,
     IRoadieService roadieService,
@@ -84,6 +85,14 @@ public class BotUpdateHandler(
                     await HandleRoadiePingAsync(bot, message, user, cancellationToken);
                     return;
 
+                case "ticket-roadie":
+                    await HandleTicketRoadieAsync(bot, message, user, cancellationToken);
+                    return;
+
+                case "call-my-roadie":
+                    await HandleCallMyRoadieAsync(bot, message, user, cancellationToken);
+                    return;
+
                 case "ping":
                     await HandlePingAsync(bot, message, user, cancellationToken);
                     return;
@@ -120,17 +129,17 @@ public class BotUpdateHandler(
 
         if (message.Text == null) return;
 
-        var userMessage = message.Text["/ping".Length..];
-        var text = message.Text.StartsWith("/ping", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(userMessage)
-            ? userMessage
-                .TrimStart()
-            : $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a> вызывает музыкантов!";
+        var (_, userMessage) = GetCommandArgsStr(message.Text);
+        var text = string.IsNullOrEmpty(userMessage)
+            ? $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a> вызывает роуди!"
+            : userMessage;
 
         text = song
             .Roles.Where(x => x.Assignment?.User.TgUserId != null)
             .Select(x => x.Assignment!.User)
             .DistinctBy(x => x.TgUserId)
-            .Aggregate(text, (current, userToMention) => current + $"<a href=\"tg://user?id={userToMention.TgUserId}\">\u2060</a>");
+            .Aggregate(text,
+                (current, userToMention) => current + $"<a href=\"tg://user?id={userToMention.TgUserId}\">\u2060</a>");
 
         await bot.SendMessage(message.Chat.Id,
             text,
@@ -139,6 +148,104 @@ public class BotUpdateHandler(
             cancellationToken: cancellationToken);
     }
 
+    /// <summary>
+    /// Распаршивает команду на саму команду и аргументы после нее
+    /// </summary>
+    /// <param name="messageText"></param>
+    /// <returns>Первое значение сама команда, второе значение текстовые аргументы после нее</returns>
+    private (string?, string?) GetCommandArgsStr(string messageText)
+    {
+        var parts = messageText.Split([' '], 2);
+        return (parts.Length >= 1 ? parts[0] : null, parts.Length >= 2 ? parts[1] : null);
+    }
+
+    private async Task HandleTicketRoadieAsync(ITelegramBotClient bot,
+        Message message,
+        User user,
+        CancellationToken cancellationToken)
+    {
+        var chatId = message.Chat.Id;
+        var isTopicMessage = message.IsTopicMessage;
+        var isDirectMessage = message.Chat.IsDirectMessages;
+        var topicId = message.MessageThreadId;
+        if (!isTopicMessage ||
+            isDirectMessage ||
+            topicId == null ||
+            chatId != long.Parse(telegramOptions.Value.ChatId))
+            return;
+
+        var topic = await songTopicRepository.FindByTopicIdAsync((long) topicId, cancellationToken);
+        if (topic == null) return;
+
+        var song = await songRepository.FindByIdWithDetailsAsync(topic.SongId, cancellationToken);
+        if (song == null) return;
+
+        if (message.Text == null) return;
+
+        var applicationUser = await userRepository.FindByTgUserIdAsync(user.Id, cancellationToken);
+        if (applicationUser == null)
+        {
+            await bot.SendMessage(message.Chat.Id,
+                $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a>, я не нашел тебя в моей базе данных, зайди в миниприложение разок и попробуй еще раз.",
+                messageThreadId: message.MessageThreadId,
+                parseMode: ParseMode.Html,
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        await roadieService.CreateTicketAsync(song.Id, applicationUser, RoadieTicketType.Help, cancellationToken);
+        await bot.SendMessage(message.Chat.Id,
+            $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a>, в чат роуди улетел запрос на помощь группе, ожидай.",
+            messageThreadId: message.MessageThreadId,
+            parseMode: ParseMode.Html,
+            cancellationToken: cancellationToken);
+    }
+
+    private async Task HandleCallMyRoadieAsync(ITelegramBotClient bot,
+        Message message,
+        User user,
+        CancellationToken cancellationToken)
+    {
+        var chatId = message.Chat.Id;
+        var isTopicMessage = message.IsTopicMessage;
+        var isDirectMessage = message.Chat.IsDirectMessages;
+        var topicId = message.MessageThreadId;
+        if (!isTopicMessage ||
+            isDirectMessage ||
+            topicId == null ||
+            chatId != long.Parse(telegramOptions.Value.ChatId))
+            return;
+
+        var topic = await songTopicRepository.FindByTopicIdAsync((long) topicId, cancellationToken);
+        if (topic == null) return;
+
+        var song = await songRepository.FindByIdWithDetailsAsync(topic.SongId, cancellationToken);
+        if (song == null) return;
+
+        if (message.Text == null) return;
+
+        var roadie = await roadieService.GetRoadie(song, cancellationToken);
+        if (roadie == null)
+        {
+            await bot.SendMessage(message.Chat.Id,
+                $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a>, я не нашел у твоей песни роуди",
+                messageThreadId: message.MessageThreadId,
+                parseMode: ParseMode.Html,
+                cancellationToken: cancellationToken);
+            return;
+        }
+
+        var (_, userMessage) = GetCommandArgsStr(message.Text);
+        var text = string.IsNullOrEmpty(userMessage)
+            ? $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a> вызывает своего роуди {telegramChatService.BuildUserMention(roadie!)}!"
+            : userMessage;
+
+        await bot.SendMessage(message.Chat.Id,
+            text,
+            messageThreadId: message.MessageThreadId,
+            parseMode: ParseMode.Html,
+            cancellationToken: cancellationToken);
+    }
 
     private async Task HandleRoadiePingAsync(ITelegramBotClient bot,
         Message message,
@@ -147,11 +254,10 @@ public class BotUpdateHandler(
     {
         if (message.Text == null) return;
 
-        var userMessage = message.Text["/roadie".Length..];
-        var text = message.Text.StartsWith("/roadie", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(userMessage)
-            ? userMessage
-                .TrimStart()
-            : $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a> вызывает роуди!";
+        var (_, userMessage) = GetCommandArgsStr(message.Text);
+        var text = string.IsNullOrEmpty(userMessage)
+            ? $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a> вызывает роуди!"
+            : userMessage;
 
         var roadies = await roadieService.ListRoadies(cancellationToken);
         var pingCount = 0;

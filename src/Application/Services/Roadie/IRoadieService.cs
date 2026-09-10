@@ -13,8 +13,8 @@ public enum RoadieAcceptResult
 public interface IRoadieService
 {
     Task<RoadieTicketDto> CreateTicketAsync(Guid songId,
-        ClaimsPrincipal currentUser,
-        RoadieTicketType ticketType,
+        ApplicationUser currentUser,
+        RoadieTicketType ticketType = RoadieTicketType.Help,
         CancellationToken cancellationToken = default);
 
     Task<RoadieAcceptResult> AcceptTicketAsync(long tgUserId,
@@ -23,4 +23,5 @@ public interface IRoadieService
 
     Task<int> AutoAssignOpenTicketsAsync(CancellationToken cancellationToken = default);
     Task<IEnumerable<ApplicationUser>> ListRoadies(CancellationToken cancellationToken = default);
+    Task<ApplicationUser?> GetRoadie(Domain.Entities.Song song, CancellationToken cancellationToken = default);
 }
