@@ -16,6 +16,7 @@ namespace CuMusicClub.Application.Services.Telegram;
 public class TelegramChatService(
     ITelegramBotClient bot,
     IOptions<TelegramOptions> telegramOptions,
+    IOptions<BotOptions> botOptions,
     ISongRepository songs,
     ISongTopicRepository songTopics) : ITelegramChatService
 {
@@ -169,5 +170,10 @@ public class TelegramChatService(
             userTag = WebUtility.HtmlEncode(user.DisplayName);
 
         return userTag;
+    }
+
+    public string BuildSongSystemLink(Domain.Entities.Song song)
+    {
+        return $"https://{botOptions.Value.WebAppUrl}/app/songs/{song.Id}";
     }
 }

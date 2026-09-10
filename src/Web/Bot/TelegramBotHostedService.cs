@@ -1,3 +1,4 @@
+using CuMusicClub.Application.Common.Options;
 using Microsoft.Extensions.Options;
 using Telegram.Bot;
 using Telegram.Bot.Polling;

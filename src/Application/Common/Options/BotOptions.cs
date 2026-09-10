@@ -1,4 +1,4 @@
-namespace CuMusicClub.Web.Bot;
+namespace CuMusicClub.Application.Common.Options;
 
 public class BotOptions
 {

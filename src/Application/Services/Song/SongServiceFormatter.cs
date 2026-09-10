@@ -24,24 +24,27 @@ public static partial class SongServiceFormatter
     /// </summary>
     /// <param name="title"></param>
     /// <param name="artist"></param>
-    /// <param name="link"></param>
+    /// <param name="listenLink">Ссылка на яндекс музыку</param>
+    /// <param name="systemLink">Ссылка на песню в системе</param>
     /// <param name="participants"></param>
     /// <returns></returns>
     public static string BuildSongFullTopicMessage(
         string title,
         string artist,
-        string? link,
+        string? listenLink,
+        string? systemLink,
         IReadOnlyList<RoleAssignmentDto> participants)
     {
         var main = BuildSongName(title, artist, "Песня");
         var mentions = BuildParticipantMentions(participants);
 
-        if (mentions == "" && main == "" && string.IsNullOrWhiteSpace(link))
+        if (mentions == "" && main == "" && string.IsNullOrWhiteSpace(listenLink))
             return "";
 
         var b = new StringBuilder();
         b.Append("Тема для песни готова");
-        AppendMessageBody(b, main, link, mentions, "Участники");
+        AppendMessageBody(b, main, listenLink, mentions, "Участники");
+        b.Append($"\n\n<a href=\"{systemLink}\">Песня в системе</a>");
 
         return b.ToString();
     }

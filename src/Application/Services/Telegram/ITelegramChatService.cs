@@ -61,4 +61,6 @@ public interface ITelegramChatService
     Task SendDirectMessage(long tgUserId, string message, CancellationToken cancellationToken = default);
 
     string BuildUserMention(ApplicationUser user);
+
+    string BuildSongSystemLink(Domain.Entities.Song song);
 }

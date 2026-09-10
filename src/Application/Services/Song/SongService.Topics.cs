@@ -1,7 +1,7 @@
 using System.Net;
-using CuMusicClub.Application.Services.Song;
+using CuMusicClub.Application.Common.Options;
 using CuMusicClub.Application.Services.Telegram;
-using CuMusicClub.Domain.Entities;
+using Microsoft.Extensions.Options;
 
 namespace CuMusicClub.Application.Services.Song;
 
@@ -31,7 +31,7 @@ public class SongServiceTopics(
             .ToList();
 
         var generalMessage = SongServiceFormatter.BuildSongFullMessage(song.Title, song.Artist, song.LinkUrl);
-        var topicMessage = SongServiceFormatter.BuildSongFullTopicMessage(song.Title, song.Artist, song.LinkUrl, participants);
+        var topicMessage = SongServiceFormatter.BuildSongFullTopicMessage(song.Title, song.Artist, song.LinkUrl, telegramChatService.BuildSongSystemLink(song), participants);
 
         if (!string.IsNullOrEmpty(generalMessage)) await telegramChatService.SendGeneralMessage(generalMessage, cancellationToken);
         if (!string.IsNullOrEmpty(topicMessage)) await telegramChatService.SendTopicMessage(topic.TopicId, topicMessage, cancellationToken);
