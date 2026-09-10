@@ -245,17 +245,17 @@
                             />
                         {/each}
                     </div>
+                </div>
 
-                    <Separator/>
+                <Separator/>
 
-                    <div class="mt-2.5">
-                        <RoadieItem
-                            songId={song.id}
-                            roadie={song.roadie}
-                            currentUser={currentUser}
-                            onupdated={(updated) => (song = updated)}
-                        />
-                    </div>
+                <div>
+                    <RoadieItem
+                        songId={song.id}
+                        roadie={song.roadie}
+                        currentUser={currentUser}
+                        onupdated={(updated) => (song = updated)}
+                    />
                 </div>
 
                 <Separator/>
