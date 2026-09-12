@@ -39,7 +39,7 @@ public partial class SongService
 
         if (role.Assignment != null) throw new BadHttpRequestException("the role is already occupied");
 
-        role.Assignment = new SongRoleAssignment
+        role.Assignment = new CuMusicClub.Domain.Entities.SongRoleAssignment
         {
             UserId = user.Id,
             SongId = role.SongId,

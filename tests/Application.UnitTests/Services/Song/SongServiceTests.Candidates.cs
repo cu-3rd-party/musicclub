@@ -1,6 +1,7 @@
 using Ardalis.GuardClauses;
 using CuMusicClub.Application.Services.Song;
 using CuMusicClub.Domain.Entities;
+using SongRoleAssignmentEntity = CuMusicClub.Domain.Entities.SongRoleAssignment;
 using Moq;
 using NUnit.Framework;
 using Shouldly;
@@ -10,7 +11,7 @@ namespace CuMusicClub.Application.UnitTests.Services.Song;
 [TestFixture]
 public class GetRoleCandidatesAsyncTests : SongServiceTests
 {
-    private static SongRole BuildRole(Guid songId, SongRoleAssignment? assignment = null)
+    private static SongRole BuildRole(Guid songId, SongRoleAssignmentEntity? assignment = null)
     {
         return new SongRole
         {
@@ -155,7 +156,7 @@ public class GetRoleCandidatesAsyncTests : SongServiceTests
         CurrentUser(Domain.Constants.Permission.ParticipationEditAny);
         var songId = Guid.NewGuid();
         var role = BuildRole(songId,
-            new SongRoleAssignment
+            new SongRoleAssignmentEntity
             {
                 Id = Guid.NewGuid(),
                 SongId = songId,

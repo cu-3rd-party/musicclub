@@ -14,7 +14,7 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
     [Migration("20260912154302_NoPrivacyAllowed")]
-    partial class NoPrivacyAllowed
+    partial class SetDefaultPreferencesForAllUsers
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

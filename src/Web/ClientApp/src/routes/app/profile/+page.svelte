@@ -2,27 +2,30 @@
     import {Avatar, AvatarFallback, AvatarImage} from "$lib/components/ui/avatar";
     import {Badge} from "$lib/components/ui/badge";
     import {Button} from "$lib/components/ui/button";
-    import {Separator} from "$lib/components/ui/separator";
-    import {authState, logout} from "$lib/auth/store";
-    import {getApiErrorMessage} from "$lib/api/auth";
-    import {LogOut, Shield} from "@lucide/svelte";
+    import {Separator, SeparatorWithLabel} from "$lib/components/ui/separator";
+    import {authState} from "$lib/auth/store";
+    import {Shield} from "@lucide/svelte";
     import * as Sheet from "$lib/components/ui/sheet";
-    import {resolve} from "$app/paths";
-    import {goto} from "$app/navigation";
-    import {categorizePermissions, PermissionCategory} from "$lib/permissions/resolve";
+    import {categorizePermissions, PermissionCategory, Permission} from "$lib/permissions/resolve";
     import * as Alert from "$lib/components/ui/alert";
-    import {Switch} from "$lib/components/ui/switch";
-    import {getPrivacyPreferences, updatePrivacyPreferences, type PrivacyPreferences} from "$lib/api/users";
+    import {getMyAssignments, getMyRoadieAssignments} from "$lib/api/users";
+    import type {SongRoleAssignment, ShortSongDto} from "$lib/songs/types";
+    import SongRow from "$lib/components/songs/song-row.svelte";
+    import {Skeleton} from "$lib/components/ui/skeleton";
 
     let error = $state<string | null>(null);
-    let loggingOut = $state(false);
     let permissionsOpen = $state(false);
     let detailsOpen = $state(false);
-    let preferences = $state<PrivacyPreferences>({allowAdding: true, allowRemoving: true});
-    let preferencesLoading = $state(true);
+
+    let assignments = $state<SongRoleAssignment[]>([]);
+    let assignmentsLoading = $state(true);
+
+    let roadieAssignments = $state<ShortSongDto[]>([]);
+    let roadieAssignmentsLoading = $state(true);
 
     let user = $derived($authState.user);
     let permissionCategory = $derived($authState.user ? categorizePermissions($authState.user.permissions) : PermissionCategory.None);
+    let hasRoadieManage = $derived(user?.permissions?.includes(Permission.RoadieManage) ?? false);
 
     function formatDate(dateString: string): string {
         if (typeof dateString == "undefined") {
@@ -60,44 +63,39 @@
         return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
     }
 
-    async function handleLogout() {
-        loggingOut = true;
-        try {
-            await logout();
-            await goto(resolve("/auth"))
-        } catch (err) {
-            error = getApiErrorMessage(err, "Не удалось выйти");
-        } finally {
-            loggingOut = false;
-        }
-    }
-
     $effect(() => {
         let cancelled = false;
-        getPrivacyPreferences()
-            .then((prefs) => {
-                if (!cancelled) preferences = prefs;
+        getMyAssignments()
+            .then((data) => {
+                if (!cancelled) assignments = data;
             })
             .catch((err) => console.error(err))
             .finally(() => {
-                if (!cancelled) preferencesLoading = false;
+                if (!cancelled) assignmentsLoading = false;
             });
         return () => {
             cancelled = true;
         };
     });
 
-    async function togglePreference(key: "allowAdding" | "allowRemoving", value: boolean) {
-        const previous = preferences;
-        const next = {...previous, [key]: value};
-        preferences = next;
-        try {
-            preferences = await updatePrivacyPreferences(next);
-        } catch (err) {
-            preferences = previous;
-            error = getApiErrorMessage(err, "Не удалось сохранить настройки приватности");
+    $effect(() => {
+        if (!hasRoadieManage) {
+            roadieAssignmentsLoading = false;
+            return;
         }
-    }
+        let cancelled = false;
+        getMyRoadieAssignments()
+            .then((data) => {
+                if (!cancelled) roadieAssignments = data;
+            })
+            .catch((err) => console.error(err))
+            .finally(() => {
+                if (!cancelled) roadieAssignmentsLoading = false;
+            });
+        return () => {
+            cancelled = true;
+        };
+    });
 
 </script>
 
@@ -153,7 +151,71 @@
         </Button>
     </section>
 
-    <Separator />
+    <SeparatorWithLabel>Мои роли</SeparatorWithLabel>
+
+    <section class="space-y-3">
+
+        {#if assignmentsLoading}
+            <div class="space-y-3">
+                {#each Array.from({length: 3}, (_, i) => i) as i (i)}
+                    <div class="flex items-center gap-3 py-2">
+                        <Skeleton class="size-10 shrink-0 rounded-full" />
+                        <div class="flex-1 space-y-2">
+                            <Skeleton class="h-4 w-1/3" />
+                            <Skeleton class="h-3 w-1/4" />
+                        </div>
+                    </div>
+                {/each}
+            </div>
+        {:else if assignments.length === 0}
+            <p class="text-sm text-muted-foreground py-2">Нет назначенных ролей</p>
+        {:else}
+            <div class="flex flex-col">
+                {#each assignments as assignment (assignment.id)}
+                    <SongRow
+                        songId={assignment.song.id}
+                        title={assignment.song.title}
+                        artist={assignment.song.artist}
+                        imageUrl={assignment.song.thumbnailUrl}
+                    />
+                {/each}
+            </div>
+        {/if}
+    </section>
+
+    {#if hasRoadieManage}
+    <SeparatorWithLabel>Роди</SeparatorWithLabel>
+
+    <section class="space-y-3">
+
+        {#if roadieAssignmentsLoading}
+            <div class="space-y-3">
+                {#each Array.from({length: 3}, (_, i) => i) as i (i)}
+                    <div class="flex items-center gap-3 py-2">
+                        <Skeleton class="size-10 shrink-0 rounded-full" />
+                        <div class="flex-1 space-y-2">
+                            <Skeleton class="h-4 w-1/3" />
+                            <Skeleton class="h-3 w-1/4" />
+                        </div>
+                    </div>
+                {/each}
+            </div>
+        {:else if roadieAssignments.length === 0}
+            <p class="text-sm text-muted-foreground py-2">Нет назначенных роди</p>
+        {:else}
+            <div class="flex flex-col">
+                {#each roadieAssignments as song (song.id)}
+                    <SongRow
+                        songId={song.id}
+                        title={song.title}
+                        artist={song.artist}
+                        imageUrl={song.thumbnailUrl}
+                    />
+                {/each}
+            </div>
+        {/if}
+    </section>
+    {/if}
 
 <!--    <section class="space-y-4">-->
 <!--        <h2 class="text-sm font-medium text-muted-foreground">-->

@@ -9,5 +9,7 @@ public static partial class Users
         group.MapGet("/{userId:guid}", Get);
         group.MapGet("/me/preferences", GetPreferences);
         group.MapPut("/me/preferences", UpdatePreferences);
+        group.MapGet("/me/assignments", GetMyAssignments);
+        group.MapGet("/me/roadie/assignments", GetMyRoadieAssignments);
     }
 }

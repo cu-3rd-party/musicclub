@@ -27,6 +27,24 @@ public sealed record SongUserDto(Guid Id, string DisplayName, string? UserName, 
 
 public sealed record RoleAssignmentDto(Guid Id, SongUserDto User, DateTimeOffset JoinedAt);
 
+/// <summary>
+/// Оч используется в эндпоинте /users/me/assignments ибо там инфу о текущем юзере возвращать не надо, а вернуть инфу
+/// о песне надо ибо их много разных
+/// </summary>
+/// <param name="Id"></param>
+/// <param name="Song"></param>
+/// <param name="Title"></param>
+/// <param name="JoinedAt"></param>
+public sealed record SongRoleAssignment(Guid RoleAssignmentId, ShortSongDto Song, string Title, DateTimeOffset JoinedAt);
+
+/// <summary>
+/// тоже самое, используется по сути только в /users/me/assignments ибо там полная инфа о песне не нужна совсем
+/// </summary>
+/// <param name="Id"></param>
+/// <param name="Title"></param>
+/// <param name="Artist"></param>
+public sealed record ShortSongDto(Guid Id, string Title, string Artist, string? ThumbnailUrl);
+
 public sealed record RoleDto(Guid Id, string Title, RoleAssignmentDto? Assignment);
 
 public sealed record PermissionsDto(

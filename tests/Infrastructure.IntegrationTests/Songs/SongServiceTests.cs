@@ -11,6 +11,7 @@ using CuMusicClub.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using SongEntity = CuMusicClub.Domain.Entities.Song;
+using SongRoleAssignmentEntity = CuMusicClub.Domain.Entities.SongRoleAssignment;
 
 namespace CuMusicClub.Infrastructure.IntegrationTests.Songs;
 
@@ -146,7 +147,7 @@ public partial class SongServiceTests : TestBase
 
         var user = await db.Users.FirstAsync(u => u.Id == userId);
 
-        db.SongRoleAssignments.Add(new SongRoleAssignment
+        db.SongRoleAssignments.Add(new SongRoleAssignmentEntity
         {
             SongId = songId,
             RoleId = roleId,

@@ -72,3 +72,17 @@ export type ListSongsParams = {
     pageSize?: number;
     pageToken?: string;
 };
+
+export type ShortSongDto = {
+    id: UUID;
+    title: string;
+    artist: string;
+    thumbnailUrl: string | null;
+};
+
+export type SongRoleAssignment = {
+    id: UUID;
+    song: ShortSongDto;
+    roleTitle: string;
+    joinedAt: string;
+};

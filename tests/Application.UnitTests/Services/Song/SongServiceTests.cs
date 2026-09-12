@@ -8,6 +8,7 @@ using CuMusicClub.Domain.Abstractions;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Domain.Enums;
 using Ardalis.GuardClauses;
+using SongRoleAssignmentEntity = CuMusicClub.Domain.Entities.SongRoleAssignment;
 using CuMusicClub.Application.Services.Roadie;
 using Microsoft.AspNetCore.Http;
 using Moq;
@@ -403,7 +404,7 @@ public class SongServiceTests
                 SongId = song.Id,
                 Song = song,
                 RoleTitle = "Vocal",
-                Assignment = new SongRoleAssignment
+                Assignment = new SongRoleAssignmentEntity
                 {
                     Id = Guid.NewGuid(),
                     SongId = song.Id,
@@ -505,7 +506,7 @@ public class SongServiceTests
         {
             var user = CurrentUser(CuMusicClub.Domain.Constants.Permission.ParticipationEditOwn);
             var song = BuildSong();
-            var assignment = new SongRoleAssignment
+            var assignment = new SongRoleAssignmentEntity
             {
                 Id = Guid.NewGuid(),
                 SongId = song.Id,
@@ -548,7 +549,7 @@ public class SongServiceTests
             };
 
             var song = BuildSong();
-            var assignment = new SongRoleAssignment
+            var assignment = new SongRoleAssignmentEntity
             {
                 Id = Guid.NewGuid(),
                 SongId = song.Id,
