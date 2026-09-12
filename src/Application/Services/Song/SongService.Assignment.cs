@@ -25,7 +25,7 @@ public partial class SongService
         if (!isSelf)
         {
             var prefs = await users.GetPreferencesAsync(user.Id, cancellationToken);
-            if (prefs is { AllowAdding: false })
+            if (!permissions.Contains(Domain.Constants.Permission.ParticipationEditOverride) && prefs is { AllowAdding: false })
                 throw new ForbiddenAccessException();
         }
 

@@ -13,7 +13,7 @@ public static class Permission
     public const string RoadieManage = "roadie.manage";
     public const string RoadieAutoAssign = "roadie.auto_assign";
 
-    public static readonly IReadOnlyList<string> Default = [ParticipationEditOwn, SongsEditOwn,];
+    public static readonly IReadOnlyList<string> Default = [ParticipationEditOwn, ParticipationEditAny, SongsEditOwn,];
 
     public static readonly IReadOnlyList<string> Roadie =
         [ParticipationEditOwn, ParticipationEditAny, SongsEditOwn, RoadieManage,];
@@ -22,6 +22,7 @@ public static class Permission
     [
         ParticipationEditOwn,
         ParticipationEditAny,
+        ParticipationEditOverride,
         SongsEditOwn,
         SongsEditAny,
         SongsEditFeatured,
