@@ -87,11 +87,11 @@ public class BotUpdateHandler(
                     await HandleRoadiePingAsync(bot, message, user, cancellationToken);
                     return;
 
-                case "ticket-roadie":
+                case "ticket_roadie":
                     await HandleTicketRoadieAsync(bot, message, user, cancellationToken);
                     return;
 
-                case "call-my-roadie":
+                case "call_my_roadie":
                     await HandleCallMyRoadieAsync(bot, message, user, cancellationToken);
                     return;
 
