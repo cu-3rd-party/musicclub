@@ -63,7 +63,7 @@ public class RoadieService(
             song.Title,
             song.Artist,
             song.Roles,
-            RoadieTicketType.Help,
+            ticketType,
             cancellationToken);
 
         return ToDto(ticket, song);
