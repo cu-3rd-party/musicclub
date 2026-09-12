@@ -81,8 +81,8 @@ export type ShortSongDto = {
 };
 
 export type SongRoleAssignment = {
-    id: UUID;
+    roleAssignmentId: UUID;
     song: ShortSongDto;
-    roleTitle: string;
+    title: string;
     joinedAt: string;
 };

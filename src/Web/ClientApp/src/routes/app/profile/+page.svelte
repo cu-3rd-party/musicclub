@@ -12,6 +12,7 @@
     import type {SongRoleAssignment, ShortSongDto} from "$lib/songs/types";
     import SongRow from "$lib/components/songs/song-row.svelte";
     import {Skeleton} from "$lib/components/ui/skeleton";
+    import {onMount} from "svelte";
 
     let error = $state<string | null>(null);
     let permissionsOpen = $state(false);
@@ -63,38 +64,20 @@
         return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
     }
 
-    $effect(() => {
-        let cancelled = false;
+    onMount(async () => {
         getMyAssignments()
-            .then((data) => {
-                if (!cancelled) assignments = data;
-            })
+            .then((data) => { assignments = data; })
             .catch((err) => console.error(err))
-            .finally(() => {
-                if (!cancelled) assignmentsLoading = false;
-            });
-        return () => {
-            cancelled = true;
-        };
-    });
+            .finally(() => { assignmentsLoading = false; });
 
-    $effect(() => {
-        if (!hasRoadieManage) {
+        if (hasRoadieManage) {
+            getMyRoadieAssignments()
+                .then((data) => { roadieAssignments = data; })
+                .catch((err) => console.error(err))
+                .finally(() => { roadieAssignmentsLoading = false; });
+        } else {
             roadieAssignmentsLoading = false;
-            return;
         }
-        let cancelled = false;
-        getMyRoadieAssignments()
-            .then((data) => {
-                if (!cancelled) roadieAssignments = data;
-            })
-            .catch((err) => console.error(err))
-            .finally(() => {
-                if (!cancelled) roadieAssignmentsLoading = false;
-            });
-        return () => {
-            cancelled = true;
-        };
     });
 
 </script>
@@ -171,13 +154,13 @@
             <p class="text-sm text-muted-foreground py-2">Нет назначенных ролей</p>
         {:else}
             <div class="flex flex-col">
-                {#each assignments as assignment (assignment.id)}
+                {#each assignments as assignment (assignment.roleAssignmentId)}
                     <SongRow
                         songId={assignment.song.id}
                         title={assignment.song.title}
                         artist={assignment.song.artist}
                         imageUrl={assignment.song.thumbnailUrl}
-                        roleTitle={assignment.roleTitle}
+                        roleTitle={assignment.title}
                     />
                 {/each}
             </div>
