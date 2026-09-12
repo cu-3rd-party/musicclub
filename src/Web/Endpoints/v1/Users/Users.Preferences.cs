@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using CuMusicClub.Application.Common.Auth;
+using CuMusicClub.Application.Common.Exceptions;
 using CuMusicClub.Application.Services.Auth;
 using CuMusicClub.Domain.Abstractions;
 using CuMusicClub.Domain.Entities;
@@ -26,16 +27,17 @@ public static partial class Users
         IApplicationUserRepository users,
         CancellationToken cancellationToken)
     {
-        var userId = claimsPrincipal.GetUserId();
-        await users.SetPreferencesAsync(userId,
-            request.AllowAdding,
-            request.AllowRemoving,
-            cancellationToken);
-        await users.SaveChangesAsync(cancellationToken);
-
-        var prefs = await users.GetPreferencesAsync(userId, cancellationToken);
-
-        return TypedResults.Ok(MapPreferences(prefs));
+        throw new ForbiddenAccessException();
+        // var userId = claimsPrincipal.GetUserId();
+        // await users.SetPreferencesAsync(userId,
+        //     request.AllowAdding,
+        //     request.AllowRemoving,
+        //     cancellationToken);
+        // await users.SaveChangesAsync(cancellationToken);
+        //
+        // var prefs = await users.GetPreferencesAsync(userId, cancellationToken);
+        //
+        // return TypedResults.Ok(MapPreferences(prefs));
     }
 
     private static UserPreferencesDto MapPreferences(UserPreferences? prefs)

@@ -155,41 +155,41 @@
 
     <Separator />
 
-    <section class="space-y-4">
-        <h2 class="text-sm font-medium text-muted-foreground">
-            Приватность
-        </h2>
+<!--    <section class="space-y-4">-->
+<!--        <h2 class="text-sm font-medium text-muted-foreground">-->
+<!--            Приватность-->
+<!--        </h2>-->
 
-        <div class="flex items-center justify-between gap-4">
-            <div class="space-y-0.5">
-                <p class="text-sm font-medium">Разрешить добавлять меня на роли</p>
-                <p class="text-xs text-muted-foreground">
-                    Другие участники смогут назначать вас на роли в песнях без вашего участия
-                </p>
-            </div>
-            <Switch
-                checked={preferences.allowAdding}
-                disabled={preferencesLoading}
-                onCheckedChange={(checked) => togglePreference("allowAdding", checked)}
-            />
-        </div>
+<!--        <div class="flex items-center justify-between gap-4">-->
+<!--            <div class="space-y-0.5">-->
+<!--                <p class="text-sm font-medium">Разрешить добавлять меня на роли</p>-->
+<!--                <p class="text-xs text-muted-foreground">-->
+<!--                    Другие участники смогут назначать вас на роли в песнях без вашего участия-->
+<!--                </p>-->
+<!--            </div>-->
+<!--            <Switch-->
+<!--                checked={preferences.allowAdding}-->
+<!--                disabled={preferencesLoading}-->
+<!--                onCheckedChange={(checked) => togglePreference("allowAdding", checked)}-->
+<!--            />-->
+<!--        </div>-->
 
-        <div class="flex items-center justify-between gap-4">
-            <div class="space-y-0.5">
-                <p class="text-sm font-medium">Разрешить снимать меня с ролей</p>
-                <p class="text-xs text-muted-foreground">
-                    Другие участники смогут убирать вас с ролей в песнях без вашего участия
-                </p>
-            </div>
-            <Switch
-                checked={preferences.allowRemoving}
-                disabled={preferencesLoading}
-                onCheckedChange={(checked) => togglePreference("allowRemoving", checked)}
-            />
-        </div>
-    </section>
+<!--        <div class="flex items-center justify-between gap-4">-->
+<!--            <div class="space-y-0.5">-->
+<!--                <p class="text-sm font-medium">Разрешить снимать меня с ролей</p>-->
+<!--                <p class="text-xs text-muted-foreground">-->
+<!--                    Другие участники смогут убирать вас с ролей в песнях без вашего участия-->
+<!--                </p>-->
+<!--            </div>-->
+<!--            <Switch-->
+<!--                checked={preferences.allowRemoving}-->
+<!--                disabled={preferencesLoading}-->
+<!--                onCheckedChange={(checked) => togglePreference("allowRemoving", checked)}-->
+<!--            />-->
+<!--        </div>-->
+<!--    </section>-->
 
-    <Separator />
+<!--    <Separator />-->
 
     <section>
         <Button
