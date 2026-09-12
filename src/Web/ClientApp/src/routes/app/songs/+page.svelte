@@ -15,7 +15,7 @@
     import {getSongs} from "$lib/api/songs";
     import type {Song} from "$lib/songs/types";
     import {page} from "$app/state";
-    import {goto} from "$app/navigation";
+    import {afterNavigate, beforeNavigate, goto} from "$app/navigation";
     import {resolve} from "$app/paths";
     import {SvelteSet} from "svelte/reactivity";
     import TextType from "$lib/components/songs/text-type.svelte";
@@ -37,6 +37,33 @@
     let showFull = $state(false);
     let rolesDialogOpen = $state(false);
     let selectedRoleTitles = $state<Set<string>>(new Set());
+
+    const SCROLL_KEY = "songs-scroll";
+
+    beforeNavigate(({ to, from, type }) => {
+        if (type === "leave" || type === "goto") {
+            const container = document.getElementById("app-container");
+            if (container) {
+                sessionStorage.setItem(
+                    `${SCROLL_KEY}:${from?.url.pathname}${from?.url.search}`,
+                    String(container.scrollTop)
+                );
+            }
+        }
+    });
+
+    afterNavigate(({ from, to, type }) => {
+        if (!from) return;
+
+        const key = `${SCROLL_KEY}:${to?.url.pathname}${to?.url.search}`;
+        const saved = sessionStorage.getItem(key);
+        if (!saved) return;
+
+        requestAnimationFrame(() => {
+            const container = document.getElementById("app-container");
+            container?.scrollTo({ top: Number(saved), behavior: "instant" as ScrollBehavior });
+        });
+    });
 
     const searchQuery = $derived(
         page.url.searchParams.get("q") ?? ""
