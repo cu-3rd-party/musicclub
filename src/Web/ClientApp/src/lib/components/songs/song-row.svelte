@@ -12,6 +12,7 @@
         imageUrl = null,
         filledAssignments = 0,
         totalAssignments = 0,
+        roleTitle = null,
     }: {
         songId: string,
         title: string,
@@ -20,6 +21,7 @@
         imageUrl?: string | null,
         filledAssignments?: number,
         totalAssignments?: number,
+        roleTitle?: string | null,
     } = $props();
 
     async function navigateToSong() {
@@ -51,18 +53,24 @@
             {title}
         </span>
 
-        <span class="text-muted-foreground text-xs">—</span>
+        {#if !roleTitle}
+            <span class="text-muted-foreground text-xs">—</span>
 
-        <span class="truncate text-muted-foreground text-sm">
-            {artist}
-        </span>
+            <span class="truncate text-muted-foreground text-sm">
+                {artist}
+            </span>
+        {/if}
 
         {#if featured}
             <Star class="size-3.5 shrink-0 text-yellow-500 fill-yellow-500"/>
         {/if}
     </div>
 
-    {#if totalAssignments !== 0}
+    {#if roleTitle}
+        <Badge variant="outline" class="shrink-0 text-xs">
+            {roleTitle}
+        </Badge>
+    {:else if totalAssignments !== 0}
         <Badge variant="secondary" class="shrink-0 text-xs">
             {filledAssignments}/{totalAssignments}
         </Badge>

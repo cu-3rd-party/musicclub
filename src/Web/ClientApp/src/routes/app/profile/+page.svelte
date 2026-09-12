@@ -177,6 +177,7 @@
                         title={assignment.song.title}
                         artist={assignment.song.artist}
                         imageUrl={assignment.song.thumbnailUrl}
+                        roleTitle={assignment.roleTitle}
                     />
                 {/each}
             </div>
