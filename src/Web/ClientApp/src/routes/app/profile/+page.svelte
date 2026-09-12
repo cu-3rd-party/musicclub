@@ -191,17 +191,17 @@
 
 <!--    <Separator />-->
 
-    <section>
-        <Button
-            variant="destructive"
-            class="w-full sm:w-auto"
-            onclick={handleLogout}
-            disabled={loggingOut}
-        >
-            <LogOut class="mr-2 size-4" />
-            {loggingOut ? "Выход..." : "Выйти из аккаунта"}
-        </Button>
-    </section>
+<!--    <section>-->
+<!--        <Button-->
+<!--            variant="destructive"-->
+<!--            class="w-full sm:w-auto"-->
+<!--            onclick={handleLogout}-->
+<!--            disabled={loggingOut}-->
+<!--        >-->
+<!--            <LogOut class="mr-2 size-4" />-->
+<!--            {loggingOut ? "Выход..." : "Выйти из аккаунта"}-->
+<!--        </Button>-->
+<!--    </section>-->
 </div>
 
 <!-- Account metadata lives here, not on the main page -->
