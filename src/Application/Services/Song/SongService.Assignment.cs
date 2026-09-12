@@ -14,7 +14,8 @@ public partial class SongService
         Guid roleId,
         CancellationToken cancellationToken)
     {
-        var requester = await users.FindByIdAsync(claimsPrincipal.GetUserId()) ?? throw new UnauthorizedAccessException();
+        var requester = await users.FindByIdAsync(claimsPrincipal.GetUserId()) ??
+                        throw new UnauthorizedAccessException();
         var isSelf = requester.Id == user.Id;
 
         var permissions = await permissionService.GetPermissionValuesAsync(requester, cancellationToken);
@@ -25,7 +26,11 @@ public partial class SongService
         if (!isSelf)
         {
             var prefs = await users.GetPreferencesAsync(user.Id, cancellationToken);
-            if (!permissions.Contains(Domain.Constants.Permission.ParticipationEditOverride) && prefs is { AllowAdding: false })
+            if (!permissions.Contains(Domain.Constants.Permission.ParticipationEditOverride) &&
+                prefs is
+                {
+                    AllowAdding: false
+                })
                 throw new ForbiddenAccessException();
         }
 
@@ -46,11 +51,18 @@ public partial class SongService
         var existing = await songTopics.FindBySongIdAsync(song.Id, cancellationToken);
         if (existing == null && song.IsFull)
         {
-            await roadieService.CreateTicketAsync(song.Id, requester, RoadieTicketType.Assignment, cancellationToken);
+            if (await roadieService.GetRoadie(role.Song, cancellationToken) == null)
+                await roadieService.CreateTicketAsync(song.Id,
+                    requester,
+                    RoadieTicketType.Assignment,
+                    cancellationToken);
             await new SongServiceTopics(telegramChatService).CreateTopicForFullSongAsync(role.Song, cancellationToken);
         }
         else if (existing != null)
-            await new SongServiceTopics(telegramChatService).AnnounceParticipantJoinAsync(existing.TopicId, user, role.RoleTitle, cancellationToken);
+            await new SongServiceTopics(telegramChatService).AnnounceParticipantJoinAsync(existing.TopicId,
+                user,
+                role.RoleTitle,
+                cancellationToken);
 
         return await GetAsync(song.Id, cancellationToken);
     }
@@ -60,7 +72,8 @@ public partial class SongService
         Guid roleId,
         CancellationToken cancellationToken)
     {
-        var requester = await users.FindByIdAsync(claimsPrincipal.GetUserId()) ?? throw new UnauthorizedAccessException();
+        var requester = await users.FindByIdAsync(claimsPrincipal.GetUserId()) ??
+                        throw new UnauthorizedAccessException();
         var isSelf = requester.Id == user.Id;
 
         var permissions = await permissionService.GetPermissionValuesAsync(requester, cancellationToken);
@@ -71,7 +84,10 @@ public partial class SongService
         if (!isSelf)
         {
             var prefs = await users.GetPreferencesAsync(user.Id, cancellationToken);
-            if (prefs is { AllowRemoving: false })
+            if (prefs is
+                {
+                    AllowRemoving: false
+                })
                 throw new ForbiddenAccessException();
         }
 
@@ -82,7 +98,11 @@ public partial class SongService
 
         var song = await GetAsync(role.Song.Id, cancellationToken);
         var topic = await songTopics.FindBySongIdAsync(song.Id, cancellationToken);
-        if (topic != null) await new SongServiceTopics(telegramChatService).AnnounceParticipantLeaveAsync(topic.TopicId, user, role.RoleTitle, cancellationToken);
+        if (topic != null)
+            await new SongServiceTopics(telegramChatService).AnnounceParticipantLeaveAsync(topic.TopicId,
+                user,
+                role.RoleTitle,
+                cancellationToken);
 
         await songRoleAssignments.RemoveByIdAsync(role.Assignment.Id, cancellationToken);
 
