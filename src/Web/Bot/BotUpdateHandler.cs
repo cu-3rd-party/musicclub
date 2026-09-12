@@ -251,7 +251,7 @@ public class BotUpdateHandler(
 
         var (_, userMessage) = GetCommandArgsStr(message.Text);
         var text = string.IsNullOrEmpty(userMessage)
-            ? $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a> вызывает своего роуди {telegramChatService.BuildUserMention(roadie!)}!"
+            ? $"вызывает своего роуди {telegramChatService.BuildUserMention(roadie!)}!"
             : WebUtility.HtmlEncode(userMessage);
 
         await bot.SendMessage(message.Chat.Id,
