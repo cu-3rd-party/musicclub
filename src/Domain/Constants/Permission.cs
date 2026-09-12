@@ -4,12 +4,14 @@ public static class Permission
 {
     public const string ParticipationEditOwn = "participation.edit_own";
     public const string ParticipationEditAny = "participation.edit_any";
+    public const string ParticipationEditOverride = "participation.edit_override";
     public const string SongsEditOwn = "songs.edit_own";
     public const string SongsEditAny = "songs.edit_any";
     public const string SongsEditFeatured = "songs.edit_featured";
     public const string EventsEdit = "events.edit";
     public const string TracklistsEdit = "tracklists.edit";
     public const string RoadieManage = "roadie.manage";
+    public const string RoadieAutoAssign = "roadie.auto_assign";
 
     public static readonly IReadOnlyList<string> Default = [ParticipationEditOwn, SongsEditOwn,];
 

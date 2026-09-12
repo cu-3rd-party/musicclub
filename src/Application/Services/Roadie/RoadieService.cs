@@ -124,7 +124,7 @@ public class RoadieService(
         if (overdue.Count == 0)
             return 0;
 
-        var roadieUsers = await users.GetUsersByPermissionAsync(CuMusicClub.Domain.Constants.Permission.RoadieManage, cancellationToken);
+        var roadieUsers = await users.GetUsersByPermissionAsync(Domain.Constants.Permission.RoadieAutoAssign, cancellationToken);
         if (roadieUsers.Count == 0)
             return 0;
 
