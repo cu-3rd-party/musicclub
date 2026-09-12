@@ -14,7 +14,7 @@
         artist,
         description,
         featured = false,
-        imageUrl = "https://placehold.co/1000x1000",
+        imageUrl = null,
         filledAssignments = 0,
         totalAssignments = 0,
     }: WithElementRef<HTMLFormAttributes> & {
