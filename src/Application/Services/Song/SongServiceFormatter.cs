@@ -55,9 +55,10 @@ public static partial class SongServiceFormatter
     /// <param name="title"></param>
     /// <param name="artist"></param>
     /// <param name="link"></param>
+    /// <param name="systemLink"></param>
     /// <param name="createdBy"></param>
     /// <returns></returns>
-    public static string BuildSongCreatedMessage(string title, string artist, string? link, ApplicationUser? createdBy)
+    public static string BuildSongCreatedMessage(string title, string artist, string? link, string? systemLink, ApplicationUser? createdBy)
     {
         var b = new StringBuilder();
         b.Append("Добавлена новая песня: ");
@@ -71,6 +72,7 @@ public static partial class SongServiceFormatter
             b.AppendLine();
         }
         b.Append($"<a href=\"{link}\">Послушать</a>");
+        b.Append($"\n\n<a href=\"{systemLink}\">Песня в системе</a>");
 
         return b.ToString();
     }

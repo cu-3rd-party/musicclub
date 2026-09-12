@@ -146,7 +146,7 @@ public class SongServiceFormatterTests
                 TgUserId = 111,
             };
 
-            var result = SongServiceFormatter.BuildSongCreatedMessage("Song", "Artist", "https://example.com", createdBy);
+            var result = SongServiceFormatter.BuildSongCreatedMessage("Song", "Artist", "https://example.com", "https://example.com/song", createdBy);
 
             result.ShouldContain("Добавлена новая песня");
             result.ShouldContain("tg://user?id=111");
@@ -156,14 +156,14 @@ public class SongServiceFormatterTests
         [Test]
         public void WithoutCreatedBy_DoesNotIncludeMention()
         {
-            var result = SongServiceFormatter.BuildSongCreatedMessage("Song", "Artist", "https://example.com", null);
+            var result = SongServiceFormatter.BuildSongCreatedMessage("Song", "Artist", "https://example.com", "https://example.com/song", null);
             result.ShouldNotContain("Добавил(а)");
         }
 
         [Test]
         public void EmptyTitleAndArtist_StillReturnsLink()
         {
-            var result = SongServiceFormatter.BuildSongCreatedMessage("", "", "https://example.com", null);
+            var result = SongServiceFormatter.BuildSongCreatedMessage("", "", "https://example.com", "https://example.com/song", null);
             result.ShouldContain("https://example.com");
         }
     }

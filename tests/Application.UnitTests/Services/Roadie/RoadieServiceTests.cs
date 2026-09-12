@@ -297,7 +297,7 @@ public class RoadieServiceTests
             var noTg = new ApplicationUser { Id = Guid.NewGuid(), DisplayName = "NoTg", TgUserId = null };
 
             _users
-                .Setup(r => r.GetUsersByPermissionAsync(CuMusicClub.Domain.Constants.Permission.RoadieManage, It.IsAny<CancellationToken>()))
+                .Setup(r => r.GetUsersByPermissionAsync(CuMusicClub.Domain.Constants.Permission.RoadieAutoAssign, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new[] { heavy, light, noTg, });
 
             var song = BuildSong();
@@ -366,7 +366,7 @@ public class RoadieServiceTests
                 .Setup(r => r.GetOpenTicketsOlderThanAsync(It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new[] { ticket, });
             _users
-                .Setup(r => r.GetUsersByPermissionAsync(CuMusicClub.Domain.Constants.Permission.RoadieManage, It.IsAny<CancellationToken>()))
+                .Setup(r => r.GetUsersByPermissionAsync(CuMusicClub.Domain.Constants.Permission.RoadieAutoAssign, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new List<ApplicationUser>());
 
             var count = await _service.AutoAssignOpenTicketsAsync(CancellationToken.None);
@@ -382,7 +382,7 @@ public class RoadieServiceTests
             var noTgA = new ApplicationUser { Id = Guid.NewGuid(), DisplayName = "A", TgUserId = null };
             var noTgB = new ApplicationUser { Id = Guid.NewGuid(), DisplayName = "B", TgUserId = null };
             _users
-                .Setup(r => r.GetUsersByPermissionAsync(CuMusicClub.Domain.Constants.Permission.RoadieManage, It.IsAny<CancellationToken>()))
+                .Setup(r => r.GetUsersByPermissionAsync(CuMusicClub.Domain.Constants.Permission.RoadieAutoAssign, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new[] { noTgA, noTgB, });
 
             var song = BuildSong();
@@ -426,7 +426,7 @@ public class RoadieServiceTests
         {
             var roadie = new ApplicationUser { Id = Guid.NewGuid(), DisplayName = "Roadie", TgUserId = 2001 };
             _users
-                .Setup(r => r.GetUsersByPermissionAsync(CuMusicClub.Domain.Constants.Permission.RoadieManage, It.IsAny<CancellationToken>()))
+                .Setup(r => r.GetUsersByPermissionAsync(CuMusicClub.Domain.Constants.Permission.RoadieAutoAssign, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new[] { roadie, });
 
             var song = BuildSong();
