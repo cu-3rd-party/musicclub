@@ -3,10 +3,11 @@
     import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
     import {
         ArrowUp,
-        Ellipsis,
         SearchIcon,
         X,
-        Funnel
+        Funnel,
+        Guitar
+
     } from "@lucide/svelte";
     import {Checkbox} from "$lib/components/ui/checkbox";
     import SongCard from "$lib/components/songs/song-card.svelte";
@@ -387,7 +388,7 @@
                                 aria-label="More"
                                 size="icon-xs"
                             >
-                                <Ellipsis/>
+                                <Funnel/>
                             </InputGroup.Button>
                         {/snippet}
                     </DropdownMenu.Trigger>
@@ -408,7 +409,7 @@
 									rolesDialogOpen = true;
 								}}
                             >
-                                <Funnel/>
+                                <Guitar/>
 
                                 <span>
 									Свободные роли
