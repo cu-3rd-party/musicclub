@@ -23,7 +23,7 @@
         artist: string,
         description?: string,
         featured?: boolean,
-        imageUrl?: string,
+        imageUrl?: string | null,
         filledAssignments?: number,
         totalAssignments?: number,
     } = $props();

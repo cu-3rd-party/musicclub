@@ -6,11 +6,13 @@
         SearchIcon,
         X,
         Funnel,
-        Guitar
-
+        Guitar,
+        LayoutGrid,
+        Rows3
     } from "@lucide/svelte";
     import {Checkbox} from "$lib/components/ui/checkbox";
     import SongCard from "$lib/components/songs/song-card.svelte";
+    import SongRow from "$lib/components/songs/song-row.svelte";
     import {Button} from "$lib/components/ui/button";
     import {getSongs} from "$lib/api/songs";
     import type {Song} from "$lib/songs/types";
@@ -21,6 +23,22 @@
     import TextType from "$lib/components/songs/text-type.svelte";
     import * as Dialog from "$lib/components/ui/dialog";
     import CreateSong from "$lib/components/songs/create-song.svelte";
+
+    const SONGS_VIEW_KEY = "songs-view";
+
+    let viewMode = $state<"tiled" | "list">("tiled");
+
+    $effect(() => {
+        const saved = localStorage.getItem(SONGS_VIEW_KEY);
+        if (saved === "list" || saved === "tiled") {
+            viewMode = saved;
+        }
+    });
+
+    function toggleView() {
+        viewMode = viewMode === "tiled" ? "list" : "tiled";
+        localStorage.setItem(SONGS_VIEW_KEY, viewMode);
+    }
 
     let showScrollTop = $state(false);
 
@@ -40,7 +58,7 @@
 
     const SCROLL_KEY = "songs-scroll";
 
-    beforeNavigate(({ to, from, type }) => {
+    beforeNavigate(({ from, type }) => {
         if (type === "leave" || type === "goto") {
             const container = document.getElementById("app-container");
             if (container) {
@@ -52,7 +70,7 @@
         }
     });
 
-    afterNavigate(({ from, to, type }) => {
+    afterNavigate(({ from, to }) => {
         if (!from) return;
 
         const key = `${SCROLL_KEY}:${to?.url.pathname}${to?.url.search}`;
@@ -61,7 +79,7 @@
 
         requestAnimationFrame(() => {
             const container = document.getElementById("app-container");
-            container?.scrollTo({ top: Number(saved), behavior: "instant" as ScrollBehavior });
+            container?.scrollTo({ top: Number(saved), behavior: "instant" as const });
         });
     });
 
@@ -406,6 +424,19 @@
             />
 
             <InputGroup.Addon align="inline-end">
+                <InputGroup.Button
+                    variant="ghost"
+                    aria-label={viewMode === "tiled" ? "Switch to list view" : "Switch to tiled view"}
+                    size="icon-xs"
+                    onclick={toggleView}
+                >
+                    {#if viewMode === "tiled"}
+                        <Rows3/>
+                    {:else}
+                        <LayoutGrid/>
+                    {/if}
+                </InputGroup.Button>
+
                 <DropdownMenu.Root>
                     <DropdownMenu.Trigger>
                         {#snippet child({props})}
@@ -526,29 +557,50 @@
             />
         </div>
     {:else}
-        <div
-            class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
-        >
-            {#each filteredSongs as song (song.id)}
-                <SongCard
-                    songId={song.id}
-                    title={song.title}
-                    artist={song.artist}
-                    description={
-						song.description ?? undefined
-					}
-                    imageUrl={
-						song.thumbnailUrl ?? undefined
-					}
-                    featured={song.featured}
-                    filledAssignments={song.roles.filter(
-						(role) =>
-							role.assignment !== null
-					).length}
-                    totalAssignments={song.roles.length}
-                />
-            {/each}
-        </div>
+        {#if viewMode === "tiled"}
+            <div
+                class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+            >
+                {#each filteredSongs as song (song.id)}
+                    <SongCard
+                        songId={song.id}
+                        title={song.title}
+                        artist={song.artist}
+                        description={
+							song.description ?? undefined
+						}
+                        imageUrl={
+							song.thumbnailUrl ?? undefined
+						}
+                        featured={song.featured}
+                        filledAssignments={song.roles.filter(
+							(role) =>
+								role.assignment !== null
+						).length}
+                        totalAssignments={song.roles.length}
+                    />
+                {/each}
+            </div>
+        {:else}
+            <div class="flex flex-col">
+                {#each filteredSongs as song (song.id)}
+                    <SongRow
+                        songId={song.id}
+                        title={song.title}
+                        artist={song.artist}
+                        imageUrl={
+							song.thumbnailUrl ?? undefined
+						}
+                        featured={song.featured}
+                        filledAssignments={song.roles.filter(
+							(role) =>
+								role.assignment !== null
+						).length}
+                        totalAssignments={song.roles.length}
+                    />
+                {/each}
+            </div>
+        {/if}
 
         <!--
             Sentinel находится после списка.
