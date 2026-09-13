@@ -21,4 +21,7 @@ public interface ISongRepository : IRepository<Song>
 
     /// <summary>Песни без привязанного превью для бэкфилла миниатюр.</summary>
     Task<IReadOnlyList<Song>> GetSongsForThumbnailBackfillAsync(int limit, CancellationToken cancellationToken = default);
+
+    /// <summary>Заполненные песни (все роли заняты) без созданного топика.</summary>
+    Task<IReadOnlyList<Song>> GetFilledSongIdsWithoutTopicAsync(CancellationToken cancellationToken = default);
 }

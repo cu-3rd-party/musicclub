@@ -78,4 +78,15 @@ public sealed class SongRepository(DbContext dbContext) : Repository<Song>(dbCon
             .Take(limit)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<Song>> GetFilledSongIdsWithoutTopicAsync(CancellationToken cancellationToken = default)
+    {
+        return await DbSet
+            .Where(s => s.SongTopic == null && s.Roles.Count > 0 &&
+                        s.Roles.Count(r => r.Assignment != null) == s.Roles.Count)
+            .Include(s => s.Roles)
+            .ThenInclude(r => r.Assignment)
+            .ThenInclude(a => a!.User)
+            .ToListAsync(cancellationToken);
+    }
 }
