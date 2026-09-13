@@ -30,7 +30,7 @@ public class RoadieService(
 
         var requesterId = currentUser.Id;
 
-        var isParticipant = song.CreatedById == requesterId || song.Assignments.Any(a => a.UserId == requesterId);
+        var isParticipant = song.CreatedById == requesterId || song.Roles.Any(r => r.Assignment?.UserId == requesterId);
         if (!isParticipant) throw new ForbiddenAccessException();
 
         // Дубль открытой заявки — возвращаем существующую, без повторных уведомлений.

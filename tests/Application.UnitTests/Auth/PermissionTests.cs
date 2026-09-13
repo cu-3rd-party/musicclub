@@ -23,9 +23,9 @@ public class PermissionTests
     }
 
     [Test]
-    public void DefaultHasExactlyTwoPermissions()
+    public void DefaultHasExactlyThreePermissions()
     {
-        Permission.Default.Count.ShouldBe(2);
+        Permission.Default.Count.ShouldBe(3);
     }
 
     [Test]
@@ -39,11 +39,12 @@ public class PermissionTests
     }
 
     [Test]
-    public void AllContainsAllEightPermissions()
+    public void AllContainsAllNinePermissions()
     {
-        Permission.All.Count.ShouldBe(8);
+        Permission.All.Count.ShouldBe(9);
         Permission.All.ShouldContain(Permission.ParticipationEditOwn);
         Permission.All.ShouldContain(Permission.ParticipationEditAny);
+        Permission.All.ShouldContain(Permission.ParticipationEditOverride);
         Permission.All.ShouldContain(Permission.SongsEditOwn);
         Permission.All.ShouldContain(Permission.SongsEditAny);
         Permission.All.ShouldContain(Permission.SongsEditFeatured);

@@ -78,7 +78,20 @@ public class RoadieServiceTests
             UpdatedAt = DateTimeOffset.UtcNow,
         };
         if (assignments is not null)
-            song.Assignments.AddRange(assignments);
+        {
+            foreach (var a in assignments)
+            {
+                var role = new SongRole
+                {
+                    Id = a.RoleId,
+                    SongId = song.Id,
+                    Song = song,
+                    RoleTitle = $"Role_{a.RoleId}",
+                    Assignment = a,
+                };
+                song.Roles.Add(role);
+            }
+        }
         return song;
     }
 
