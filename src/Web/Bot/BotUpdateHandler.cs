@@ -133,7 +133,7 @@ public class BotUpdateHandler(
 
         var (_, userMessage) = GetCommandArgsStr(message.Text);
         var text = string.IsNullOrEmpty(userMessage)
-            ? $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a> вызывает роуди!"
+            ? $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a> вызывает участников песни!"
             : WebUtility.HtmlEncode(userMessage);
 
         text = song
