@@ -168,7 +168,7 @@
     </section>
 
     {#if hasRoadieManage}
-    <SeparatorWithLabel>Роди</SeparatorWithLabel>
+    <SeparatorWithLabel>Роуди</SeparatorWithLabel>
 
     <section class="space-y-3">
 
