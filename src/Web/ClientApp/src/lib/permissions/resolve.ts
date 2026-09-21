@@ -1,6 +1,7 @@
 export const Permission = {
     ParticipationEditOwn: "participation.edit_own",
     ParticipationEditAny: "participation.edit_any",
+    ParticipationEditOverride: "participation.edit_override",
     SongsEditOwn: "songs.edit_own",
     SongsEditAny: "songs.edit_any",
     SongsEditFeatured: "songs.edit_featured",
@@ -16,7 +17,11 @@ export const Roles = {
 } as const;
 
 export const PermissionBundles = {
-    Default: [Permission.ParticipationEditOwn, Permission.SongsEditOwn],
+    Default: [
+        Permission.ParticipationEditOwn,
+        Permission.ParticipationEditAny,
+        Permission.SongsEditOwn,
+    ],
     Roadie: [
         Permission.ParticipationEditOwn,
         Permission.ParticipationEditAny,
@@ -26,6 +31,7 @@ export const PermissionBundles = {
     All: [
         Permission.ParticipationEditOwn,
         Permission.ParticipationEditAny,
+        Permission.ParticipationEditOverride,
         Permission.SongsEditOwn,
         Permission.SongsEditAny,
         Permission.SongsEditFeatured,
