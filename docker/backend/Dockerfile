@@ -26,6 +26,7 @@ COPY src/Web/Backfill/ src/Web/Backfill/
 COPY src/Web/Bot/ src/Web/Bot/
 COPY src/Web/Endpoints/ src/Web/Endpoints/
 COPY src/Web/Infrastructure/ src/Web/Infrastructure/
+COPY src/Web/Middleware/ src/Web/Middleware/
 COPY src/Web/Properties/ src/Web/Properties/
 COPY src/Web/wwwroot/ src/Web/wwwroot/
 COPY src/Web/appsettings*.json src/Web/
