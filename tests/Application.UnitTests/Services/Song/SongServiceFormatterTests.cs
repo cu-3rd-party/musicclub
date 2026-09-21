@@ -108,6 +108,93 @@ public class SongServiceFormatterTests
     }
 
     [TestFixture]
+    public class BuildParticipantMentionsTests
+    {
+        [Test]
+        public void MultipleParticipants_ReturnsAllMentionsSeparated()
+        {
+            var participants = new[]
+            {
+                new RoleAssignmentDto(Guid.NewGuid(),
+                    new SongUserDto(Guid.NewGuid(), "Игорь", "igamamaev", null, 111),
+                    DateTimeOffset.UtcNow),
+                new RoleAssignmentDto(Guid.NewGuid(),
+                    new SongUserDto(Guid.NewGuid(), "Александр", "alex_guitar", null, 222),
+                    DateTimeOffset.UtcNow),
+                new RoleAssignmentDto(Guid.NewGuid(),
+                    new SongUserDto(Guid.NewGuid(), "Дмитрий", "drummer_d", null, 333),
+                    DateTimeOffset.UtcNow),
+            };
+
+            var result = SongServiceFormatter.BuildParticipantMentions(participants);
+
+            result.ShouldBe(
+                "<a href=\"tg://user?id=111\">Игорь</a>, " +
+                "<a href=\"tg://user?id=222\">Александр</a>, " +
+                "<a href=\"tg://user?id=333\">Дмитрий</a>");
+        }
+
+        [Test]
+        public void SingleParticipant_ReturnsSingleMention()
+        {
+            var participants = new[]
+            {
+                new RoleAssignmentDto(Guid.NewGuid(),
+                    new SongUserDto(Guid.NewGuid(), "Игорь", "igamamaev", null, 111),
+                    DateTimeOffset.UtcNow),
+            };
+
+            var result = SongServiceFormatter.BuildParticipantMentions(participants);
+
+            result.ShouldBe("<a href=\"tg://user?id=111\">Игорь</a>");
+        }
+
+        [Test]
+        public void EmptyParticipants_ReturnsEmptyString()
+        {
+            var result = SongServiceFormatter.BuildParticipantMentions(Array.Empty<RoleAssignmentDto>());
+
+            result.ShouldBeEmpty();
+        }
+
+        [Test]
+        public void MixedTgUserIds_HandlesNullsCorrectly()
+        {
+            var participants = new[]
+            {
+                new RoleAssignmentDto(Guid.NewGuid(),
+                    new SongUserDto(Guid.NewGuid(), "Игорь", "igamamaev", null, 111),
+                    DateTimeOffset.UtcNow),
+                new RoleAssignmentDto(Guid.NewGuid(),
+                    new SongUserDto(Guid.NewGuid(), "Александр", "alex_guitar", null, null),
+                    DateTimeOffset.UtcNow),
+            };
+
+            var result = SongServiceFormatter.BuildParticipantMentions(participants);
+
+            result.ShouldBe("<a href=\"tg://user?id=111\">Игорь</a>, Александр");
+        }
+
+        [Test]
+        public void CustomSeparator_UsesProvidedSeparator()
+        {
+            var participants = new[]
+            {
+                new RoleAssignmentDto(Guid.NewGuid(),
+                    new SongUserDto(Guid.NewGuid(), "Игорь", "igamamaev", null, 111),
+                    DateTimeOffset.UtcNow),
+                new RoleAssignmentDto(Guid.NewGuid(),
+                    new SongUserDto(Guid.NewGuid(), "Александр", "alex_guitar", null, 222),
+                    DateTimeOffset.UtcNow),
+            };
+
+            var result = SongServiceFormatter.BuildParticipantMentions(participants, " | ");
+
+            result.ShouldBe("<a href=\"tg://user?id=111\">Игорь</a> | <a href=\"tg://user?id=222\">Александр</a>");
+        }
+    }
+
+    [TestFixture]
     public class BuildSongFullMessageTests
     {
         [Test]

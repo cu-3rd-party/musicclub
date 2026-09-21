@@ -51,12 +51,15 @@ public partial class SongService
         var existing = await songTopics.FindBySongIdAsync(song.Id, cancellationToken);
         if (existing == null && song.IsFull)
         {
-            if (await roadieService.GetRoadie(role.Song, cancellationToken) == null)
+            var fullSong = await songs.FindByIdWithDetailsAsync(role.Song.Id, cancellationToken)
+                           ?? throw new NotFoundException(role.Song.Id.ToString(), nameof(Domain.Entities.Song));
+
+            if (await roadieService.GetRoadie(fullSong, cancellationToken) == null)
                 await roadieService.CreateTicketAsync(song.Id,
                     requester,
                     RoadieTicketType.Assignment,
                     cancellationToken);
-            await new SongServiceTopics(telegramChatService).CreateTopicForFullSongAsync(role.Song, cancellationToken);
+            await new SongServiceTopics(telegramChatService).CreateTopicForFullSongAsync(fullSong, cancellationToken);
         }
         else if (existing != null)
             await new SongServiceTopics(telegramChatService).AnnounceParticipantJoinAsync(existing.TopicId,
