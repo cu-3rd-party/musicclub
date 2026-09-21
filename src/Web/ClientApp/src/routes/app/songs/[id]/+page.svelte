@@ -177,11 +177,11 @@
             </div>
         {:else if song}
         {#if song.thumbnailUrl}
-            <div class="relative aspect-video w-full md:mx-auto md:max-w-3xl lg:max-w-4xl">
+            <div class="relative aspect-video w-full md:mx-auto md:max-w-3xl lg:max-w-4xl bg-muted">
                 <img
                     src={song.thumbnailUrl}
                     alt={song.title}
-                    class="h-full w-full object-cover md:rounded-lg"
+                    class="h-full w-full object-contain md:rounded-lg"
                 />
                 {#if song.featured}
                     <Star class="absolute top-2 right-2 size-6"/>

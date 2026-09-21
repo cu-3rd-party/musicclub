@@ -34,12 +34,12 @@
 </script>
 
 <Card.Root class="relative w-full pt-0 {className}" onclick={navigateToSong} role="link" tabindex={0}>
-    <div class="relative aspect-video">
+    <div class="relative aspect-video bg-muted">
         {#if imageUrl}
             <img
                 src={imageUrl}
                 alt="placeholder"
-                class="h-full w-full object-cover"
+                class="h-full w-full object-contain"
             />
         {:else}
             <div class="w-full h-full bg-muted flex items-center justify-center">

@@ -404,13 +404,13 @@
             <img
                 src={thumbnailPreviewUrl}
                 alt="Предпросмотр обложки"
-                class="absolute inset-0 size-full object-cover"
+                class="absolute inset-0 size-full object-contain"
             />
         {:else if thumbnailUrl}
             <img
                 src={thumbnailUrl}
                 alt="Предпросмотр обложки"
-                class="absolute inset-0 size-full object-cover"
+                class="absolute inset-0 size-full object-contain"
             />
         {/if}
 
