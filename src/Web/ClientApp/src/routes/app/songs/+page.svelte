@@ -26,7 +26,7 @@
 
     const SONGS_VIEW_KEY = "songs-view";
 
-    let viewMode = $state<"tiled" | "list">("tiled");
+    let viewMode = $state<"tiled" | "list">("list");
 
     $effect(() => {
         const saved = localStorage.getItem(SONGS_VIEW_KEY);
