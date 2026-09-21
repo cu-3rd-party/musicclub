@@ -46,7 +46,7 @@
         </Dialog.Header>
 
         <SongForm
-            availableRoles={["гитара", "барабаны", "вокал"]}
+            availableRoles={["Гитара", "Барабаны", "Вокал", "Бас"]}
             submitLabel="Создать"
             submittingLabel="Создание..."
             onsubmit={handleSubmit}
