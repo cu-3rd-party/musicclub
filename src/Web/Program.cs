@@ -1,7 +1,16 @@
 using CuMusicClub.Infrastructure.Data;
+using CuMusicClub.Web.Middleware;
+using Microsoft.Extensions.Logging.Console;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Logging.ClearProviders();
+builder.Logging.AddSimpleConsole(options =>
+{
+    options.SingleLine = true;
+    options.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
+});
 
 builder.AddApplicationServices();
 builder.AddInfrastructureServices();
@@ -26,6 +35,7 @@ app.MapScalarApiReference();
 app.MapHealthChecks("/health");
 
 app.UseExceptionHandler(options => { });
+app.UseRequestLogging();
 
 app.UseAuthentication();
 app.UseAuthorization();
