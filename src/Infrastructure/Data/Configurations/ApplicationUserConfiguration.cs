@@ -37,6 +37,10 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
             .Property(u => u.AvatarUrl)
             .HasColumnName("AvatarUrl");
         builder
+            .Property(u => u.YandexLogin)
+            .HasColumnName("YandexLogin")
+            .HasMaxLength(100);
+        builder
             .Property(u => u.CreatedAt)
             .HasColumnName("CreatedAt")
             .HasDefaultValueSql("NOW()");
@@ -49,5 +53,9 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
             .HasIndex(u => u.TgUserId)
             .IsUnique()
             .HasDatabaseName("idx_application_user_tg_user_id");
+        
+        builder
+            .HasIndex(u => u.YandexLogin)
+            .HasDatabaseName("idx_application_user_yandex_login");
     }
 }

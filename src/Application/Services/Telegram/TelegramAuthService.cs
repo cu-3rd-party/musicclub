@@ -12,6 +12,8 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Telegram.Bot.Types;
+using ApplicationUser = CuMusicClub.Domain.Entities.ApplicationUser;
+using TelegramUser = Telegram.Bot.Types.User;
 
 namespace CuMusicClub.Application.Services.Telegram;
 
@@ -62,7 +64,7 @@ public class TelegramAuthService(
         if (DateTimeOffset.UtcNow - authDate > TokenTtl) throw new BadHttpRequestException("token expired");
     }
 
-    public User? ExtractTgUser(string initData)
+    public TelegramUser? ExtractTgUser(string initData)
     {
         var parsed = QueryHelpers.ParseQuery(initData);
         if (!parsed.TryGetValue("user", out var userValues))
@@ -75,7 +77,7 @@ public class TelegramAuthService(
             PropertyNameCaseInsensitive = true
         };
 
-        var user = JsonSerializer.Deserialize<User>(userJson, options);
+        var user = JsonSerializer.Deserialize<TelegramUser>(userJson, options);
 
         if (user == null) throw new BadHttpRequestException("Failed to deserialize user data");
 
@@ -114,7 +116,7 @@ public class TelegramAuthService(
         return await authService.CreateAuthSession(user, cancellationToken);
     }
 
-    public async Task<ApplicationUser> UpsertUserAsync(User tgUser, CancellationToken cancellationToken)
+    public async Task<ApplicationUser> UpsertUserAsync(TelegramUser tgUser, CancellationToken cancellationToken)
     {
         var user = await users.FindByTgUserIdAsync(tgUser.Id, cancellationToken);
         if (user != null) return user;

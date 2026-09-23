@@ -40,4 +40,9 @@ public interface IApplicationUserRepository : IRepository<ApplicationUser>
         bool allowAdding,
         bool allowRemoving,
         CancellationToken cancellationToken = default);
+    
+    /// <summary>
+    /// Найти пользователя по YandexLogin.
+    /// </summary>
+    Task<ApplicationUser?> FindByYandexLoginAsync(string yandexLogin, CancellationToken cancellationToken = default);
 }

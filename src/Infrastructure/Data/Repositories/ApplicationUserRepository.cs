@@ -112,4 +112,9 @@ public sealed class ApplicationUserRepository(ApplicationDbContext dbContext)
         prefs.AllowAdding = allowAdding;
         prefs.AllowRemoving = allowRemoving;
     }
+    
+    public async Task<ApplicationUser?> FindByYandexLoginAsync(string yandexLogin, CancellationToken cancellationToken = default)
+    {
+        return await DbSet.FirstOrDefaultAsync(u => u.YandexLogin == yandexLogin, cancellationToken);
+    }
 }

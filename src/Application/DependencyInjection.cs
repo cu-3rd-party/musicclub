@@ -6,6 +6,7 @@ using CuMusicClub.Application.Services.Permission;
 using CuMusicClub.Application.Services.Roadie;
 using CuMusicClub.Application.Services.Song;
 using CuMusicClub.Application.Services.Telegram;
+using CuMusicClub.Application.Services.User;
 using FluentValidation;
 using Microsoft.Extensions.Hosting;
 
@@ -26,5 +27,6 @@ public static class DependencyInjection
         builder.Services.AddScoped<IRoadieService, RoadieService>();
         builder.Services.AddScoped<ICalendarService, CalendarService>();
         builder.Services.AddScoped<IIcsFeedGenerator, IcsFeedGenerator>();
+        builder.Services.AddScoped<IYandexLoginService, YandexLoginService>();
     }
 }

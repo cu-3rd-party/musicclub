@@ -13,6 +13,10 @@
     import SongRow from "$lib/components/songs/song-row.svelte";
     import {Skeleton} from "$lib/components/ui/skeleton";
     import {onMount} from "svelte";
+    import {Input} from "$lib/components/ui/input";
+    import {Label} from "$lib/components/ui/label";
+    import {getYandexLogin, updateYandexLogin, type YandexLoginDto} from "$lib/api/yandex-login";
+    import {Check, X} from "@lucide/svelte";
 
     let error = $state<string | null>(null);
     let permissionsOpen = $state(false);
@@ -23,6 +27,13 @@
 
     let roadieAssignments = $state<ShortSongDto[]>([]);
     let roadieAssignmentsLoading = $state(true);
+
+    let yandexLogin = $state<YandexLoginDto | null>(null);
+    let yandexLoginLoading = $state(true);
+    let yandexLoginSaving = $state(false);
+    let yandexLoginEdit = $state(false);
+    let yandexLoginInput = $state("");
+    let yandexLoginError = $state<string | null>(null);
 
     let user = $derived($authState.user);
     let permissionCategory = $derived($authState.user ? categorizePermissions($authState.user.permissions) : PermissionCategory.None);
@@ -78,7 +89,47 @@
         } else {
             roadieAssignmentsLoading = false;
         }
+
+        loadYandexLogin();
     });
+
+    async function loadYandexLogin() {
+        yandexLoginLoading = true;
+        try {
+            yandexLogin = await getYandexLogin();
+        } catch (err) {
+            console.error("Failed to load YandexLogin:", err);
+            yandexLoginError = "Не удалось загрузить YandexLogin";
+        } finally {
+            yandexLoginLoading = false;
+        }
+    }
+
+    async function saveYandexLogin() {
+        yandexLoginSaving = true;
+        yandexLoginError = null;
+        try {
+            const result = await updateYandexLogin(yandexLoginInput.trim() || null);
+            yandexLogin = result;
+            yandexLoginEdit = false;
+        } catch (err) {
+            console.error("Failed to update YandexLogin:", err);
+            yandexLoginError = "Не удалось сохранить YandexLogin";
+        } finally {
+            yandexLoginSaving = false;
+        }
+    }
+
+    function cancelEdit() {
+        yandexLoginInput = yandexLogin?.yandexLogin ?? "";
+        yandexLoginEdit = false;
+        yandexLoginError = null;
+    }
+
+    function startEdit() {
+        yandexLoginInput = yandexLogin?.yandexLogin ?? "";
+        yandexLoginEdit = true;
+    }
 
 </script>
 
@@ -132,6 +183,94 @@
                 <span class="text-sm font-medium">{permissionCategory} доступы</span>
             </span>
         </Button>
+    </section>
+
+    <SeparatorWithLabel>Яндекс.Почта</SeparatorWithLabel>
+
+    <section class="space-y-3">
+        {#if yandexLoginLoading}
+            <div class="flex items-center gap-3 py-2">
+                <Skeleton class="h-10 w-full" />
+            </div>
+        {:else}
+            <div class="rounded-lg border bg-card p-4">
+                {#if yandexLoginEdit}
+                    <div class="space-y-3">
+                        <div>
+                            <Label for="yandex-login-input">
+                                Логин Яндекса (без @edu.centraluniversity.ru)
+                            </Label>
+                            <p class="text-xs text-muted-foreground mt-1">
+                                Укажите ваш логин из корпоративной почты @edu.centraluniversity.ru
+                            </p>
+                        </div>
+                        <div class="flex gap-2">
+                            <Input
+                                id="yandex-login-input"
+                                value={yandexLoginInput}
+                                placeholder="ivan.ivanov"
+                                class="flex-1"
+                                onkeydown={(e) => {
+                                    if (e.key === "Enter") saveYandexLogin();
+                                    if (e.key === "Escape") cancelEdit();
+                                }}
+                            />
+                            <Button
+                                size="sm"
+                                onclick={saveYandexLogin}
+                                disabled={yandexLoginSaving}
+                            >
+                                {#if yandexLoginSaving}
+                                    <span class="animate-spin mr-2">⏳</span>
+                                {:else}
+                                    <Check class="size-4 mr-2" />
+                                {/if}
+                                Сохранить
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onclick={cancelEdit}
+                                disabled={yandexLoginSaving}
+                            >
+                                <X class="size-4 mr-2" />
+                                Отмена
+                            </Button>
+                        </div>
+                        {#if yandexLoginError}
+                            <p class="text-sm text-destructive">{yandexLoginError}</p>
+                        {/if}
+                    </div>
+                {:else}
+                    <div class="flex items-center justify-between">
+                        <div class="space-y-1">
+                            {#if yandexLogin?.hasYandexLogin}
+                                <p class="text-sm font-medium">
+                                    {yandexLogin.yandexLogin}@edu.centraluniversity.ru
+                                </p>
+                                <p class="text-xs text-muted-foreground">
+                                    Яндекс.Почта для календаря
+                                </p>
+                            {:else}
+                                <p class="text-sm font-medium text-muted-foreground">
+                                    Не указана
+                                </p>
+                                <p class="text-xs text-muted-foreground">
+                                    Укажите почту для проверки доступности
+                                </p>
+                            {/if}
+                        </div>
+                        <Button
+                            size="sm"
+                            variant={yandexLogin?.hasYandexLogin ? "outline" : "default"}
+                            onclick={startEdit}
+                        >
+                            {yandexLogin?.hasYandexLogin ? "Изменить" : "Указать"}
+                        </Button>
+                    </div>
+                {/if}
+            </div>
+        {/if}
     </section>
 
     <SeparatorWithLabel>Мои роли</SeparatorWithLabel>

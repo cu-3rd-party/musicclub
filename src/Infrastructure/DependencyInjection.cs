@@ -5,6 +5,7 @@ using CuMusicClub.Domain.Entities;
 using CuMusicClub.Infrastructure.Data;
 using CuMusicClub.Infrastructure.Data.Interceptors;
 using CuMusicClub.Infrastructure.Data.Repositories;
+using CuMusicClub.Infrastructure.Yandex;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -106,5 +107,8 @@ public static class DependencyInjection
             var options = sp.GetRequiredService<IOptions<TelegramOptions>>().Value;
             return new TelegramBotClient(options.BotToken);
         });
+
+        // Playwright для обновления cookies Яндекс.Календаря
+        builder.Services.AddScoped<IYandexCookieRefresher, YandexCookieRefresher>();
     }
 }
