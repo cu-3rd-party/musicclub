@@ -1,6 +1,6 @@
 import axios from "axios";
 
-import {api} from "$lib/api/client";
+import { api } from "$lib/api/client";
 import type {
     AuthSession,
     TokenPair,

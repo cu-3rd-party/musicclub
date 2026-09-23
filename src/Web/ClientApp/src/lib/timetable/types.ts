@@ -1,4 +1,4 @@
-import type {Song} from "$lib/songs/types";
+import type { Song } from "$lib/songs/types";
 
 export type TimetableEvent = {
     id: string;

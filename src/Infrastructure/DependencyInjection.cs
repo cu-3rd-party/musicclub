@@ -95,6 +95,8 @@ public static class DependencyInjection
         builder.Services.AddScoped<IApplicationUserRepository, ApplicationUserRepository>();
         builder.Services.AddScoped<IRoadieTicketRepository, RoadieTicketRepository>();
         builder.Services.AddScoped<ISongRoadieRepository, SongRoadieRepository>();
+        builder.Services.AddScoped<ICalendarEventRepository, CalendarEventRepository>();
+        builder.Services.AddScoped<ICalendarFeedRepository, CalendarFeedRepository>();
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         builder.Services.AddScoped<ApplicationDbContextInitialiser>();

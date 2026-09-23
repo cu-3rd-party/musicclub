@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using CuMusicClub.Application.Services.Auth;
+using CuMusicClub.Application.Services.Calendar;
 using CuMusicClub.Application.Services.DataEntry;
 using CuMusicClub.Application.Services.Permission;
 using CuMusicClub.Application.Services.Roadie;
@@ -23,5 +24,7 @@ public static class DependencyInjection
         builder.Services.AddScoped<IAuthService, AuthService>();
         builder.Services.AddScoped<IDataEntryService, DataEntryService>();
         builder.Services.AddScoped<IRoadieService, RoadieService>();
+        builder.Services.AddScoped<ICalendarService, CalendarService>();
+        builder.Services.AddScoped<IIcsFeedGenerator, IcsFeedGenerator>();
     }
 }

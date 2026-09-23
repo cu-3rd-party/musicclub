@@ -2,12 +2,13 @@
     import BottomNav from "$lib/components/bottom-nav.svelte";
     import MusicIcon from "@lucide/svelte/icons/music";
     import UserIcon from "@lucide/svelte/icons/user";
+    import {CalendarIcon} from "@lucide/svelte";
 
     let {children} = $props();
 
     const navItems = [
         {label: "Песни", href: "/app/songs", icon: MusicIcon},
-        // {label: "Календарь", href: "/app/calendar", icon: CalendarIcon},
+        {label: "Календарь", href: "/app/calendar", icon: CalendarIcon},
         {label: "Профиль", href: "/app/profile", icon: UserIcon},
     ];
 </script>
