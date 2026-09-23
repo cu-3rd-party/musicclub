@@ -49,6 +49,102 @@ public class SongTests
     {
         new Song().IsFeatured.ShouldBeFalse();
     }
+
+    [Test]
+    public void IsFull_WithNoRoles_ReturnsFalse()
+    {
+        var song = new Song();
+        song.IsFull.ShouldBeFalse();
+    }
+
+    [Test]
+    public void IsFull_WithAllRolesUnfilled_ReturnsFalse()
+    {
+        var song = new Song
+        {
+            Roles =
+            [
+                new SongRole { Id = Guid.NewGuid(), RoleTitle = "Vocals" },
+                new SongRole { Id = Guid.NewGuid(), RoleTitle = "Guitar" }
+            ]
+        };
+
+        song.IsFull.ShouldBeFalse();
+    }
+
+    [Test]
+    public void IsFull_WithSomeRolesFilled_ReturnsFalse()
+    {
+        var song = new Song
+        {
+            Roles =
+            [
+                new SongRole
+                {
+                    Id = Guid.NewGuid(),
+                    RoleTitle = "Vocals",
+                    Assignment = new SongRoleAssignment { UserId = Guid.NewGuid() }
+                },
+                new SongRole { Id = Guid.NewGuid(), RoleTitle = "Guitar" }
+            ]
+        };
+
+        song.IsFull.ShouldBeFalse();
+    }
+
+    [Test]
+    public void IsFull_WithAllRolesFilled_ReturnsTrue()
+    {
+        var song = new Song
+        {
+            Roles =
+            [
+                new SongRole
+                {
+                    Id = Guid.NewGuid(),
+                    RoleTitle = "Vocals",
+                    Assignment = new SongRoleAssignment { UserId = Guid.NewGuid() }
+                },
+                new SongRole
+                {
+                    Id = Guid.NewGuid(),
+                    RoleTitle = "Guitar",
+                    Assignment = new SongRoleAssignment { UserId = Guid.NewGuid() }
+                }
+            ]
+        };
+
+        song.IsFull.ShouldBeTrue();
+    }
+
+    [Test]
+    public void IsFull_AfterDeletingUnfilledRole_BecomesFull()
+    {
+        // Arrange: song with two roles, one filled and one unfilled
+        var filledRole = new SongRole
+        {
+            Id = Guid.NewGuid(),
+            RoleTitle = "Vocals",
+            Assignment = new SongRoleAssignment { UserId = Guid.NewGuid() }
+        };
+        var unfilledRole = new SongRole
+        {
+            Id = Guid.NewGuid(),
+            RoleTitle = "Bass",
+            Assignment = null
+        };
+
+        var song = new Song
+        {
+            Roles = [filledRole, unfilledRole]
+        };
+
+        // Act: delete the unfilled role (simulating role removal)
+        song.Roles.Remove(unfilledRole);
+
+        // Assert: song should now be full since all remaining roles are filled
+        song.IsFull.ShouldBeTrue();
+    }
 }
 
 [TestFixture]

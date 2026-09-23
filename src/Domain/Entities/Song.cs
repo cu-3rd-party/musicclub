@@ -22,4 +22,10 @@ public class Song
     public List<SongRole> Roles { get; set; } = [];
     public List<SongRoleAssignment> Assignments { get; set; } = [];
     public SongTopic? SongTopic { get; set; }
+
+    /// <summary>
+    /// Returns true if all roles in the song are filled (have assignments).
+    /// A song with no roles is considered not full.
+    /// </summary>
+    public bool IsFull => Roles.Count > 0 && Roles.All(r => r.Assignment != null);
 }
