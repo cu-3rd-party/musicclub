@@ -2,7 +2,7 @@
     import BottomNav from "$lib/components/bottom-nav.svelte";
     import MusicIcon from "@lucide/svelte/icons/music";
     import UserIcon from "@lucide/svelte/icons/user";
-    import {CalendarIcon} from "@lucide/svelte";
+    import CalendarIcon from "@lucide/svelte/icons/calendar";
     import YandexLoginModal from "$lib/components/YandexLoginModal.svelte";
     import {getYandexLogin, type YandexLoginDto} from "$lib/api/yandex-login";
     import {onMount} from "svelte";
@@ -47,9 +47,9 @@
     />
 
     <YandexLoginModal
-        {open: showModal}
+        bind:open={showModal}
         {yandexLogin}
-        onsaved={handleSaved}
-        onclose={() => (showModal = false)}
+        on:saved={(e) => handleSaved(e.detail)}
+        on:close={() => (showModal = false)}
     />
 </div>

@@ -3,19 +3,19 @@
     import {Button} from "$lib/components/ui/button";
     import {Input} from "$lib/components/ui/input";
     import {Label} from "$lib/components/ui/label";
-    import {Check, X} from "@lucide/svelte";
+    import {Check} from "@lucide/svelte";
     import {updateYandexLogin, type YandexLoginDto} from "$lib/api/yandex-login";
+    import {createEventDispatcher} from "svelte";
 
-    export let open = $state(false);
-    export let yandexLogin: YandexLoginDto | null = null;
+    let {open = $bindable(false), yandexLogin = null as YandexLoginDto | null} = $props();
 
     let input = $state("");
     let saving = $state(false);
     let error = $state<string | null>(null);
 
-    const emit = defineEmits<{
-        (e: "saved", login: YandexLoginDto): void;
-        (e: "close"): void;
+    const dispatch = createEventDispatcher<{
+        saved: YandexLoginDto;
+        close: void;
     }>();
 
     function handleSubmit() {
@@ -25,7 +25,7 @@
         updateYandexLogin(input.trim() || null)
             .then((result) => {
                 open = false;
-                emit("saved", result);
+                dispatch("saved", result);
             })
             .catch((err) => {
                 console.error("Failed to set YandexLogin:", err);
@@ -38,13 +38,15 @@
 
     function handleClose() {
         open = false;
-        emit("close");
+        dispatch("close");
     }
 
-    $: if (open) {
-        input = yandexLogin?.yandexLogin ?? "";
-        error = null;
-    }
+    $effect(() => {
+        if (open) {
+            input = yandexLogin?.yandexLogin ?? "";
+            error = null;
+        }
+    })
 </script>
 
 <Dialog.Root bind:open>
@@ -89,7 +91,7 @@
                     <span class="animate-spin mr-2">⏳</span>
                     Сохранение...
                 {:else}
-                    <Check class="size-4 mr-2" />
+                    <Check class="size-4 mr-2"/>
                     Сохранить
                 {/if}
             </Button>
