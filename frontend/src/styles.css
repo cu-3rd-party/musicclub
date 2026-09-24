@@ -1,0 +1,15 @@
+/* Taiga UI Base Styles */
+@import 'tailwindcss';
+
+:root {
+    --tui-font-primary: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: var(--tui-font-primary);
+    background-color: var(--tui-bg-base);
+    color: var(--tui-text-primary);
+}
