@@ -9,41 +9,36 @@ RUN corepack enable
 FROM base AS prod-deps
 
 # Copy only frontend package files
-COPY src/Web/ClientApp/package.json src/Web/ClientApp/pnpm-lock.yaml ./
+COPY frontend/package.json frontend/pnpm-lock.yaml ./
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 	pnpm install --frozen-lockfile --prod
 
 FROM base AS build-deps
 
 # Copy only frontend package files
-COPY src/Web/ClientApp/package.json src/Web/ClientApp/pnpm-lock.yaml ./
+COPY frontend/package.json frontend/pnpm-lock.yaml ./
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 	pnpm install --frozen-lockfile
 
 FROM build-deps AS builder
 
 # Copy only frontend source
-COPY src/Web/ClientApp/ ./
+COPY frontend/ ./
 
 RUN pnpm run build
 
-FROM node:22-alpine
+FROM nginx:alpine
 
-WORKDIR /app
+# Copy custom nginx config
+COPY docker/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
-COPY --from=prod-deps /app/node_modules ./node_modules
-COPY --from=builder /app/build ./build
-COPY src/Web/ClientApp/package.json ./
-COPY src/Web/ClientApp/static ./static
-
-ENV HOST=0.0.0.0
-ENV PORT=5173
-ENV NODE_ENV=production
-
-EXPOSE 5173
+# Copy built frontend
+COPY --from=builder /app/dist/frontend/browser /usr/share/nginx/html
 
 # Health check
 HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:5173 || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:80 || exit 1
 
-CMD ["node", "build/index.js"]
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
