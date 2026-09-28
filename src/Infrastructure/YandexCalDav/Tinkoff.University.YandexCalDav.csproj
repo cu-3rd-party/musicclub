@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <RootNamespace>Tinkoff.University.YandexCalDav</RootNamespace>
+        <AssemblyName>Tinkoff.University.YandexCalDav</AssemblyName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Ical.Net" />
+        <PackageReference Include="Microsoft.Extensions.Http" />
+    </ItemGroup>
+
+</Project>

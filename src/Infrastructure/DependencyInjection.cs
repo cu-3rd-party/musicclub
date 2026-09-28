@@ -1,7 +1,6 @@
 ﻿using System.Text;
 using CuMusicClub.Application.Common.Options;
 using CuMusicClub.Domain.Abstractions;
-using CuMusicClub.Domain.Entities;
 using CuMusicClub.Infrastructure.Data;
 using CuMusicClub.Infrastructure.Data.Interceptors;
 using CuMusicClub.Infrastructure.Data.Repositories;
@@ -11,10 +10,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Telegram.Bot;
+using YandexCalDavDi = CuMusicClub.Infrastructure.YandexCalDav.Config.DependencyInjection;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -110,5 +109,8 @@ public static class DependencyInjection
 
         // Playwright для обновления cookies Яндекс.Календаря
         builder.Services.AddScoped<IYandexCookieRefresher, YandexCookieRefresher>();
+
+        // Yandex CalDAV client
+        YandexCalDavDi.AddYandexCalDav(builder.Services);
     }
 }
