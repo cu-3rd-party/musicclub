@@ -3,6 +3,7 @@ using CuMusicClub.Web.Endpoints.v1.Calendar;
 using CuMusicClub.Web.Endpoints.v1.Data;
 using CuMusicClub.Web.Endpoints.v1.Songs;
 using CuMusicClub.Web.Endpoints.v1.Users;
+using CuMusicClub.Web.Endpoints.v1.YandexLogin;
 
 namespace CuMusicClub.Web.Infrastructure;
 
@@ -31,6 +32,8 @@ public static class WebApplicationExtensions
         Calendar.Map(v1
             .MapGroup("/calendar")
             .WithTags("Calendar"));
+
+        YandexLoginEndpoints.Map(v1.MapGroup("/yandex-login").WithTags("YandexLogin"));
 
         return app;
     }

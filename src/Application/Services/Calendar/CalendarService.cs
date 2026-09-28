@@ -92,13 +92,13 @@ public partial class CalendarService(
     }
 
     public async Task<List<CalendarEventDto>> GetEventsAsync(
-        Guid userId, 
-        DateTimeOffset? from, 
-        DateTimeOffset? to, 
+        Guid userId,
+        DateTimeOffset? from,
+        DateTimeOffset? to,
         CancellationToken ct)
     {
-        var fromDate = from?.DateTime ?? DateTime.UtcNow.Date;
-        var toDate = to?.DateTime ?? fromDate.AddMonths(1);
+        var fromDate = from?.UtcDateTime ?? DateTime.UtcNow.Date;
+        var toDate = to?.UtcDateTime ?? fromDate.AddMonths(1);
 
         var events = await eventRepository.GetUserActiveEventsAsync(userId, fromDate, toDate, ct);
 
