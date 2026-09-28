@@ -199,7 +199,7 @@ public class BotUpdateHandler(
         {
             await roadieService.CreateTicketAsync(song.Id, applicationUser, RoadieTicketType.Help, cancellationToken);
         }
-        catch (ForbiddenAccessException e)
+        catch (ForbiddenAccessException)
         {
             await bot.SendMessage(message.Chat.Id,
                 $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a>, у тебя не хватило прав создать тикет(",
