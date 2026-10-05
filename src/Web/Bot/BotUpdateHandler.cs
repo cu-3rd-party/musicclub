@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.RegularExpressions;
+using CuMusicClub.Application.Services.Calendar;
 using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Common.Exceptions;
 using CuMusicClub.Application.Common.Options;
@@ -24,7 +25,9 @@ public class BotUpdateHandler(
     ISongTopicRepository songTopicRepository,
     ISongRepository songRepository,
     IOptions<TelegramOptions> telegramOptions,
-    ILogger<BotUpdateHandler> logger)
+    ILogger<BotUpdateHandler> logger,
+    BotRehearsalCommandsHandler rehearsalCommandsHandler,
+    BotScheduleCommandsHandler scheduleCommandsHandler)
 {
     private static readonly Regex CommandRegex = new(
         @"^\/(?<command>[a-z0-9_]+)(?:@(?<botusername>[a-zA-Z0-9_]+))?(?:\s+(?<args>.*))?$",
@@ -65,17 +68,15 @@ public class BotUpdateHandler(
 
         var command = CommandRegex.Match(text);
         if (command.Success)
-            switch (command
-                        .Groups["command"]
-                        .Value.ToLowerInvariant())
+        {
+            var args = command.Groups["args"].Success
+                ? command.Groups["args"].Value.Trim()
+                : string.Empty;
+
+            switch (command.Groups["command"].Value.ToLowerInvariant())
             {
                 // может и есть получше способ для задания обработки команд, но я хз
                 case "start":
-                    var args = command.Groups["args"].Success
-                        ? command
-                            .Groups["args"]
-                            .Value.Trim()
-                        : string.Empty;
                     if (args.Length > 0)
                         await HandleStartWithArgsAsync(bot, message, user, args, cancellationToken);
                     else
@@ -99,6 +100,28 @@ public class BotUpdateHandler(
                     await HandlePingAsync(bot, message, user, cancellationToken);
                     return;
 
+                // === Rehearsal booking commands ===
+                case "check":
+                case "slots":
+                case "slots_with":
+                case "take":
+                case "take_with":
+                case "approve":
+                case "reject":
+                case "cancel":
+                    await rehearsalCommandsHandler.HandleRehearsalCommandAsync(
+                        command.Groups["command"].Value, args, message, user, cancellationToken);
+                    return;
+
+                // === Schedule display commands ===
+                case "status":
+                case "update":
+                case "recheck":
+                case "day":
+                    await scheduleCommandsHandler.HandleScheduleCommandAsync(
+                        command.Groups["command"].Value, args, message, user, cancellationToken);
+                    return;
+
                 case "help":
                     await SendTextAsync(bot,
                         message.Chat,
@@ -106,6 +129,7 @@ public class BotUpdateHandler(
                         cancellationToken);
                     return;
             }
+        }
     }
 
     private async Task HandlePingAsync(ITelegramBotClient bot,
