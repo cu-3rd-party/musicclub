@@ -94,13 +94,12 @@ public class TelegramChatService(
     }
 
     /// <summary>
-    /// Добавляет https://dev.musicclub.cu3rd.ru/api/v1 перед url (или что стоит в TelegramOptions__BaseUrl)
+    /// Добавляет базовый URL из конфига перед url
     /// </summary>
     /// <param name="topicId"></param>
     /// <param name="url"></param>
     /// <param name="message"></param>
     /// <param name="cancellationToken"></param>
-    /// <exception cref="NotImplementedException"></exception>
     public async Task SendTopicPhoto(long topicId,
         string url,
         string? message,
