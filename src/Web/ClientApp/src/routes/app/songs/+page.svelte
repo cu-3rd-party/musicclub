@@ -426,7 +426,7 @@
             <InputGroup.Addon align="inline-end">
                 <InputGroup.Button
                     variant="ghost"
-                    aria-label={viewMode === "tiled" ? "Switch to list view" : "Switch to tiled view"}
+                    aria-label={viewMode === "tiled" ? "Показать списком" : "Показать плиткой"}
                     size="icon-xs"
                     onclick={toggleView}
                 >

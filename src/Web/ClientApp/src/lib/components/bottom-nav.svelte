@@ -31,7 +31,7 @@
     }
 </script>
 
-<nav class={cn("bg-background border-t border-border", className)} aria-label="Main navigation">
+<nav class={cn("bg-background border-t border-border", className)} aria-label="Основная навигация">
     <!-- eslint-disable svelte/no-navigation-without-resolve -- маршруты динамические (из пропов), resolve() неприменим к runtime-значениям -->
     <ul class="flex items-stretch justify-around">
         {#each items as item (item.href)}

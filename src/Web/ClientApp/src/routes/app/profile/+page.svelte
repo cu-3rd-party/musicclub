@@ -325,7 +325,7 @@
                 {/each}
             </div>
         {:else if roadieAssignments.length === 0}
-            <p class="text-sm text-muted-foreground py-2">Нет назначенных роди</p>
+            <p class="text-sm text-muted-foreground py-2">Вы пока не роуди ни одной песни</p>
         {:else}
             <div class="flex flex-col">
                 {#each roadieAssignments as song (song.id)}
@@ -390,26 +390,26 @@
 <!--    </section>-->
 </div>
 
-<!-- Account metadata lives here, not on the main page -->
+<!-- Метаданные аккаунта — в шторке, не на основной странице -->
 <Sheet.Root bind:open={detailsOpen}>
     <Sheet.Content side="right" class="w-full sm:max-w-md">
         <Sheet.Header>
-            <Sheet.Title>Account details</Sheet.Title>
+            <Sheet.Title>Данные аккаунта</Sheet.Title>
             <Sheet.Description>
-                Technical information about your account.
+                Техническая информация об аккаунте.
             </Sheet.Description>
         </Sheet.Header>
 
         <div class="mt-6 space-y-5">
             <div class="space-y-1">
-                <p class="text-sm text-muted-foreground">Username</p>
+                <p class="text-sm text-muted-foreground">Имя пользователя</p>
                 <p class="font-medium">@{user?.username}</p>
             </div>
 
             <Separator />
 
             <div class="space-y-1">
-                <p class="text-sm text-muted-foreground">Registered</p>
+                <p class="text-sm text-muted-foreground">Регистрация</p>
                 <p class="font-medium">{user?.createdAt ? formatDate(user?.createdAt) : "???"}</p>
             </div>
 
@@ -417,7 +417,7 @@
                 <Separator />
 
                 <div class="space-y-1">
-                    <p class="text-sm text-muted-foreground">Last login</p>
+                    <p class="text-sm text-muted-foreground">Последний вход</p>
                     <p class="font-medium">{formatDateTime(user?.lastLoginAt)}</p>
                 </div>
             {/if}
@@ -425,20 +425,20 @@
             <Separator />
 
             <div class="space-y-1">
-                <p class="text-sm text-muted-foreground">Last updated</p>
+                <p class="text-sm text-muted-foreground">Последнее обновление</p>
                 <p class="font-medium">{user?.updatedAt ? formatDateTime(user?.updatedAt) : "???"}</p>
             </div>
         </div>
     </Sheet.Content>
 </Sheet.Root>
 
-<!-- Permissions as secondary information -->
+<!-- Права — второстепенная информация -->
 <Sheet.Root bind:open={permissionsOpen}>
     <Sheet.Content side="right" class="w-full sm:max-w-md">
         <Sheet.Header>
-            <Sheet.Title>Permissions</Sheet.Title>
+            <Sheet.Title>Права доступа</Sheet.Title>
             <Sheet.Description>
-                Permissions currently granted to this account.
+                Права, выданные этому аккаунту.
             </Sheet.Description>
         </Sheet.Header>
 
