@@ -195,13 +195,16 @@ public class DayScheduleService(
             excludeUsernames.Select(u => u.TrimStart('@')),
             StringComparer.OrdinalIgnoreCase);
 
-        var userIds = await songRoleAssignmentRepository.GetMemberUserIdsBySongIdAsync(songId, ct);
+        var userIds = (await songRoleAssignmentRepository.GetMemberUserIdsBySongIdAsync(songId, ct)).Distinct().ToList();
+
+        var users = await userRepository.Query()
+            .Where(u => userIds.Contains(u.Id))
+            .ToListAsync(ct);
 
         var result = new List<MemberSchedule>();
-        foreach (var userId in userIds.Distinct())
+        foreach (var user in users)
         {
-            var user = await userRepository.FindByIdAsync(userId);
-            if (user == null || (user.UserName != null && excluded.Contains(user.UserName)))
+            if (user.UserName != null && excluded.Contains(user.UserName))
                 continue;
 
             var name = string.IsNullOrWhiteSpace(user.DisplayName) ? user.UserName ?? "?" : user.DisplayName;

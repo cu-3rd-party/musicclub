@@ -262,23 +262,18 @@ public class RehearsalBookingService(
         Guid songId,
         CancellationToken ct = default)
     {
-        var memberUserIds = await songRoleAssignmentRepository
-            .GetMemberUserIdsBySongIdAsync(songId, ct);
+        var memberUserIds = (await songRoleAssignmentRepository
+            .GetMemberUserIdsBySongIdAsync(songId, ct)).ToList();
 
-        var usersWithYandex = new List<UserWithYandex>();
+        var users = await userRepository.Query()
+            .Where(u => memberUserIds.Contains(u.Id) && !string.IsNullOrEmpty(u.YandexLogin))
+            .ToListAsync(ct);
 
-        foreach (var userId in memberUserIds)
-        {
-            var user = await userRepository.FindByIdAsync(userId, ct);
-            if (user == null || string.IsNullOrEmpty(user.YandexLogin))
-                continue;
-
-            usersWithYandex.Add(new UserWithYandex(
-                user.Id,
-                user.DisplayName,
-                user.YandexLogin,
-                BuildYandexEmail(user.YandexLogin)));
-        }
+        var usersWithYandex = users.Select(user => new UserWithYandex(
+            user.Id,
+            user.DisplayName,
+            user.YandexLogin!,
+            BuildYandexEmail(user.YandexLogin))).ToList();
 
         return usersWithYandex;
     }
