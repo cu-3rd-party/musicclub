@@ -120,6 +120,11 @@ public static class DependencyInjection
         builder.Services.Configure<YandexWebCalendarOptions>(section);
         var yandexOptions = section.Get<YandexWebCalendarOptions>() ?? new YandexWebCalendarOptions();
 
+        // Расписание зала из ICS-экспорта — не зависит от провайдера и cookies
+        builder.Services.AddHttpClient(YandexIcsRoomScheduleProvider.HttpClientName,
+            client => client.Timeout = TimeSpan.FromSeconds(15));
+        builder.Services.AddScoped<IRoomScheduleProvider, YandexIcsRoomScheduleProvider>();
+
         // Playwright для обновления cookies Яндекс.Календаря
         builder.Services.AddSingleton<IYandexCookieRefresher, YandexCookieRefresher>();
 
