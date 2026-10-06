@@ -53,7 +53,7 @@ public class TelegramChatService(
         return songTopic;
     }
 
-    public async Task<SongTopic> GetTopic(long topicId, CancellationToken cancellationToken = default)
+    public async Task<SongTopic?> GetTopic(long topicId, CancellationToken cancellationToken = default)
     {
         return await songTopics.FindByTopicIdAsync(topicId, cancellationToken);
     }

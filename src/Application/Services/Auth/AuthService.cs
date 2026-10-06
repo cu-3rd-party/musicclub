@@ -14,7 +14,6 @@ namespace CuMusicClub.Application.Services.Auth;
 
 public class AuthService(
     IOptions<SecurityOptions> securityOptions,
-    ILogger<AuthService> logger,
     IRefreshTokenRepository refreshTokens,
     IUserSessionRepository userSessions,
     IPermissionService permissionService,

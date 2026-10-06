@@ -18,8 +18,8 @@ public interface ITelegramChatService
     /// </summary>
     /// <param name="topicId">ID топика</param>
     /// <param name="cancellationToken">Токен отмены</param>
-    /// <returns>Топик</returns>
-    Task<SongTopic> GetTopic(long topicId, CancellationToken cancellationToken = default);
+    /// <returns>Топик или null, если не найден</returns>
+    Task<SongTopic?> GetTopic(long topicId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Удалить топик

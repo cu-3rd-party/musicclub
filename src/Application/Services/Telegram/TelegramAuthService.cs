@@ -18,7 +18,6 @@ using TelegramUser = Telegram.Bot.Types.User;
 namespace CuMusicClub.Application.Services.Telegram;
 
 public class TelegramAuthService(
-    ILogger<TelegramAuthService> logger,
     IOptions<TelegramOptions> telegramOptions,
     ITgAuthLinkRepository tgAuthLinks,
     IApplicationUserRepository users,
