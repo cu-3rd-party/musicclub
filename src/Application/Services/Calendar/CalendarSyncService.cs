@@ -15,6 +15,7 @@ public class CalendarSyncService(
     ICalendarIntegration integration,
     IApplicationUserRepository userRepository,
     IRehearsalBookingRepository bookingRepository,
+    ISongRepository songRepository,
     ILogger<CalendarSyncService> logger) : ICalendarSyncService
 {
     private const string SharedCalendarDisplayName = "MusicClub — Репетиции";
@@ -54,7 +55,7 @@ public class CalendarSyncService(
 
         var eventInfo = new CalDavEventInfo(
             icalUid,
-            BuildEventTitle(booking),
+            await BuildEventTitleAsync(booking, ct),
             BuildEventDescription(booking),
             booking.ScheduledAt.UtcDateTime,
             booking.ScheduledAt.AddMinutes(booking.DurationMinutes).UtcDateTime,
@@ -128,7 +129,7 @@ public class CalendarSyncService(
 
         var updatedInfo = new CalDavEventInfo(
             existing.Uid,
-            BuildEventTitle(booking),
+            await BuildEventTitleAsync(booking, ct),
             BuildEventDescription(booking),
             booking.ScheduledAt.UtcDateTime,
             booking.ScheduledAt.AddMinutes(booking.DurationMinutes).UtcDateTime,
@@ -325,20 +326,29 @@ public class CalendarSyncService(
         return participants;
     }
 
-    private static string BuildEventTitle(RehearsalBooking booking)
+    private async Task<string> BuildEventTitleAsync(RehearsalBooking booking, CancellationToken ct)
     {
-        if (booking.SongId.HasValue)
-            return $"🎸 Репетиция (ID: {booking.SongId.Value:N})";
-        return "🎸 Репетиция";
+        var song = booking.SongId is { } songId ? await songRepository.FindByIdAsync(songId, ct) : null;
+        return song == null
+            ? "🎸 Репетиция"
+            : $"🎸 Репетиция: {song.Title} — {song.Artist}";
     }
 
     private static string BuildEventDescription(RehearsalBooking booking)
     {
         var sb = new StringBuilder();
-        sb.AppendLine($"Бронирование: {booking.Id:N}");
-        sb.AppendLine($"Статус: {booking.Status}");
+        var status = booking.Status switch
+        {
+            BookingStatus.Pending => "ждёт подтверждения",
+            BookingStatus.Rejected => "отклонено",
+            BookingStatus.Cancelled => "отменено",
+            _ => "подтверждено"
+        };
+
+        sb.AppendLine("Забронировано через бота Music Club.");
+        sb.AppendLine($"Статус: {status}");
         sb.AppendLine($"Длительность: {booking.DurationMinutes} мин");
-        sb.AppendLine($"Создано: {booking.CreatedAt:yyyy-MM-dd HH:mm}");
+        sb.AppendLine($"Бронь: {booking.Id:N}");
 
         return sb.ToString().Trim();
     }

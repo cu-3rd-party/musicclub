@@ -22,6 +22,21 @@ public class CalendarSyncServiceTests
 
     private readonly List<CalDavEventInfo> _created = [];
 
+    private Mock<ISongRepository> _songs = null!;
+
+    [Test]
+    public async Task CreateBookingEvent_UsesSongTitleInEventTitle()
+    {
+        var song = new Domain.Entities.Song { Id = Guid.NewGuid(), Title = "Кино", Artist = "Группа крови" };
+        _songs.Setup(r => r.FindByIdAsync(song.Id, It.IsAny<CancellationToken>())).ReturnsAsync(song);
+        var booking = Booking(DateTimeOffset.UtcNow.AddDays(1));
+        booking.SongId = song.Id;
+
+        await _service.CreateBookingEventAsync(booking);
+
+        _created.ShouldHaveSingleItem().Title.ShouldBe("🎸 Репетиция: Кино — Группа крови");
+    }
+
     [SetUp]
     public void SetUp()
     {
@@ -48,8 +63,10 @@ public class CalendarSyncServiceTests
         users.Setup(r => r.FindByTgUserIdAsync(42, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ApplicationUser { Id = Guid.NewGuid(), DisplayName = "Иван", YandexLogin = "ivan" });
 
+        _songs = new Mock<ISongRepository>();
+
         _service = new CalendarSyncService(_calDav.Object, _integration.Object, users.Object, _bookings.Object,
-            NullLogger<CalendarSyncService>.Instance);
+            _songs.Object, NullLogger<CalendarSyncService>.Instance);
     }
 
     private static RehearsalBooking Booking(DateTimeOffset scheduledAt,
