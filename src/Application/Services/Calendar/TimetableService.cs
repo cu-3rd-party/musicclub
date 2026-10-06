@@ -72,11 +72,11 @@ public class TimetableService(
         var ownEvents = await eventRepository.GetUserActiveEventsAsync(user.Id, from.UtcDateTime, to.UtcDateTime, ct);
         result.AddRange(ownEvents.Select(e => MapCalendarEvent(e, e.EventType == CalendarEventType.Personal)));
 
-        // Репетиции: мои брони, брони моих песен и те, где я тренер
+        // Репетиции: мои брони, брони моих песен и те, где я роуди
         var mySongIds = (await assignmentRepository.GetSongIdsByUserIdAsync(user.Id, ct)).ToHashSet();
         var bookings = (await bookingRepository.GetActiveInRangeAsync(from, to, ct))
             .Where(b => (user.TgUserId.HasValue && b.RequesterTgUserId == user.TgUserId.Value)
-                        || b.CoachUserId == user.Id
+                        || b.RoadieUserId == user.Id
                         || (b.SongId.HasValue && mySongIds.Contains(b.SongId.Value)))
             .ToList();
         result.AddRange(await MapBookingsAsync(bookings, ct));

@@ -309,15 +309,15 @@ public class CalendarSyncService(
                 CalDavParticipantStatus.NeedsAction));
         }
 
-        // Илья (тренер)
-        if (booking.CoachUserId.HasValue)
+        // Роуди
+        if (booking.RoadieUserId.HasValue)
         {
-            var coach = await userRepository.FindByIdAsync(booking.CoachUserId.Value, ct);
-            if (coach != null && !string.IsNullOrEmpty(coach.YandexLogin))
+            var roadie = await userRepository.FindByIdAsync(booking.RoadieUserId.Value, ct);
+            if (roadie != null && !string.IsNullOrEmpty(roadie.YandexLogin))
             {
                 participants.Add(new CalDavParticipant(
-                    BuildYandexEmail(coach.YandexLogin),
-                    coach.DisplayName,
+                    BuildYandexEmail(roadie.YandexLogin),
+                    roadie.DisplayName,
                     CalDavParticipantRole.Required,
                     CalDavParticipantStatus.NeedsAction));
             }
