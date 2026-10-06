@@ -1,6 +1,7 @@
 using CuMusicClub.Application.Common.Extensions;
 using CuMusicClub.Domain.Abstractions;
 using CuMusicClub.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace CuMusicClub.Application.Services.Calendar;
