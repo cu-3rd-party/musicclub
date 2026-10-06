@@ -67,7 +67,8 @@ public partial class SongService(
     {
         var user = await users.FindByIdAsync(currentUser.GetUserId()) ?? throw new ForbiddenAccessException();
         var permissions = await permissionService.GetPermissionValuesAsync(user, cancellationToken);
-        if (!permissions.Contains(Domain.Constants.Permission.SongsEditOwn))
+        if (!permissions.Contains(Domain.Constants.Permission.SongsEditOwn) &&
+            !permissions.Contains(Domain.Constants.Permission.SongsEditAny))
             throw new ForbiddenAccessException();
 
         if (request.Featured && !permissions.Contains(Domain.Constants.Permission.SongsEditFeatured))
