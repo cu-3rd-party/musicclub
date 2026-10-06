@@ -1,4 +1,5 @@
 using CuMusicClub.Application.Common.Options;
+using CuMusicClub.Web.BackgroundServices;
 using CuMusicClub.Web.Backfill;
 using CuMusicClub.Web.Bot;
 using Microsoft.AspNetCore.Mvc;
@@ -37,5 +38,6 @@ public static class DependencyInjection
         builder.Services.AddHostedService<RoadieAutoAssignHostedService>();
         builder.Services.AddHostedService<TopicBackfillHostedService>();
         builder.Services.AddHostedService<CalendarSyncBackfillHostedService>();
+        builder.Services.AddHostedService<ExpiredAuthLinkCleanupService>();
     }
 }
