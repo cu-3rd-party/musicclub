@@ -67,11 +67,14 @@ jobs:
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
-      - name: Run unit tests
-        run: dotnet test tests/Domain.UnitTests tests/Application.UnitTests --no-build --configuration Release --logger "trx;LogFileName=test-results.trx" --verbosity normal
+      - name: Run unit tests (Domain)
+        run: dotnet test tests/Domain.UnitTests --no-build --configuration Release --logger "trx;LogFileName=test-results-domain.trx" --verbosity normal
+
+      - name: Run unit tests (Application)
+        run: dotnet test tests/Application.UnitTests --no-build --configuration Release --logger "trx;LogFileName=test-results-application.trx" --verbosity normal
 
       - name: Run integration tests
-        run: dotnet test tests/Infrastructure.IntegrationTests --no-build --configuration Release --logger "trx;LogFileName=test-results.trx" --verbosity normal
+        run: dotnet test tests/Infrastructure.IntegrationTests --no-build --configuration Release --logger "trx;LogFileName=test-results-integration.trx" --verbosity normal
         env:
           ConnectionStrings__CuMusicClubDb: "Server=localhost;Port=5432;Database=db;Username=admin;Password=password"
 
