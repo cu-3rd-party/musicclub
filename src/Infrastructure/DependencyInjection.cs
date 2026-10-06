@@ -111,6 +111,8 @@ public static class DependencyInjection
             return new TelegramBotClient(options.BotToken);
         });
 
+        builder.Services.AddScoped<IYandexEmailSearchService, YandexEmailSearchService>();
+
         AddYandexCalendar(builder);
     }
 

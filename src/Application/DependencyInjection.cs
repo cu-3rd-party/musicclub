@@ -35,5 +35,6 @@ public static class DependencyInjection
         builder.Services.AddScoped<IWeeklyDigestService, WeeklyDigestService>();
         builder.Services.AddScoped<IIcsFeedGenerator, IcsFeedGenerator>();
         builder.Services.AddScoped<IYandexLoginService, YandexLoginService>();
+        builder.Services.AddScoped<IYandexEmailBackfillService, YandexEmailBackfillService>();
     }
 }

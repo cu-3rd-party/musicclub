@@ -2,6 +2,7 @@ using System.Text;
 using CuMusicClub.Domain.Abstractions;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Domain.Enums;
+using CuMusicClub.Infrastructure.Yandex;
 using Microsoft.Extensions.Logging;
 
 namespace CuMusicClub.Application.Services.Calendar;
@@ -16,6 +17,7 @@ public class CalendarSyncService(
     IApplicationUserRepository userRepository,
     IRehearsalBookingRepository bookingRepository,
     ISongRepository songRepository,
+    IYandexEmailSearchService emailSearchService,
     ILogger<CalendarSyncService> logger) : ICalendarSyncService
 {
     private const string SharedCalendarDisplayName = "MusicClub — Репетиции";
@@ -300,30 +302,61 @@ public class CalendarSyncService(
 
         // Инициатор
         var requester = await userRepository.FindByTgUserIdAsync(booking.RequesterTgUserId, ct);
-        if (requester != null && !string.IsNullOrEmpty(requester.YandexLogin))
+        if (requester != null)
         {
-            participants.Add(new CalDavParticipant(
-                BuildYandexEmail(requester.YandexLogin),
-                requester.DisplayName,
-                CalDavParticipantRole.Required,
-                CalDavParticipantStatus.NeedsAction));
+            var email = await GetUserEmailAsync(requester, ct);
+            if (!string.IsNullOrEmpty(email))
+            {
+                participants.Add(new CalDavParticipant(
+                    email,
+                    requester.DisplayName,
+                    CalDavParticipantRole.Required,
+                    CalDavParticipantStatus.NeedsAction));
+            }
         }
 
         // Роуди
         if (booking.RoadieUserId.HasValue)
         {
             var roadie = await userRepository.FindByIdAsync(booking.RoadieUserId.Value, ct);
-            if (roadie != null && !string.IsNullOrEmpty(roadie.YandexLogin))
+            if (roadie != null)
             {
-                participants.Add(new CalDavParticipant(
-                    BuildYandexEmail(roadie.YandexLogin),
-                    roadie.DisplayName,
-                    CalDavParticipantRole.Required,
-                    CalDavParticipantStatus.NeedsAction));
+                var email = await GetUserEmailAsync(roadie, ct);
+                if (!string.IsNullOrEmpty(email))
+                {
+                    participants.Add(new CalDavParticipant(
+                        email,
+                        roadie.DisplayName,
+                        CalDavParticipantRole.Required,
+                        CalDavParticipantStatus.NeedsAction));
+                }
             }
         }
 
         return participants;
+    }
+
+    private async Task<string?> GetUserEmailAsync(ApplicationUser user, CancellationToken ct)
+    {
+        if (!string.IsNullOrEmpty(user.YandexLogin))
+            return BuildYandexEmail(user.YandexLogin);
+
+        // Try to search for email by display name
+        if (!string.IsNullOrEmpty(user.DisplayName))
+        {
+            try
+            {
+                var email = await emailSearchService.SearchEmailByNameAsync(user.DisplayName, ct);
+                if (!string.IsNullOrEmpty(email))
+                    return email;
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to search email for user {UserId}", user.Id);
+            }
+        }
+
+        return null;
     }
 
     private async Task<string> BuildEventTitleAsync(RehearsalBooking booking, CancellationToken ct)
