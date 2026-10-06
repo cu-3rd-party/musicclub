@@ -69,6 +69,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
+      - name: Cache build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/bin/Release
+            **/obj/Release
+          key: ${{ runner.os }}-dotnet-build-${{ hashFiles('**/*.csproj', 'Directory.Packages.props') }}
+          restore-keys: |
+            ${{ runner.os }}-dotnet-build-
+
       - name: Restore dependencies
         run: dotnet restore
 
@@ -125,6 +135,24 @@ jobs:
 
       - name: Set commit SHA
         run: echo "COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('Directory.Packages.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Cache build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/bin/Release
+            **/obj/Release
+          key: ${{ runner.os }}-dotnet-build-${{ hashFiles('**/*.csproj', 'Directory.Packages.props') }}
+          restore-keys: |
+            ${{ runner.os }}-dotnet-build-
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
