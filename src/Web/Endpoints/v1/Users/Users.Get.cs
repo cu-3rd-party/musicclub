@@ -20,6 +20,18 @@ public static partial class Users
         if (user == null)
             return TypedResults.NotFound();
 
-        throw new NotImplementedException();
+        var permissions = await users.GetPermissionsAsync(userId, cancellationToken);
+
+        var profile = new UserProfileDto(
+            user.Id,
+            user.DisplayName,
+            user.UserName ?? "",
+            user.AvatarUrl,
+            permissions,
+            null, // LastLoginAt is not tracked yet
+            user.CreatedAt,
+            user.UpdatedAt);
+
+        return TypedResults.Ok(profile);
     }
 }
