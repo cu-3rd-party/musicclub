@@ -73,8 +73,13 @@ jobs:
       - name: Run unit tests (Application)
         run: dotnet test tests/Application.UnitTests --no-build --configuration Release --logger "trx;LogFileName=test-results-application.trx" --verbosity normal
 
+      - name: Setup .NET user secrets
+        run: |
+          mkdir -p ~/.microsoft/usersecrets/a23eb711-3d7c-49a8-a6c6-409a4e03fd21
+          echo '${{ secrets.TEST_NET_SECRETS }}' > ~/.microsoft/usersecrets/a23eb711-3d7c-49a8-a6c6-409a4e03fd21/secrets.json
+
       - name: Run integration tests
-        run: dotnet test tests/Infrastructure.IntegrationTests --no-build --configuration Release --logger "trx;LogFileName=test-results-integration.trx" --verbosity normal
+        run: dotnet test tests/Infrastructure.IntegrationTests --no-build --configuration Release --logger "trx;LogFileName=test-results-integration.trx" --verbosity normal --startup-project src/Web/Web.csproj
         env:
           ConnectionStrings__CuMusicClubDb: "Server=localhost;Port=5432;Database=db;Username=admin;Password=password"
 
