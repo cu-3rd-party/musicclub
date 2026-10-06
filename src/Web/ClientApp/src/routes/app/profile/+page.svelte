@@ -207,7 +207,7 @@
                         <div class="flex gap-2">
                             <Input
                                 id="yandex-login-input"
-                                value={yandexLoginInput}
+                                bind:value={yandexLoginInput}
                                 placeholder="ivan.ivanov"
                                 class="flex-1"
                                 onkeydown={(e) => {
