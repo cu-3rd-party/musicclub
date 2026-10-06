@@ -4,6 +4,14 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
+# Install system dependencies and tools early (cached until apt-cache updates)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        wget \
+        libkrb5-3 \
+        libgssapi-krb5-2 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Layer 1: Copy only props and project files (minimal cache invalidation)
 COPY Directory.Build.props Directory.Packages.props *.slnx ./
 COPY src/Application/Application.csproj src/Application/
@@ -13,7 +21,9 @@ COPY src/Shared/Shared.csproj src/Shared/
 COPY src/Web/Web.csproj src/Web/
 
 # Layer 2: Restore dependencies (cached unless .csproj or .props files change)
-RUN dotnet restore src/Web/Web.csproj
+# Use cache mount for NuGet packages to speed up subsequent builds
+RUN --mount=type=cache,id=nuget-build,target=/root/.nuget/packages \
+    dotnet restore src/Web/Web.csproj
 
 # Layer 3: Copy source code (invalidates cache only when source changes)
 COPY src/ src/
@@ -22,24 +32,34 @@ COPY src/ src/
 # OpenApiGenerateDocuments=false: document generation runs the whole app (including DB init),
 # which must not happen during an image build; docs are served live via MapOpenApi at runtime
 WORKDIR /src/src/Web
-RUN dotnet publish Web.csproj -c Release -o /app/publish /p:UseAppHost=false /p:PublishRunWebpack=false /p:OpenApiGenerateDocuments=false
+RUN --mount=type=cache,id=nuget-build,target=/root/.nuget/packages \
+    dotnet publish Web.csproj -c Release -o /app/publish /p:UseAppHost=false /p:PublishRunWebpack=false /p:OpenApiGenerateDocuments=false
 
 # Layer 5: Install Chromium for Playwright (in build stage)
 # Moves installation to build stage so Chromium isn't re-downloaded in runtime
 # when the build output is copied - Chromium is part of the build layer cache
 WORKDIR /app/publish
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        wget \
-    && ./.playwright/node/linux-x64/node ./.playwright/package/cli.js install --with-deps chromium \
-    && rm -rf /var/lib/apt/lists/*
+RUN ./.playwright/node/linux-x64/node ./.playwright/package/cli.js install --with-deps chromium
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
-# Copy published application (includes cached Chromium)
+# Install system dependencies for Chromium to run and health check
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        wget \
+        libkrb5-3 \
+        libgssapi-krb5-2 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set environment variables before copying (so they're cached)
+ENV ASPNETCORE_URLS=http://+:8080
+ENV ASPNETCORE_ENVIRONMENT=Production
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+# Copy published application and Chromium (both from build stage cache)
 COPY --from=build /app/publish .
 COPY --from=build /ms-playwright /ms-playwright
 
@@ -48,10 +68,6 @@ RUN mkdir -p /app/data/yandex
 
 # Expose the port the app runs on
 EXPOSE 8080
-
-# Set environment variables
-ENV ASPNETCORE_URLS=http://+:8080
-ENV ASPNETCORE_ENVIRONMENT=Production
 
 # Health check endpoint
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
