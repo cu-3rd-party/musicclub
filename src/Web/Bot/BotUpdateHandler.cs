@@ -1,7 +1,6 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Text.RegularExpressions;
-using CuMusicClub.Application.Services.Calendar;
-using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Common.Exceptions;
 using CuMusicClub.Application.Common.Options;
 using CuMusicClub.Application.Services.Roadie;
@@ -29,30 +28,43 @@ public class BotUpdateHandler(
     BotRehearsalCommandsHandler rehearsalCommandsHandler,
     BotScheduleCommandsHandler scheduleCommandsHandler)
 {
+    /// <summary>
+    /// Сколько живёт ссылка входа t.me/bot?start=auth_… (браузер ждёт подтверждения).
+    /// </summary>
+    public static readonly TimeSpan AuthLinkLifetime = TelegramAuthService.AuthLinkLifetime;
+
+    private const string AuthCallbackPrefix = "auth:";
+    private const string RoadieAcceptPrefix = "roadie_accept:";
+
     private static readonly Regex CommandRegex = new(
         @"^\/(?<command>[a-z0-9_]+)(?:@(?<botusername>[a-zA-Z0-9_]+))?(?:\s+(?<args>.*))?$",
         RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Singleline);
 
-    private static readonly Regex EmailRegex = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled);
+    /// <summary>
+    /// Команды, которые пингуют людей, — не чаще раза в интервал на пользователя.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, TimeSpan> Cooldowns = new Dictionary<string, TimeSpan>
+    {
+        ["roadie"] = TimeSpan.FromMinutes(2),
+        ["ping"] = TimeSpan.FromMinutes(1),
+        ["call_my_roadie"] = TimeSpan.FromMinutes(1),
+        ["ticket_roadie"] = TimeSpan.FromMinutes(5),
+    };
 
-    private static readonly Regex NamePartRegex = new("[^a-zA-Z]", RegexOptions.Compiled);
+    private static readonly ConcurrentDictionary<(long UserId, string Command), DateTimeOffset> LastUsed = new();
 
     public async Task HandleUpdateAsync(ITelegramBotClient bot,
         Update update,
         string webAppUrl,
         CancellationToken cancellationToken)
     {
-        if (update.Message is
-            {
-            } message)
+        if (update.Message is { } message)
         {
             await HandleMessageAsync(bot, message, webAppUrl, cancellationToken);
             return;
         }
 
-        if (update.CallbackQuery is
-            {
-            } callback)
+        if (update.CallbackQuery is { } callback)
             await HandleCallbackQueryAsync(bot, callback, cancellationToken);
     }
 
@@ -62,136 +74,113 @@ public class BotUpdateHandler(
         CancellationToken cancellationToken)
     {
         var user = message.From;
-        if (user is null || string.IsNullOrWhiteSpace(message.Text)) return;
+        if (user is null || user.IsBot || string.IsNullOrWhiteSpace(message.Text)) return;
 
-        var text = message.Text.Trim();
+        var match = CommandRegex.Match(message.Text.Trim());
+        if (!match.Success) return;
 
-        var command = CommandRegex.Match(text);
-        if (command.Success)
+        // «/slots@other_bot» адресована другому боту в том же чате
+        var addressee = match.Groups["botusername"];
+        var ourUsername = telegramOptions.Value.BotUsername.TrimStart('@');
+        if (addressee.Success && ourUsername.Length > 0 &&
+            !addressee.Value.Equals(ourUsername, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var command = match.Groups["command"].Value.ToLowerInvariant();
+        var args = match.Groups["args"].Success ? match.Groups["args"].Value.Trim() : string.Empty;
+        logger.LogDebug("Команда /{Command} от {UserId} в чате {ChatId}", command, user.Id, message.Chat.Id);
+
+        if (Cooldowns.TryGetValue(command, out var cooldown) && !TryUse(user.Id, command, cooldown, out var wait))
         {
-            var args = command.Groups["args"].Success
-                ? command.Groups["args"].Value.Trim()
-                : string.Empty;
+            await ReplyAsync(bot, message, string.Format(BotTexts.Cooldown, (int) Math.Ceiling(wait.TotalSeconds)),
+                cancellationToken);
+            return;
+        }
 
-            switch (command.Groups["command"].Value.ToLowerInvariant())
-            {
-                // может и есть получше способ для задания обработки команд, но я хз
-                case "start":
-                    if (args.Length > 0)
-                        await HandleStartWithArgsAsync(bot, message, user, args, cancellationToken);
-                    else
-                        await HandleStartAsync(bot, message, user, webAppUrl, cancellationToken);
+        switch (command)
+        {
+            case "start":
+                if (args.Length > 0)
+                    await HandleStartWithArgsAsync(bot, message, args, cancellationToken);
+                else
+                    await HandleStartAsync(bot, message, webAppUrl, cancellationToken);
+                return;
 
-                    return;
+            case "help":
+            case "info":
+                await ReplyAsync(bot, message, BotTexts.Help, cancellationToken);
+                return;
 
-                case "roadie":
-                    await HandleRoadiePingAsync(bot, message, user, cancellationToken);
-                    return;
+            case "roadie":
+                await HandleRoadiePingAsync(bot, message, user, args, cancellationToken);
+                return;
 
-                case "ticket_roadie":
-                    await HandleTicketRoadieAsync(bot, message, user, cancellationToken);
-                    return;
+            case "ticket_roadie":
+                await HandleTicketRoadieAsync(bot, message, user, cancellationToken);
+                return;
 
-                case "call_my_roadie":
-                    await HandleCallMyRoadieAsync(bot, message, user, cancellationToken);
-                    return;
+            case "call_my_roadie":
+                await HandleCallMyRoadieAsync(bot, message, user, args, cancellationToken);
+                return;
 
-                case "ping":
-                    await HandlePingAsync(bot, message, user, cancellationToken);
-                    return;
+            case "ping":
+                await HandlePingAsync(bot, message, user, args, cancellationToken);
+                return;
 
-                // === Rehearsal booking commands ===
-                case "check":
-                case "slots":
-                case "slots_with":
-                case "take":
-                case "take_with":
-                case "approve":
-                case "reject":
-                case "cancel":
-                    await rehearsalCommandsHandler.HandleRehearsalCommandAsync(
-                        command.Groups["command"].Value, args, message, user, cancellationToken);
-                    return;
+            // === Бронирование репетиций ===
+            case "check":
+            case "slots":
+            case "slots_with":
+            case "take":
+            case "take_with":
+            case "approve":
+            case "reject":
+            case "cancel":
+                await rehearsalCommandsHandler.HandleRehearsalCommandAsync(
+                    command, args, message, user, cancellationToken);
+                return;
 
-                // === Schedule display commands ===
-                case "status":
-                case "update":
-                case "recheck":
-                case "day":
-                    await scheduleCommandsHandler.HandleScheduleCommandAsync(
-                        command.Groups["command"].Value, args, message, user, cancellationToken);
-                    return;
+            // === Расписание ===
+            case "status":
+            case "update":
+            case "day":
+                await scheduleCommandsHandler.HandleScheduleCommandAsync(
+                    command, args, message, user, cancellationToken);
+                return;
 
-                case "help":
-                    await SendTextAsync(bot,
-                        message.Chat,
-                        BotTexts.Get("help.start", user.LanguageCode),
-                        cancellationToken);
-                    return;
-            }
+            default:
+                // В группах молчим: команда может быть для другого бота
+                if (message.Chat.Type == ChatType.Private)
+                    await ReplyAsync(bot, message, BotTexts.UnknownCommand, cancellationToken);
+                return;
         }
     }
 
     private async Task HandlePingAsync(ITelegramBotClient bot,
         Message message,
         User user,
+        string userMessage,
         CancellationToken cancellationToken)
     {
-        var chatId = message.Chat.Id;
-        var isTopicMessage = message.IsTopicMessage;
-        var isDirectMessage = message.Chat.IsDirectMessages;
-        var topicId = message.MessageThreadId;
-        if (!isTopicMessage ||
-            isDirectMessage ||
-            topicId == null ||
-            chatId != long.Parse(telegramOptions.Value.ChatId))
-            return;
-
-        var topic = await songTopicRepository.FindByTopicIdAsync((long) topicId, cancellationToken);
-        if (topic == null) return;
-
-        var song = await songRepository.FindByIdWithDetailsAsync(topic.SongId, cancellationToken);
+        var song = await ResolveClubSongAsync(bot, message, cancellationToken);
         if (song == null) return;
 
-        if (message.Text == null) return;
-
-        var (_, userMessage) = GetCommandArgsStr(message.Text);
-        
         var participants = song
             .Roles.Where(x => x.Assignment?.User.TgUserId != null)
             .Select(x => x.Assignment!.User)
             .DistinctBy(x => x.TgUserId)
+            .Where(x => x.TgUserId != user.Id)
             .ToList();
 
-        var messageHeader = $"<b>🎤 {WebUtility.HtmlEncode(song.Title)}</b>\n";
-        messageHeader += $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a> вызывает участников";
-        
+        var text = $"<b>🎤 {Html(song.Title)}</b>\n{Mention(user)} зовёт участников";
+
         if (!string.IsNullOrEmpty(userMessage))
-        {
-            messageHeader += $"\n\n💬 <i>{WebUtility.HtmlEncode(userMessage)}</i>";
-        }
+            text += $"\n\n💬 <i>{Html(userMessage)}</i>";
 
-        messageHeader += $"\n\n👥 Участников: {participants.Count}";
+        text += $"\n\n👥 Позвали: {participants.Count}";
+        text += string.Concat(participants.Select(p => HiddenMention(p.TgUserId!.Value)));
 
-        var text = participants.Aggregate(messageHeader,
-            (current, userToMention) => current + $"<a href=\"tg://user?id={userToMention.TgUserId}\">\u2060</a>");
-
-        await bot.SendMessage(message.Chat.Id,
-            text,
-            messageThreadId: (int) topicId,
-            parseMode: ParseMode.Html,
-            cancellationToken: cancellationToken);
-    }
-
-    /// <summary>
-    /// Распаршивает команду на саму команду и аргументы после нее
-    /// </summary>
-    /// <param name="messageText"></param>
-    /// <returns>Первое значение сама команда, второе значение текстовые аргументы после нее</returns>
-    private (string?, string?) GetCommandArgsStr(string messageText)
-    {
-        var parts = messageText.Split([' '], 2);
-        return (parts.Length >= 1 ? parts[0] : null, parts.Length >= 2 ? parts[1] : null);
+        await ReplyAsync(bot, message, text, cancellationToken);
     }
 
     private async Task HandleTicketRoadieAsync(ITelegramBotClient bot,
@@ -199,32 +188,13 @@ public class BotUpdateHandler(
         User user,
         CancellationToken cancellationToken)
     {
-        var chatId = message.Chat.Id;
-        var isTopicMessage = message.IsTopicMessage;
-        var isDirectMessage = message.Chat.IsDirectMessages;
-        var topicId = message.MessageThreadId;
-        if (!isTopicMessage ||
-            isDirectMessage ||
-            topicId == null ||
-            chatId != long.Parse(telegramOptions.Value.ChatId))
-            return;
-
-        var topic = await songTopicRepository.FindByTopicIdAsync((long) topicId, cancellationToken);
-        if (topic == null) return;
-
-        var song = await songRepository.FindByIdWithDetailsAsync(topic.SongId, cancellationToken);
+        var song = await ResolveClubSongAsync(bot, message, cancellationToken);
         if (song == null) return;
-
-        if (message.Text == null) return;
 
         var applicationUser = await userRepository.FindByTgUserIdAsync(user.Id, cancellationToken);
         if (applicationUser == null)
         {
-            await bot.SendMessage(message.Chat.Id,
-                $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a>, я не нашел тебя в моей базе данных, зайди в миниприложение разок и попробуй еще раз.",
-                messageThreadId: message.MessageThreadId,
-                parseMode: ParseMode.Html,
-                cancellationToken: cancellationToken);
+            await ReplyAsync(bot, message, $"{Mention(user)}, {BotTexts.NotRegistered}", cancellationToken);
             return;
         }
 
@@ -234,197 +204,199 @@ public class BotUpdateHandler(
         }
         catch (ForbiddenAccessException)
         {
-            await bot.SendMessage(message.Chat.Id,
-                $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a>, у тебя не хватило прав создать тикет(",
-                messageThreadId: message.MessageThreadId,
-                parseMode: ParseMode.Html,
-                cancellationToken: cancellationToken);
+            await ReplyAsync(bot, message, $"{Mention(user)}, у вас нет прав создать заявку для этой песни.",
+                cancellationToken);
             return;
         }
-        await bot.SendMessage(message.Chat.Id,
-            $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a>, в чат роуди улетел запрос на помощь группе, ожидай.",
-            messageThreadId: message.MessageThreadId,
-            parseMode: ParseMode.Html,
-            cancellationToken: cancellationToken);
+
+        await ReplyAsync(bot, message,
+            $"{Mention(user)}, заявка на помощь улетела в чат роуди — ждите отклика 🙌",
+            cancellationToken);
     }
 
     private async Task HandleCallMyRoadieAsync(ITelegramBotClient bot,
         Message message,
         User user,
+        string userMessage,
         CancellationToken cancellationToken)
     {
-        var chatId = message.Chat.Id;
-        var isTopicMessage = message.IsTopicMessage;
-        var isDirectMessage = message.Chat.IsDirectMessages;
-        var topicId = message.MessageThreadId;
-        if (!isTopicMessage ||
-            isDirectMessage ||
-            topicId == null ||
-            chatId != long.Parse(telegramOptions.Value.ChatId))
-            return;
-
-        var topic = await songTopicRepository.FindByTopicIdAsync((long) topicId, cancellationToken);
-        if (topic == null) return;
-
-        var song = await songRepository.FindByIdWithDetailsAsync(topic.SongId, cancellationToken);
+        var song = await ResolveClubSongAsync(bot, message, cancellationToken);
         if (song == null) return;
-
-        if (message.Text == null) return;
 
         var roadie = await roadieService.GetRoadie(song, cancellationToken);
         if (roadie == null)
         {
-            await bot.SendMessage(message.Chat.Id,
-                $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a>, я не нашел у твоей песни роуди",
-                messageThreadId: message.MessageThreadId,
-                parseMode: ParseMode.Html,
-                cancellationToken: cancellationToken);
+            await ReplyAsync(bot, message,
+                $"{Mention(user)}, у этой песни пока нет роуди. Попросить — /ticket_roadie",
+                cancellationToken);
             return;
         }
 
-        var (_, userMessage) = GetCommandArgsStr(message.Text);
-        var text = string.IsNullOrEmpty(userMessage)
-            ? $"вызывает своего роуди {telegramChatService.BuildUserMention(roadie!)}!"
-            : WebUtility.HtmlEncode(userMessage);
+        var text = $"{Mention(user)} зовёт роуди {telegramChatService.BuildUserMention(roadie)}";
+        if (!string.IsNullOrEmpty(userMessage))
+            text += $"\n\n💬 <i>{Html(userMessage)}</i>";
 
-        await bot.SendMessage(message.Chat.Id,
-            $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a> {text}",
-            messageThreadId: message.MessageThreadId,
-            parseMode: ParseMode.Html,
-            cancellationToken: cancellationToken);
+        await ReplyAsync(bot, message, text, cancellationToken);
     }
 
     private async Task HandleRoadiePingAsync(ITelegramBotClient bot,
         Message message,
         User user,
+        string userMessage,
         CancellationToken cancellationToken)
     {
-        if (message.Text == null) return;
-
-        var (_, userMessage) = GetCommandArgsStr(message.Text);
-        var text = string.IsNullOrEmpty(userMessage)
-            ? $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a> вызывает роуди!"
-            : WebUtility.HtmlEncode(userMessage);
-
-        var roadies = await roadieService.ListRoadies(cancellationToken);
-        var pingCount = 0;
-
-        text = roadies.Aggregate(text, (current, userToMention) =>
+        // Пинг всех роуди — только из чата клуба, чтобы бота нельзя было использовать для спама
+        if (!IsClubChat(message.Chat.Id))
         {
-            pingCount++;
-            return current + $"<a href=\"tg://user?id={userToMention.TgUserId}\">\u2060</a>";
-        });
+            await ReplyAsync(bot, message, BotTexts.ClubChatOnly, cancellationToken);
+            return;
+        }
 
-        text += $"\n\nБыло вызвано {pingCount} роуди";
+        var roadies = (await roadieService.ListRoadies(cancellationToken))
+            .Where(r => r.TgUserId != null && r.TgUserId != user.Id)
+            .ToList();
 
-        await bot.SendMessage(message.Chat.Id,
-            $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a> {text}",
-            messageThreadId: message.MessageThreadId,
-            parseMode: ParseMode.Html,
-            cancellationToken: cancellationToken);
+        var text = $"{Mention(user)} зовёт роуди!";
+        if (!string.IsNullOrEmpty(userMessage))
+            text += $"\n\n💬 <i>{Html(userMessage)}</i>";
+
+        text += $"\n\n🙋 Позвали роуди: {roadies.Count}";
+        text += string.Concat(roadies.Select(r => HiddenMention(r.TgUserId!.Value)));
+
+        await ReplyAsync(bot, message, text, cancellationToken);
     }
 
     private async Task HandleStartAsync(ITelegramBotClient bot,
         Message message,
-        User user,
         string webAppUrl,
         CancellationToken cancellationToken)
     {
-        logger.LogDebug("Received command /start without args");
-
-        var keyboard = new InlineKeyboardMarkup(new[]
-        {
-            new[]
-            {
-                InlineKeyboardButton.WithWebApp(BotTexts.Get("start.button", user.LanguageCode),
-                    new WebAppInfo(webAppUrl)),
-            },
-        });
+        // WebApp-кнопки Telegram разрешает только в личке; в группе — обычная ссылка
+        var button = message.Chat.Type == ChatType.Private
+            ? InlineKeyboardButton.WithWebApp(BotTexts.StartButton, new WebAppInfo(webAppUrl))
+            : InlineKeyboardButton.WithUrl(BotTexts.StartButton, webAppUrl);
 
         await bot.SendMessage(message.Chat,
-            BotTexts.Get("start.welcome", user.LanguageCode),
-            replyMarkup: keyboard,
+            BotTexts.Welcome,
+            messageThreadId: message.MessageThreadId,
+            replyMarkup: new InlineKeyboardMarkup(button),
             cancellationToken: cancellationToken);
     }
 
     private async Task HandleStartWithArgsAsync(ITelegramBotClient bot,
         Message message,
-        User user,
         string args,
         CancellationToken cancellationToken)
     {
-        logger.LogDebug("Received command start with {Args}", args);
-
         if (!args.StartsWith("auth_", StringComparison.Ordinal))
         {
-            await SendTextAsync(bot,
-                message.Chat,
-                BotTexts.Get("start.invalid_param", user.LanguageCode),
-                cancellationToken);
+            await ReplyAsync(bot, message, BotTexts.StartInvalidParam, cancellationToken);
             return;
         }
 
-        var rawUuid = args["auth_".Length..];
-        if (!Guid.TryParse(rawUuid, out var token))
+        if (message.Chat.Type != ChatType.Private)
         {
-            await SendTextAsync(bot,
-                message.Chat,
-                BotTexts.Get("start.invalid_token", user.LanguageCode),
-                cancellationToken);
+            await ReplyAsync(bot, message, BotTexts.AuthPrivateOnly, cancellationToken);
             return;
         }
 
+        if (!Guid.TryParse(args["auth_".Length..], out var token) ||
+            await FindUsableAuthLinkAsync(token, cancellationToken) == null)
+        {
+            await ReplyAsync(bot, message, BotTexts.AuthInvalidToken, cancellationToken);
+            return;
+        }
+
+        // Не привязываем сразу: ссылку мог прислать злоумышленник, чтобы войти под чужим аккаунтом
+        var keyboard = new InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton.WithCallbackData(BotTexts.AuthConfirmButton, $"{AuthCallbackPrefix}ok:{token:N}"),
+                InlineKeyboardButton.WithCallbackData(BotTexts.AuthCancelButton, $"{AuthCallbackPrefix}no:{token:N}"),
+            ],
+        ]);
+
+        await bot.SendMessage(message.Chat,
+            BotTexts.AuthConfirm,
+            parseMode: ParseMode.Html,
+            replyMarkup: keyboard,
+            cancellationToken: cancellationToken);
+    }
+
+    private async Task HandleAuthCallbackAsync(ITelegramBotClient bot,
+        CallbackQuery callback,
+        CancellationToken cancellationToken)
+    {
+        var parts = callback.Data![AuthCallbackPrefix.Length..].Split(':', 2);
+        if (parts.Length != 2 || !Guid.TryParse(parts[1], out var token) ||
+            callback.Message?.Chat.Type != ChatType.Private)
+        {
+            await bot.AnswerCallbackQuery(callback.Id, cancellationToken: cancellationToken);
+            return;
+        }
+
+        var link = await FindUsableAuthLinkAsync(token, cancellationToken);
+        string result;
+
+        if (link == null)
+            result = BotTexts.AuthInvalidToken;
+        else if (parts[0] == "ok")
+        {
+            link.TgUserId = callback.From.Id;
+            await tgAuthLinks.SaveChangesAsync(cancellationToken);
+            await tgAuthService.UpsertUserAsync(callback.From, cancellationToken);
+            result = BotTexts.AuthOk;
+        }
+        else
+        {
+            tgAuthLinks.Remove(link);
+            await tgAuthLinks.SaveChangesAsync(cancellationToken);
+            result = BotTexts.AuthCancelled;
+        }
+
+        await bot.AnswerCallbackQuery(callback.Id, cancellationToken: cancellationToken);
+        await bot.EditMessageText(callback.Message.Chat.Id,
+            callback.Message.MessageId,
+            result,
+            cancellationToken: cancellationToken);
+    }
+
+    private async Task<TgAuthLink?> FindUsableAuthLinkAsync(Guid token, CancellationToken cancellationToken)
+    {
         var link = await tgAuthLinks.FindByIdAsync(token, cancellationToken);
-        if (link is not
-            {
-                TgUserId: null,
-            })
-        {
-            await SendTextAsync(bot,
-                message.Chat,
-                BotTexts.Get("start.invalid_token", user.LanguageCode),
-                cancellationToken);
-            return;
-        }
+        if (link is not { TgUserId: null }) return null;
 
-        link.TgUserId = user.Id;
-        await tgAuthLinks.SaveChangesAsync(cancellationToken);
-
-        await tgAuthService.UpsertUserAsync(user, cancellationToken);
-
-        await SendTextAsync(bot, message.Chat, BotTexts.Get("auth.ok", user.LanguageCode), cancellationToken);
+        return DateTimeOffset.UtcNow - link.Created > AuthLinkLifetime ? null : link;
     }
 
     private async Task HandleCallbackQueryAsync(ITelegramBotClient bot,
         CallbackQuery callback,
         CancellationToken cancellationToken)
     {
-        if (callback.Message is null)
+        var data = callback.Data ?? string.Empty;
+
+        if (data.StartsWith(AuthCallbackPrefix, StringComparison.Ordinal))
         {
-            await bot.AnswerCallbackQuery(callback.Id, cancellationToken: cancellationToken);
+            await HandleAuthCallbackAsync(bot, callback, cancellationToken);
             return;
         }
 
-        const string roadieAcceptPrefix = "roadie_accept:";
-
-        if (callback.Data?.StartsWith(roadieAcceptPrefix, StringComparison.Ordinal) == true &&
-            Guid.TryParse(callback.Data[roadieAcceptPrefix.Length..], out var ticketId))
+        if (data.StartsWith(BotRehearsalCommandsHandler.CallbackPrefix, StringComparison.Ordinal))
         {
-            var tgUserId = callback.From?.Id ?? 0;
+            await rehearsalCommandsHandler.HandleCallbackAsync(callback, cancellationToken);
+            return;
+        }
 
-            if (tgUserId == 0)
-            {
-                await bot.AnswerCallbackQuery(callback.Id, cancellationToken: cancellationToken);
-                return;
-            }
-
-            var result = await roadieService.AcceptTicketAsync(tgUserId, ticketId, cancellationToken);
+        if (callback.Message is not null &&
+            data.StartsWith(RoadieAcceptPrefix, StringComparison.Ordinal) &&
+            Guid.TryParse(data[RoadieAcceptPrefix.Length..], out var ticketId))
+        {
+            var result = await roadieService.AcceptTicketAsync(callback.From.Id, ticketId, cancellationToken);
 
             var text = result switch
             {
                 RoadieAcceptResult.Accepted => "🎸 Вы взяли группу!",
-                RoadieAcceptResult.NotARoadie => "Вы не роуди.",
-                RoadieAcceptResult.AlreadyAccepted => "Заявка уже принята.",
+                RoadieAcceptResult.NotARoadie => "Брать группы могут только роуди.",
+                RoadieAcceptResult.AlreadyAccepted => "Эту заявку уже кто-то взял.",
                 _ => "Заявка не найдена.",
             };
 
@@ -432,9 +404,8 @@ public class BotUpdateHandler(
 
             if (result == RoadieAcceptResult.Accepted)
             {
-                var acceptedBy = callback.From?.FirstName ?? "роуди";
-
-                var newMarkup = new InlineKeyboardMarkup(InlineKeyboardButton.WithCallbackData($"✅ Взял {acceptedBy}",
+                var newMarkup = new InlineKeyboardMarkup(InlineKeyboardButton.WithCallbackData(
+                    $"✅ Взял(а) {callback.From.FirstName}",
                     $"roadie_already_accepted:{ticketId}"));
 
                 await bot.EditMessageReplyMarkup(callback.Message.Chat.Id,
@@ -449,18 +420,86 @@ public class BotUpdateHandler(
         await bot.AnswerCallbackQuery(callback.Id, cancellationToken: cancellationToken);
     }
 
-    private static string NormalizeNamePart(string value)
-    {
-        return NamePartRegex
-            .Replace(value, string.Empty)
-            .ToLowerInvariant();
-    }
-
-    private static Task SendTextAsync(ITelegramBotClient bot,
-        ChatId chatId,
-        string text,
+    /// <summary>
+    /// Песня топика в чате клуба. Отвечает пользователю, если команда отправлена не туда.
+    /// </summary>
+    private async Task<Song?> ResolveClubSongAsync(ITelegramBotClient bot,
+        Message message,
         CancellationToken cancellationToken)
     {
-        return bot.SendMessage(chatId, text, cancellationToken: cancellationToken);
+        if (!IsClubChat(message.Chat.Id))
+        {
+            await ReplyAsync(bot, message, BotTexts.ClubChatOnly, cancellationToken);
+            return null;
+        }
+
+        if (!message.IsTopicMessage || message.MessageThreadId is not { } topicId)
+        {
+            await ReplyAsync(bot, message, BotTexts.SongTopicOnly, cancellationToken);
+            return null;
+        }
+
+        var topic = await songTopicRepository.FindByTopicIdAsync(topicId, cancellationToken);
+        var song = topic == null
+            ? null
+            : await songRepository.FindByIdWithDetailsAsync(topic.SongId, cancellationToken);
+
+        if (song == null)
+            await ReplyAsync(bot, message, BotTexts.SongTopicOnly, cancellationToken);
+
+        return song;
+    }
+
+    private bool IsClubChat(long chatId)
+    {
+        return long.TryParse(telegramOptions.Value.ChatId, out var clubChatId) && chatId == clubChatId;
+    }
+
+    private static bool TryUse(long userId, string command, TimeSpan cooldown, out TimeSpan wait)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var key = (userId, command);
+        wait = TimeSpan.Zero;
+
+        if (LastUsed.TryGetValue(key, out var last) && now - last < cooldown)
+        {
+            wait = cooldown - (now - last);
+            return false;
+        }
+
+        LastUsed[key] = now;
+        return true;
+    }
+
+    private static string Mention(User user)
+    {
+        var name = string.IsNullOrWhiteSpace(user.FirstName) ? user.Username ?? "участник" : user.FirstName;
+        return $"<a href=\"tg://user?id={user.Id}\">{Html(name)}</a>";
+    }
+
+    /// <summary>
+    /// Невидимое упоминание: человеку приходит уведомление, а текст не засоряется.
+    /// </summary>
+    private static string HiddenMention(long tgUserId)
+    {
+        return $"<a href=\"tg://user?id={tgUserId}\">⁠</a>";
+    }
+
+    private static string Html(string? text)
+    {
+        return WebUtility.HtmlEncode(text ?? "");
+    }
+
+    private Task<Message> ReplyAsync(ITelegramBotClient bot,
+        Message message,
+        string html,
+        CancellationToken cancellationToken)
+    {
+        return bot.SendMessage(message.Chat,
+            html,
+            messageThreadId: message.MessageThreadId,
+            parseMode: ParseMode.Html,
+            linkPreviewOptions: new LinkPreviewOptions { IsDisabled = true },
+            cancellationToken: cancellationToken);
     }
 }

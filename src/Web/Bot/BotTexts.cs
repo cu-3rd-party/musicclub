@@ -1,61 +1,72 @@
 namespace CuMusicClub.Web.Bot;
 
+/// <summary>
+/// Тексты бота. Клуб русскоязычный, поэтому бот отвечает по-русски независимо от языка Telegram.
+/// </summary>
 public static class BotTexts
 {
-    private static readonly IReadOnlyDictionary<string, string> En = new Dictionary<string, string>
-    {
-        ["start.button"] = "🎸 Open Music Club",
-        ["start.welcome"] = "Welcome to Music Club! 🎸\n\nTap the button below to open the app:",
-        ["help.start"] = "Send /start to get the web app link.",
-        ["start.invalid_param"] = "Invalid start parameter.",
-        ["start.invalid_token"] = "Invalid or used authentication token.",
-        ["auth.ok"] = "✅ Authentication successful! You may return to the web app.",
-        ["auth.fail"] = "❌ Authentication failed or expired.",
-        ["calendar.attach.ask"] = "Send your calendar ICS URL.",
-        ["calendar.attach.invalid_url"] =
-            "That does not look like a valid ICS URL. Please send a link ending with .ics.",
-        ["calendar.attach.not_linked"] = "Please link your account in the Music Club web app first, then try again.",
-        ["calendar.attach.success"] = "✅ Calendar attached.",
-        ["calendar.attach.fail"] = "❌ Failed to attach calendar. Please try again later.",
-        ["email.confirm.prompt"] = "Is this your email: {0}?",
-        ["email.confirm.yes"] = "Yes",
-        ["email.confirm.no"] = "No",
-        ["email.ask"] = "Please enter your email address.",
-        ["email.invalid"] = "That does not look like a valid email address. Please try again.",
-        ["email.save.ok"] = "✅ Email saved: {0}",
-        ["email.save.fail"] = "❌ Failed to save email. Please try again later.",
-    };
+    public const string StartButton = "🎸 Открыть Music Club";
 
-    private static readonly IReadOnlyDictionary<string, string> Ru = new Dictionary<string, string>
-    {
-        ["start.button"] = "🎸 Открыть Music Club",
-        ["start.welcome"] = "Добро пожаловать в Music Club! 🎸\n\nНажмите кнопку ниже, чтобы открыть приложение:",
-        ["help.start"] = "Отправьте /start, чтобы получить ссылку на веб-приложение.",
-        ["start.invalid_param"] = "Некорректный параметр /start.",
-        ["start.invalid_token"] = "Неверный токен аутентификации.",
-        ["auth.ok"] = "✅ Аутентификация успешна! Можно вернуться в веб-приложение.",
-        ["auth.fail"] = "❌ Аутентификация не удалась или истекла.",
-        ["calendar.attach.ask"] = "Пришлите ссылку на ваш календарь в формате ICS.",
-        ["calendar.attach.invalid_url"] =
-            "Похоже, это не ссылка на ICS. Пришлите ссылку, которая заканчивается на .ics.",
-        ["calendar.attach.not_linked"] =
-            "Сначала привяжите аккаунт в веб‑приложении Music Club, затем попробуйте снова.",
-        ["calendar.attach.success"] = "✅ Календарь прикреплён.",
-        ["calendar.attach.fail"] = "❌ Не удалось прикрепить календарь. Попробуйте позже.",
-        ["email.confirm.prompt"] = "Это ваш email: {0}?",
-        ["email.confirm.yes"] = "Да",
-        ["email.confirm.no"] = "Нет",
-        ["email.ask"] = "Пожалуйста, введите ваш email.",
-        ["email.invalid"] = "Похоже, это некорректный email. Попробуйте ещё раз.",
-        ["email.save.ok"] = "✅ Email сохранён: {0}",
-        ["email.save.fail"] = "❌ Не удалось сохранить email. Попробуйте позже.",
-    };
+    public const string Welcome =
+        "Привет! Это бот музыкального клуба ЦУ 🎸\n\n" +
+        "В приложении — песни, роли и твой профиль. Открой его кнопкой ниже.\n" +
+        "Список команд — /help";
 
-    public static string Get(string key, string? languageCode)
-    {
-        var isRussian = !string.IsNullOrEmpty(languageCode) &&
-                        languageCode.StartsWith("ru", StringComparison.OrdinalIgnoreCase);
-        var table = isRussian ? Ru : En;
-        return table.TryGetValue(key, out var text) ? text : key;
-    }
+    public const string StartInvalidParam = "Не понял ссылку. Чтобы открыть приложение, отправьте /start.";
+
+    public const string AuthInvalidToken =
+        "Ссылка для входа устарела или уже использована. Начните вход на сайте заново.";
+
+    public const string AuthPrivateOnly = "Подтвердить вход можно только в личных сообщениях с ботом.";
+
+    public const string AuthConfirm =
+        "🔐 <b>Вход в Music Club</b>\n\n" +
+        "Кто-то хочет войти на сайт под вашим Telegram-аккаунтом. Если это вы — подтвердите.\n\n" +
+        "⚠️ Если вы не начинали вход сами, нажмите «Отмена»: иначе другой человек получит доступ к вашему аккаунту.";
+
+    public const string AuthConfirmButton = "✅ Да, это я";
+    public const string AuthCancelButton = "✖️ Отмена";
+    public const string AuthOk = "✅ Вход подтверждён. Можно вернуться в браузер.";
+    public const string AuthCancelled = "Вход отменён.";
+
+    public const string UnknownCommand = "Не знаю такой команды 🤔 Список команд — /help";
+
+    public const string NotRegistered =
+        "я пока вас не знаю — откройте приложение через /start в личке с ботом и попробуйте ещё раз.";
+
+    public const string ClubChatOnly = "Эта команда работает только в чате клуба.";
+
+    public const string SongTopicOnly = "Эта команда работает только в топике песни.";
+
+    public const string Cooldown = "⏳ Не так часто — попробуйте через {0} сек.";
+
+    public const string Help =
+        """
+        📋 <b>Команды бота</b>
+
+        <b>Репетиции</b> — в топике песни:
+        /slots — свободные окна на 7 дней
+        /slots_with — окна, когда в зале Илья
+        <i>…без @user — не учитывать кого-то</i>
+        /check 19.02 18:00 — проверить время
+        /take 19.02 18:00 — забронировать зал
+        /take_with 19.02 18:00 — заявка на репетицию с Ильёй
+        /cancel 19.02 18:00 — отменить свою бронь
+
+        <b>Расписание:</b>
+        /day [дата] — картинка с расписанием дня
+        /status [дата] — брони на день
+
+        <b>Группа и роуди</b> — в топике песни:
+        /ping [текст] — позвать всех участников
+        /call_my_roadie [текст] — позвать роуди песни
+        /ticket_roadie — попросить роуди для группы
+        /roadie [текст] — позвать всех роуди
+
+        <b>Организаторам:</b>
+        /approve, /reject [дата время] — решить по заявке
+        /update — опубликовать сводку на неделю
+
+        Дата — ДД.ММ, день недели (пн…вс), «сегодня» или «завтра». Время — 18, 18:00 или 1800.
+        """;
 }

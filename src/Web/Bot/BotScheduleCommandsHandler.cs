@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -17,7 +16,7 @@ namespace CuMusicClub.Web.Bot;
 
 /// <summary>
 /// Обработчик команд отображения расписания:
-/// /status, /update, /recheck, /day, /info, /help
+/// /status, /update, /day
 /// </summary>
 public class BotScheduleCommandsHandler(
     IRehearsalBookingService bookingService,
@@ -30,19 +29,7 @@ public class BotScheduleCommandsHandler(
     IDayScheduleService dayScheduleService,
     ILogger<BotScheduleCommandsHandler> logger)
 {
-    private static readonly Regex DateRegex = new(@"^(\d{1,2})[./-](\d{1,2})$", RegexOptions.Compiled);
     private static readonly Regex MentionRegex = new(@"@([A-Za-z0-9_]+)", RegexOptions.Compiled);
-    private static readonly CultureInfo Ru = CultureInfo.GetCultureInfo("ru-RU");
-    private static readonly Dictionary<string, int> DayAliases = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["пн"] = 1, ["mon"] = 1,
-        ["вт"] = 2, ["tue"] = 2,
-        ["ср"] = 3, ["wed"] = 3,
-        ["чт"] = 4, ["thu"] = 4,
-        ["пт"] = 5, ["fri"] = 5,
-        ["сб"] = 6, ["sat"] = 6,
-        ["вс"] = 7, ["sun"] = 7,
-    };
 
     public async Task HandleScheduleCommandAsync(
         string command,
@@ -61,52 +48,44 @@ public class BotScheduleCommandsHandler(
                 case "update":
                     await HandleUpdateAsync(args, message, user, ct);
                     break;
-                case "recheck":
-                    await HandleRecheckAsync(args, message, user, ct);
-                    break;
                 case "day":
                     await HandleDayAsync(args, message, ct);
-                    break;
-                case "info":
-                case "help":
-                    await HandleInfoAsync(message, user, ct);
                     break;
             }
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error handling schedule command {Command}", command);
-            await botClient.SendMessage(
-                message.Chat.Id,
-                "❌ Произошла ошибка. Попробуйте позже.",
-                cancellationToken: ct);
+            await SendTextAsync(message, "❌ Что-то пошло не так. Попробуйте позже.");
         }
     }
 
     private async Task HandleStatusAsync(string? args, Message message, CancellationToken ct)
     {
         var date = ParseDate(args);
+        var from = new DateTimeOffset(date.FromMskToUtc(), TimeSpan.Zero);
 
-        var bookings = await bookingRepository.GetUpcomingAsync(
-            date.Date,
-            date.Date.AddDays(1),
-            ct);
+        var bookings = await bookingRepository.GetActiveInRangeAsync(from, from.AddDays(1), ct);
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"📅 <b>Брони на {FormatDate(date)}</b>");
+        sb.AppendLine();
 
         if (bookings.Count == 0)
         {
-            await SendTextAsync(message, $"📅 Расписание на {FormatDate(date)}:\n\nНичего нет. 🎸");
+            sb.AppendLine("Пока ничего — зал свободен 🎸");
+            sb.AppendLine("Подробнее с календарями участников — /day");
+            await SendTextAsync(message, sb.ToString());
             return;
         }
 
-        var sb = new StringBuilder();
-        sb.AppendLine($"📅 Расписание на {FormatDate(date)}");
-        sb.AppendLine();
-
-        foreach (var booking in bookings.OrderBy(b => b.ScheduledAt))
+        foreach (var booking in bookings)
         {
-            var time = booking.ScheduledAt.ToOffset(TimeSpan.FromHours(3)).ToString("HH:mm");
-            var end = booking.ScheduledAt.ToOffset(TimeSpan.FromHours(3)).AddMinutes(booking.DurationMinutes).ToString("HH:mm");
-            sb.AppendLine($"⏰ <code>{time}–{end}</code>");
+            var song = booking.SongId is { } songId ? await songRepository.FindByIdAsync(songId, ct) : null;
+            var icon = booking.Status == BookingStatus.Pending ? "⏳" : "🎸";
+            var title = song == null ? "Репетиция" : $"{Html(song.Title)} — {Html(song.Artist)}";
+            var suffix = booking.Status == BookingStatus.Pending ? " <i>(ждёт подтверждения)</i>" : "";
+            sb.AppendLine($"{icon} <code>{Range(booking.ScheduledAt, booking.ScheduledAt.AddMinutes(booking.DurationMinutes))}</code> {title}{suffix}");
         }
 
         await SendTextAsync(message, sb.ToString());
@@ -114,35 +93,29 @@ public class BotScheduleCommandsHandler(
 
     private async Task HandleUpdateAsync(string? args, Message message, User user, CancellationToken ct)
     {
+        if (!await bookingService.CanApproveAsync(user.Id, ct))
+        {
+            await SendTextAsync(message, "⛔ Публиковать сводку могут только организаторы.");
+            return;
+        }
+
         var chatId = message.Chat.Id;
         var topicId = message.MessageThreadId;
 
         var result = await digestService.PublishDigestAsync(
             chatId,
             topicId,
-            DateTime.Today,
+            BotDateParser.NowMsk().Date,
             ct);
 
         if (result.Success)
         {
-            await SendTextAsync(message, "✅ Еженедельная сводка обновлена.");
+            await SendTextAsync(message, "✅ Сводка на неделю опубликована.");
         }
         else
         {
-            await SendTextAsync(message, $"❌ Ошибка: {result.Message}");
+            await SendTextAsync(message, $"❌ Не удалось опубликовать сводку: {Html(result.Message)}");
         }
-    }
-
-    private async Task HandleRecheckAsync(string? args, Message message, User user, CancellationToken ct)
-    {
-        if (!message.Chat.IsDirectMessages)
-        {
-            await SendTextAsync(message, "❌ /recheck можно использовать только в личных сообщениях.");
-            return;
-        }
-
-        await SendTextAsync(message, "🔄 Обновление сводки...");
-        // TODO: реализовать обновление сохранённой недели
     }
 
     private async Task HandleDayAsync(string? args, Message message, CancellationToken ct)
@@ -288,7 +261,7 @@ public class BotScheduleCommandsHandler(
 
     private static string FormatDate(DateTime date)
     {
-        return date.ToString("dd.MM, ddd", Ru);
+        return BotDateParser.FormatDate(date);
     }
 
     private static string Html(string? text)
@@ -296,85 +269,13 @@ public class BotScheduleCommandsHandler(
         return WebUtility.HtmlEncode(text ?? "");
     }
 
-    private async Task HandleInfoAsync(Message message, User user, CancellationToken ct)
-    {
-        var lang = user.LanguageCode;
-        var isRu = lang != null && lang.StartsWith("ru", StringComparison.OrdinalIgnoreCase);
-
-        var helpText = isRu
-            ? @"📋 <b>Доступные команды:</b>
-
-<b>Бронирование:</b>
-/check ДД.MM ЧЧ:ММ — проверить доступность слота
-/slots — найти свободные слоты на неделю
-/slots_with — то же + проверить Илью
-/take ДД.MM ЧЧ:ММ — забронировать слот
-/take_with ДД.MM ЧЧ:ММ — забронировать с запросом к Илье
-/approve — подтвердить бронирование (Илья)
-/reject — отклонить бронирование (Илья)
-/cancel ДД.MM ЧЧ:ММ — отменить бронирование
-
-<b>Расписание:</b>
-/status [ДД.MM] — расписание на день
-/update — опубликовать еженедельную сводку (Илья)
-/recheck — обновить сводку (Илья, ЛС)
-/day [ДД.MM] — расписание на день
-
-<b>Другое:</b>
-/info — эта справка"
-            : @"📋 <b>Available commands:</b>
-
-<b>Booking:</b>
-/check DD.MM HH:MM — check slot availability
-/slots — find free slots this week
-/slots_with — same + check coach
-/take DD.MM HH:MM — book a slot
-/take_with DD.MM HH:MM — book with coach approval
-/approve — approve a booking (coach)
-/reject — reject a booking (coach)
-/cancel DD.MM HH:MM — cancel a booking
-
-<b>Schedule:</b>
-/status [DD.MM] — schedule for the day
-/update — publish weekly digest (coach)
-/recheck — refresh digest (coach, DM)
-/day [DD.MM] — daily schedule
-
-<b>Other:</b>
-/info — this help message";
-
-        await botClient.SendMessage(
-            message.Chat.Id,
-            helpText,
-            parseMode: ParseMode.Html,
-            cancellationToken: ct);
-    }
-
-    private DateTime ParseDate(string? args)
+    private static DateTime ParseDate(string? args)
     {
         // Kind=Unspecified, время МСК: репозиторий переводит его в UTC как МСК
-        var today = DateTime.UtcNow.FromUtcToMsk().Date;
+        var today = BotDateParser.NowMsk().Date;
+        var token = args?.Split((char[]?) null, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
 
-        if (string.IsNullOrWhiteSpace(args))
-            return today;
-
-        if (DateRegex.Match(args.Trim()) is { Success: true } dateMatch)
-        {
-            var day = int.Parse(dateMatch.Groups[1].Value);
-            var month = int.Parse(dateMatch.Groups[2].Value);
-            return new DateTime(today.Year, month, day);
-        }
-
-        if (DayAliases.TryGetValue(args.Trim(), out var dow))
-        {
-            var todayDow = (int) today.DayOfWeek;
-            todayDow = todayDow == 0 ? 7 : todayDow;
-            var diff = dow - todayDow;
-            if (diff <= 0) diff += 7;
-            return today.AddDays(diff);
-        }
-
-        return today;
+        return BotDateParser.TryParseDate(token, today, out var date) ? date : today;
     }
 
     private Task SendTextAsync(Message message, string text)

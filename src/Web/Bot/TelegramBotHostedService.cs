@@ -54,6 +54,8 @@ public class TelegramBotHostedService : BackgroundService
             _logger.LogWarning(ex, "Failed to delete Telegram webhook (continuing with polling).");
         }
 
+        await RegisterCommandsAsync(bot, stoppingToken);
+
         TelegramBotClient.OnUpdateHandler onUpdate = (Update update) =>
             HandleUpdateAsync(bot, webAppUrl, update, stoppingToken);
         TelegramBotClient.OnErrorHandler onError = (Exception exception, HandleErrorSource source) =>
@@ -95,6 +97,47 @@ public class TelegramBotHostedService : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to handle Telegram update {UpdateId}", update.Id);
+        }
+    }
+
+    /// <summary>
+    /// Меню команд с подсказками: в личке — вход и справка, в группах — команды для топиков песен.
+    /// </summary>
+    private async Task RegisterCommandsAsync(ITelegramBotClient bot, CancellationToken cancellationToken)
+    {
+        BotCommand[] privateCommands =
+        [
+            new() { Command = "start", Description = "Открыть приложение Music Club" },
+            new() { Command = "help", Description = "Список команд" },
+        ];
+
+        BotCommand[] groupCommands =
+        [
+            new() { Command = "slots", Description = "Свободные окна на неделю" },
+            new() { Command = "slots_with", Description = "Окна, когда в зале Илья" },
+            new() { Command = "check", Description = "Проверить время: /check 19.02 18:00" },
+            new() { Command = "take", Description = "Забронировать: /take 19.02 18:00" },
+            new() { Command = "take_with", Description = "Заявка с Ильёй: /take_with 19.02 18:00" },
+            new() { Command = "cancel", Description = "Отменить бронь: /cancel 19.02 18:00" },
+            new() { Command = "day", Description = "Расписание дня картинкой" },
+            new() { Command = "status", Description = "Брони на день" },
+            new() { Command = "ping", Description = "Позвать участников песни" },
+            new() { Command = "call_my_roadie", Description = "Позвать роуди песни" },
+            new() { Command = "ticket_roadie", Description = "Попросить роуди для группы" },
+            new() { Command = "roadie", Description = "Позвать всех роуди" },
+            new() { Command = "help", Description = "Список команд" },
+        ];
+
+        try
+        {
+            await bot.SetMyCommands(privateCommands, new BotCommandScopeAllPrivateChats(),
+                cancellationToken: cancellationToken);
+            await bot.SetMyCommands(groupCommands, new BotCommandScopeAllGroupChats(),
+                cancellationToken: cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to register bot commands menu.");
         }
     }
 

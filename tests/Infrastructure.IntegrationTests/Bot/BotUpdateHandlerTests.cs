@@ -6,7 +6,10 @@ using CuMusicClub.Infrastructure.Data;
 using CuMusicClub.Web.Bot;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Telegram.Bot;
+using Telegram.Bot.Requests;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace CuMusicClub.Infrastructure.IntegrationTests.Bot;
@@ -34,6 +37,7 @@ public class BotUpdateHandlerTests : TestBase
             Chat = new Chat
             {
                 Id = chatId,
+                Type = ChatType.Private,
             },
             From = from,
             Text = text,
@@ -52,6 +56,7 @@ public class BotUpdateHandlerTests : TestBase
                 Chat = new Chat
                 {
                     Id = chatId,
+                    Type = ChatType.Private,
                 },
             },
         };
@@ -95,6 +100,14 @@ public class BotUpdateHandlerTests : TestBase
 
         public BotUpdateHandler Handler { get; }
 
+        public IServiceProvider Services
+        {
+            get
+            {
+                return _scope.ServiceProvider;
+            }
+        }
+
         public HandlerScope()
         {
             _scope = FunctionalTestSetup.ScopeFactory.CreateScope();
@@ -123,7 +136,7 @@ public class BotUpdateHandlerTests : TestBase
         await handler.Handler.HandleUpdateAsync(bot, update, WebAppUrl, CancellationToken.None);
 
         var message = bot.SentMessages.ShouldHaveSingleItem();
-        message.Text.ShouldBe("Welcome to Music Club! 🎸\n\nTap the button below to open the app:");
+        message.Text.ShouldBe(BotTexts.Welcome);
         message.ChatId!.Identifier.ShouldBe(ChatId);
 
         var keyboard = message.ReplyMarkup.ShouldBeOfType<InlineKeyboardMarkup>();
@@ -145,7 +158,7 @@ public class BotUpdateHandlerTests : TestBase
 
         bot
             .SentMessages.Single()
-            .Text.ShouldBe("Invalid or used authentication token.");
+            .Text.ShouldBe(BotTexts.AuthInvalidToken);
     }
 
     [Test]
@@ -159,7 +172,7 @@ public class BotUpdateHandlerTests : TestBase
 
         bot
             .SentMessages.Single()
-            .Text.ShouldBe("Invalid start parameter.");
+            .Text.ShouldBe(BotTexts.StartInvalidParam);
     }
 
     [Test]
@@ -173,6 +186,140 @@ public class BotUpdateHandlerTests : TestBase
 
         bot
             .SentMessages.Single()
-            .Text.ShouldBe("Send /start to get the web app link.");
+            .Text.ShouldBe(BotTexts.Help);
+    }
+
+    private static async Task<TgAuthLink> CreateAuthLinkAsync(DateTimeOffset? created = null)
+    {
+        await using var db = Db();
+        var link = new TgAuthLink { Id = Guid.NewGuid() };
+        db.Add(link);
+        await db.SaveChangesAsync();
+
+        if (created is { } value)
+        {
+            // Created проставляет интерсептор при сохранении — перезаписываем отдельным запросом
+            await db.Set<TgAuthLink>()
+                .Where(l => l.Id == link.Id)
+                .ExecuteUpdateAsync(u => u.SetProperty(l => l.Created, value));
+        }
+
+        return link;
+    }
+
+    private static async Task<TgAuthLink> ReloadAuthLinkAsync(Guid id)
+    {
+        await using var db = Db();
+        return await db.Set<TgAuthLink>().AsNoTracking().SingleAsync(l => l.Id == id);
+    }
+
+    [Test]
+    public async Task Start_WithValidToken_AsksForConfirmation_WithoutLinkingYet()
+    {
+        var link = await CreateAuthLinkAsync();
+        var bot = new FakeTelegramBotClient();
+        var update = MessageUpdate(TextMessage(ChatId, BotUser(42), $"/start auth_{link.Id}"));
+
+        using var handler = new HandlerScope();
+        await handler.Handler.HandleUpdateAsync(bot, update, WebAppUrl, CancellationToken.None);
+
+        var message = bot.SentMessages.ShouldHaveSingleItem();
+        message.Text.ShouldBe(BotTexts.AuthConfirm);
+        var buttons = message.ReplyMarkup.ShouldBeOfType<InlineKeyboardMarkup>().InlineKeyboard.Single().ToList();
+        buttons.Count.ShouldBe(2);
+
+        (await ReloadAuthLinkAsync(link.Id)).TgUserId.ShouldBeNull();
+    }
+
+    [Test]
+    public async Task AuthConfirmCallback_LinksTelegramUser()
+    {
+        var link = await CreateAuthLinkAsync();
+        var bot = new FakeTelegramBotClient();
+        var update = CallbackUpdate(Callback("cb1", BotUser(42), $"auth:ok:{link.Id:N}"));
+
+        using var handler = new HandlerScope();
+        await handler.Handler.HandleUpdateAsync(bot, update, WebAppUrl, CancellationToken.None);
+
+        (await ReloadAuthLinkAsync(link.Id)).TgUserId.ShouldBe(42);
+        bot.Requests.OfType<EditMessageTextRequest>().ShouldHaveSingleItem().Text.ShouldBe(BotTexts.AuthOk);
+    }
+
+    [Test]
+    public async Task AuthConfirmCallback_ForExpiredLink_DoesNotLink()
+    {
+        var link = await CreateAuthLinkAsync(DateTimeOffset.UtcNow - BotUpdateHandler.AuthLinkLifetime - TimeSpan.FromMinutes(1));
+        var bot = new FakeTelegramBotClient();
+        var update = CallbackUpdate(Callback("cb1", BotUser(42), $"auth:ok:{link.Id:N}"));
+
+        using var handler = new HandlerScope();
+        await handler.Handler.HandleUpdateAsync(bot, update, WebAppUrl, CancellationToken.None);
+
+        (await ReloadAuthLinkAsync(link.Id)).TgUserId.ShouldBeNull();
+        bot.Requests.OfType<EditMessageTextRequest>().ShouldHaveSingleItem().Text.ShouldBe(BotTexts.AuthInvalidToken);
+    }
+
+    [Test]
+    public async Task Command_AddressedToAnotherBot_IsIgnored()
+    {
+        var bot = new FakeTelegramBotClient();
+        var update = MessageUpdate(TextMessage(ChatId, BotUser(1), "/help@some_other_bot"));
+
+        using var handler = new HandlerScope();
+        await handler.Handler.HandleUpdateAsync(bot, update, WebAppUrl, CancellationToken.None);
+
+        bot.Requests.ShouldBeEmpty();
+    }
+
+    [Test]
+    public async Task Command_AddressedToThisBot_IsHandled()
+    {
+        var bot = new FakeTelegramBotClient();
+        var update = MessageUpdate(TextMessage(ChatId, BotUser(1), $"/help@{WebApiFactory.TestBotUsername}"));
+
+        using var handler = new HandlerScope();
+        await handler.Handler.HandleUpdateAsync(bot, update, WebAppUrl, CancellationToken.None);
+
+        bot.SentMessages.ShouldHaveSingleItem().Text.ShouldBe(BotTexts.Help);
+    }
+
+    [Test]
+    public async Task UnknownCommand_InPrivateChat_RepliesHint()
+    {
+        var bot = new FakeTelegramBotClient();
+        var update = MessageUpdate(TextMessage(ChatId, BotUser(1), "/whatever"));
+
+        using var handler = new HandlerScope();
+        await handler.Handler.HandleUpdateAsync(bot, update, WebAppUrl, CancellationToken.None);
+
+        bot.SentMessages.ShouldHaveSingleItem().Text.ShouldBe(BotTexts.UnknownCommand);
+    }
+
+    [Test]
+    public async Task Approve_WithoutPermission_IsRefused()
+    {
+        await CreateUserAsync(tgUserId: 77);
+        var update = MessageUpdate(TextMessage(ChatId, BotUser(77), "/approve"));
+
+        // Команды броней отвечают через ITelegramBotClient из DI (в тестах — общий фейк)
+        using var handler = new HandlerScope();
+        var diBot = (FakeTelegramBotClient) handler.Services.GetRequiredService<ITelegramBotClient>();
+        var before = diBot.SentMessages.Count;
+
+        await handler.Handler.HandleUpdateAsync(new FakeTelegramBotClient(), update, WebAppUrl, CancellationToken.None);
+
+        diBot.SentMessages.Skip(before).ShouldHaveSingleItem().Text.ShouldContain("только организаторы");
+    }
+
+    [Test]
+    public async Task Roadie_OutsideClubChat_IsRefused()
+    {
+        var bot = new FakeTelegramBotClient();
+        var update = MessageUpdate(TextMessage(ChatId, BotUser(5), "/roadie"));
+
+        using var handler = new HandlerScope();
+        await handler.Handler.HandleUpdateAsync(bot, update, WebAppUrl, CancellationToken.None);
+
+        bot.SentMessages.ShouldHaveSingleItem().Text.ShouldBe(BotTexts.ClubChatOnly);
     }
 }
