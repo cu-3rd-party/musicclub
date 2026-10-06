@@ -35,7 +35,7 @@ jobs:
   test:
     name: Run tests
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     services:
       postgres:
@@ -61,6 +61,14 @@ jobs:
         with:
           dotnet-version: 10.x
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('Directory.Packages.props') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
       - name: Restore dependencies
         run: dotnet restore
 
@@ -68,10 +76,10 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Run unit tests (Domain)
-        run: dotnet test tests/Domain.UnitTests --no-build --configuration Release --logger "trx;LogFileName=test-results-domain.trx" --verbosity normal
+        run: dotnet test tests/Domain.UnitTests --no-build --configuration Release --logger "trx;LogFileName=test-results-domain.trx" --verbosity minimal
 
       - name: Run unit tests (Application)
-        run: dotnet test tests/Application.UnitTests --no-build --configuration Release --logger "trx;LogFileName=test-results-application.trx" --verbosity normal
+        run: dotnet test tests/Application.UnitTests --no-build --configuration Release --logger "trx;LogFileName=test-results-application.trx" --verbosity minimal
 
       - name: Setup .NET user secrets
         run: |
@@ -79,15 +87,33 @@ jobs:
           echo '${{ secrets.TEST_NET_SECRETS }}' > ~/.microsoft/usersecrets/a23eb711-3d7c-49a8-a6c6-409a4e03fd21/secrets.json
 
       - name: Run integration tests
-        run: dotnet test tests/Infrastructure.IntegrationTests --no-build --configuration Release --logger "trx;LogFileName=test-results-integration.trx" --verbosity normal --startup-project src/Web/Web.csproj
+        run: dotnet test tests/Infrastructure.IntegrationTests --no-build --configuration Release --logger "trx;LogFileName=test-results-integration.trx" --verbosity minimal
         env:
           ConnectionStrings__CuMusicClubDb: "Server=localhost;Port=5432;Database=db;Username=admin;Password=password"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            tests/**/TestResults/**/*.trx
+          retention-days: 30
 
   build:
     name: Build and push images
     needs: test
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - image: backend
+            dockerfile: docker/backend/Dockerfile
+            context: .
+          - image: frontend
+            dockerfile: docker/frontend/Dockerfile
+            context: .
     outputs:
       backend-tag: ${{ env.IMAGE_BACKEND }}:${{ env.COMMIT_SHA }}
       frontend-tag: ${{ env.IMAGE_FRONTEND }}:${{ env.COMMIT_SHA }}
@@ -99,46 +125,26 @@ jobs:
       - name: Set commit SHA
         run: echo "COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Log in to GHCR
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u "${{ github.actor }}" --password-stdin
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Check if backend image exists
-        id: backend-exists
-        run: |
-          if docker manifest inspect ${{ env.IMAGE_BACKEND }}:${{ env.COMMIT_SHA }} > /dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-        continue-on-error: true
-
-      - name: Build and push backend
-        if: steps.backend-exists.outputs.exists == 'false'
-        run: |
-          docker build \
-            -f docker/backend/Dockerfile \
-            -t ${{ env.IMAGE_BACKEND }}:${{ env.COMMIT_SHA }} \
-            .
-          docker push ${{ env.IMAGE_BACKEND }}:${{ env.COMMIT_SHA }}
-
-      - name: Check if frontend image exists
-        id: frontend-exists
-        run: |
-          if docker manifest inspect ${{ env.IMAGE_FRONTEND }}:${{ env.COMMIT_SHA }} > /dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-        continue-on-error: true
-
-      - name: Build and push frontend
-        if: steps.frontend-exists.outputs.exists == 'false'
-        run: |
-          docker build \
-            -f docker/frontend/Dockerfile \
-            -t ${{ env.IMAGE_FRONTEND }}:${{ env.COMMIT_SHA }} \
-            .
-          docker push ${{ env.IMAGE_FRONTEND }}:${{ env.COMMIT_SHA }}
+      - name: Build and push ${{ matrix.image }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/musicclub-${{ matrix.image }}:${{ env.COMMIT_SHA }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   deploy-dev:
     name: Deploy to dev
@@ -152,78 +158,46 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure SSH
+      - name: Deploy via SSH
         env:
           SSH_KEY: ${{ secrets.SSH_KEY }}
           HOST: ${{ secrets.HOST }}
+          USERNAME: ${{ secrets.USERNAME }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          ENV_FILE: ${{ secrets.ENV }}
+          COMMIT_SHA: ${{ github.sha }}
         run: |
           install -d -m 700 ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-
-          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
           chmod 644 ~/.ssh/known_hosts
 
-      - name: Sync application
-        env:
-          HOST: ${{ secrets.HOST }}
-          USERNAME: ${{ secrets.USERNAME }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-        run: |
+          # Sync files
           rsync -az --delete \
-            -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=yes" \
+            -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new" \
             docker-compose.yml \
             docker-compose.prod.yml \
             traefik \
             "${USERNAME}@${HOST}:${DEPLOY_PATH}/"
 
-      - name: Write environment
-        env:
-          ENV_FILE: ${{ secrets.ENV }}
-          HOST: ${{ secrets.HOST }}
-          USERNAME: ${{ secrets.USERNAME }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-        run: |
+          # Write .env
           printf '%s\n' "$ENV_FILE" | \
             ssh -i ~/.ssh/id_ed25519 \
-              -o StrictHostKeyChecking=yes \
+              -o StrictHostKeyChecking=accept-new \
               "${USERNAME}@${HOST}" \
               "cat > '${DEPLOY_PATH}/.env' && chmod 600 '${DEPLOY_PATH}/.env'"
 
-      - name: Deploy
-        env:
-          HOST: ${{ secrets.HOST }}
-          USERNAME: ${{ secrets.USERNAME }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-          COMMIT_SHA: ${{ github.sha }}
-          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_ACTOR: ${{ github.actor }}
-        run: |
+          # Deploy
           ssh -i ~/.ssh/id_ed25519 \
-            -o StrictHostKeyChecking=yes \
-            -o SendEnv=COMMIT_SHA,GITHUB_REPOSITORY_OWNER,GITHUB_TOKEN,GITHUB_ACTOR \
-            "${USERNAME}@${HOST}" << EOF
+            -o StrictHostKeyChecking=accept-new \
+            "${USERNAME}@${HOST}" << EOFSH
               set -euo pipefail
-
-              export COMMIT_SHA="${COMMIT_SHA}"
-              export GITHUB_REPOSITORY_OWNER="${GITHUB_REPOSITORY_OWNER}"
-              export GITHUB_TOKEN="${GITHUB_TOKEN}"
-              export GITHUB_ACTOR="${GITHUB_ACTOR}"
-
               cd "${DEPLOY_PATH}"
-
-              docker login ghcr.io -u "${GITHUB_ACTOR}" -p "${GITHUB_TOKEN}"
-
-              docker compose \
-                -f docker-compose.yml \
-                -f docker-compose.prod.yml \
-                up -d \
-                --pull always \
-                --remove-orphans
-
+              docker login ghcr.io -u "${{ github.actor }}" -p "${{ secrets.GITHUB_TOKEN }}" 2>/dev/null
+              docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --pull always --remove-orphans
               docker image prune -f
-          EOF
+          EOFSH
 
   deploy-prod:
     name: Deploy to prod
@@ -237,75 +211,43 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure SSH
+      - name: Deploy via SSH
         env:
           SSH_KEY: ${{ secrets.SSH_KEY }}
           HOST: ${{ secrets.HOST }}
+          USERNAME: ${{ secrets.USERNAME }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          ENV_FILE: ${{ secrets.ENV }}
+          COMMIT_SHA: ${{ github.sha }}
         run: |
           install -d -m 700 ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-
-          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
           chmod 644 ~/.ssh/known_hosts
 
-      - name: Sync application
-        env:
-          HOST: ${{ secrets.HOST }}
-          USERNAME: ${{ secrets.USERNAME }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-        run: |
+          # Sync files
           rsync -az --delete \
-            -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=yes" \
+            -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new" \
             docker-compose.yml \
             docker-compose.prod.yml \
             traefik \
             "${USERNAME}@${HOST}:${DEPLOY_PATH}/"
 
-      - name: Write environment
-        env:
-          ENV_FILE: ${{ secrets.ENV }}
-          HOST: ${{ secrets.HOST }}
-          USERNAME: ${{ secrets.USERNAME }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-        run: |
+          # Write .env
           printf '%s\n' "$ENV_FILE" | \
             ssh -i ~/.ssh/id_ed25519 \
-              -o StrictHostKeyChecking=yes \
+              -o StrictHostKeyChecking=accept-new \
               "${USERNAME}@${HOST}" \
               "cat > '${DEPLOY_PATH}/.env' && chmod 600 '${DEPLOY_PATH}/.env'"
 
-      - name: Deploy
-        env:
-          HOST: ${{ secrets.HOST }}
-          USERNAME: ${{ secrets.USERNAME }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-          COMMIT_SHA: ${{ github.sha }}
-          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_ACTOR: ${{ github.actor }}
-        run: |
+          # Deploy
           ssh -i ~/.ssh/id_ed25519 \
-            -o StrictHostKeyChecking=yes \
-            -o SendEnv=COMMIT_SHA,GITHUB_REPOSITORY_OWNER,GITHUB_TOKEN,GITHUB_ACTOR \
-            "${USERNAME}@${HOST}" << EOF
+            -o StrictHostKeyChecking=accept-new \
+            "${USERNAME}@${HOST}" << EOFSH
               set -euo pipefail
-
-              export COMMIT_SHA="${COMMIT_SHA}"
-              export GITHUB_REPOSITORY_OWNER="${GITHUB_REPOSITORY_OWNER}"
-              export GITHUB_TOKEN="${GITHUB_TOKEN}"
-              export GITHUB_ACTOR="${GITHUB_ACTOR}"
-
               cd "${DEPLOY_PATH}"
-
-              docker login ghcr.io -u "${GITHUB_ACTOR}" -p "${GITHUB_TOKEN}"
-
-              docker compose \
-                -f docker-compose.yml \
-                -f docker-compose.prod.yml \
-                up -d \
-                --pull always \
-                --remove-orphans
-
+              docker login ghcr.io -u "${{ github.actor }}" -p "${{ secrets.GITHUB_TOKEN }}" 2>/dev/null
+              docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --pull always --remove-orphans
               docker image prune -f
-          EOF
+          EOFSH
