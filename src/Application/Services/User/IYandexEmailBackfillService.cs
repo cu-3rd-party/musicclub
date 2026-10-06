@@ -1,18 +1,25 @@
+using CuMusicClub.Domain.Enums;
+
 namespace CuMusicClub.Application.Services.User;
 
+/// <summary>Итог прогона бекфилла логинов Яндекса.</summary>
+public sealed record YandexLoginBackfillResult(int Found, int NotFound, int Conflicts, int Errors);
+
 /// <summary>
-/// Backfills YandexLogin for users by searching Yandex Calendar for their emails.
+/// Угадывает YandexLogin пользователей по отображаемому имени через suggest-contacts Яндекс.Календаря
+/// и отмечает каждую попытку в <c>yandex_login_guess</c>.
 /// </summary>
 public interface IYandexEmailBackfillService
 {
     /// <summary>
-    /// Searches for and updates a user's YandexLogin if not already set.
-    /// Queries Yandex Calendar's suggest-contacts by surname/name.
+    /// Пытается угадать логин пользователя, записывает его при однозначном совпадении
+    /// и сохраняет результат попытки. Изменения сохраняются сразу.
     /// </summary>
-    Task<bool> BackfillUserEmailAsync(Guid userId, CancellationToken ct = default);
+    Task<YandexLoginGuessStatus> GuessLoginAsync(ApplicationUser user, CancellationToken ct = default);
 
     /// <summary>
-    /// Backfills emails for all users without YandexLogin (up to limit).
+    /// Прогоняет всех пользователей без логина, для которых ещё не было завершённой попытки.
+    /// Останавливается, если Яндекс несколько раз подряд отвечает ошибкой.
     /// </summary>
-    Task<int> BackfillAllUsersAsync(int limit = 50, CancellationToken ct = default);
+    Task<YandexLoginBackfillResult> BackfillAllUsersAsync(CancellationToken ct = default);
 }

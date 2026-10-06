@@ -38,6 +38,7 @@ public static class DependencyInjection
         builder.Services.AddHostedService<RoadieAutoAssignHostedService>();
         builder.Services.AddHostedService<TopicBackfillHostedService>();
         builder.Services.AddHostedService<CalendarSyncBackfillHostedService>();
+        builder.Services.AddHostedService<YandexLoginBackfillHostedService>();
         builder.Services.AddHostedService<ExpiredAuthLinkCleanupService>();
     }
 }

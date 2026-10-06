@@ -120,6 +120,11 @@ public class ApplicationDbContext : DbContext
         get { return Set<RoadieTicket>(); }
     }
 
+    public DbSet<YandexLoginGuess> YandexLoginGuesses
+    {
+        get { return Set<YandexLoginGuess>(); }
+    }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         builder.HasPostgresEnum<Domain.Enums.SongLinkType>();

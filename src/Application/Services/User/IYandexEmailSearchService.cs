@@ -7,8 +7,14 @@ namespace CuMusicClub.Application.Services.User;
 public interface IYandexEmailSearchService
 {
     /// <summary>
+    /// Whether the search can be performed at all (web calendar provider with configured auth).
+    /// </summary>
+    bool IsAvailable { get; }
+
+    /// <summary>
     /// Searches for a Yandex email by "Фамилия Имя" format.
-    /// Returns email if found, null otherwise.
+    /// Returns email if found unambiguously, null otherwise.
+    /// Throws if Yandex could not be queried (auth/network errors).
     /// </summary>
     Task<string?> SearchEmailByNameAsync(string query, CancellationToken ct = default);
 }

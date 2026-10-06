@@ -10,8 +10,14 @@ namespace CuMusicClub.Infrastructure.Yandex;
 /// </summary>
 public class YandexEmailSearchService(
     IYandexMayaClient mayaClient,
+    IYandexWebSession session,
     ILogger<YandexEmailSearchService> logger) : IYandexEmailSearchService
 {
+    public bool IsAvailable
+    {
+        get { return session.IsConfigured; }
+    }
+
     public async Task<string?> SearchEmailByNameAsync(string query, CancellationToken ct = default)
     {
         query = (query ?? string.Empty).Trim();
@@ -29,93 +35,73 @@ public class YandexEmailSearchService(
         var surname = parts[0];
         var given = parts.Count > 1 ? parts[1] : null;
 
-        try
+        // Attempt 1: Search by full name
+        var contacts = await SuggestContactsAsync(query, ct);
+        if (contacts is { Length: 1 })
+            return contacts[0].GetProperty("email").GetString();
+
+        if (contacts is { Length: > 1 })
         {
-            // Attempt 1: Search by full name
-            var contacts = await SuggestContactsAsync(query, ct);
-            if (contacts is { Length: 1 })
-                return contacts[0].GetProperty("email").GetString();
-
-            if (contacts is { Length: > 1 })
-            {
-                var norm = (string s) => Normalize(s);
-                var exact = contacts
-                    .Where(c => norm(c.GetProperty("name").GetString() ?? "") == norm(query))
-                    .ToArray();
-
-                if (exact.Length == 1)
-                    return exact[0].GetProperty("email").GetString();
-
-                if (exact.Length > 1)
-                    logger.LogWarning("Поиск '{Query}': {Count} точных совпадений, выбрать нельзя", query, exact.Length);
-            }
-
-            // Attempt 2: Search by surname only if we have a given name
-            if (string.IsNullOrEmpty(given))
-                return null;
-
-            var bySurname = await SuggestContactsAsync(surname, ct) ?? [];
-            var g = Normalize(given);
-            var near = bySurname
-                .Where(c =>
-                {
-                    var nameParts = Normalize(c.GetProperty("name").GetString() ?? "").Split();
-                    return nameParts.Skip(1).Any(w => w.StartsWith(g) || g.StartsWith(w));
-                })
+            var norm = (string s) => Normalize(s);
+            var exact = contacts
+                .Where(c => norm(c.GetProperty("name").GetString() ?? "") == norm(query))
                 .ToArray();
 
-            if (near.Length == 1)
+            if (exact.Length == 1)
+                return exact[0].GetProperty("email").GetString();
+
+            if (exact.Length > 1)
+                logger.LogWarning("Поиск '{Query}': {Count} точных совпадений, выбрать нельзя", query, exact.Length);
+        }
+
+        // Attempt 2: Search by surname only if we have a given name
+        if (string.IsNullOrEmpty(given))
+            return null;
+
+        var bySurname = await SuggestContactsAsync(surname, ct) ?? [];
+        var g = Normalize(given);
+        var near = bySurname
+            .Where(c =>
             {
-                logger.LogInformation(
-                    "Поиск '{Query}': нашёл по неточному имени '{Name}'",
-                    query,
-                    near[0].GetProperty("name").GetString());
-                return near[0].GetProperty("email").GetString();
-            }
+                var nameParts = Normalize(c.GetProperty("name").GetString() ?? "").Split();
+                return nameParts.Skip(1).Any(w => w.StartsWith(g) || g.StartsWith(w));
+            })
+            .ToArray();
 
-            if (bySurname.Length > 0)
-                logger.LogWarning(
-                    "Поиск '{Query}': среди {Count} однофамильцев имя не совпало",
-                    query,
-                    bySurname.Length);
-
-            return null;
-        }
-        catch (Exception ex)
+        if (near.Length == 1)
         {
-            logger.LogWarning(ex, "Поиск '{Query}': {Error}", query, ex.Message);
-            return null;
+            logger.LogInformation(
+                "Поиск '{Query}': нашёл по неточному имени '{Name}'",
+                query,
+                near[0].GetProperty("name").GetString());
+            return near[0].GetProperty("email").GetString();
         }
+
+        if (bySurname.Length > 0)
+            logger.LogWarning(
+                "Поиск '{Query}': среди {Count} однофамильцев имя не совпало",
+                query,
+                bySurname.Length);
+
+        return null;
     }
 
     private async Task<JsonElement[]?> SuggestContactsAsync(string query, CancellationToken ct)
     {
-        try
-        {
-            var parameters = new { query };
-            var result = await mayaClient.CallAsync("suggest-contacts", parameters, ct);
+        var parameters = new { query };
+        var result = await mayaClient.CallAsync("suggest-contacts", parameters, ct);
 
-            if (!result.TryGetProperty("contacts", out var contactsElement))
-                return null;
-
-            var contacts = new List<JsonElement>();
-            foreach (var contact in contactsElement.EnumerateArray())
-            {
-                if (contact.TryGetProperty("email", out _))
-                    contacts.Add(contact);
-            }
-
-            return contacts.ToArray();
-        }
-        catch (YandexWebAuthException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Ошибка suggest-contacts для '{Query}'", query);
+        if (!result.TryGetProperty("contacts", out var contactsElement))
             return null;
+
+        var contacts = new List<JsonElement>();
+        foreach (var contact in contactsElement.EnumerateArray())
+        {
+            if (contact.TryGetProperty("email", out _))
+                contacts.Add(contact);
         }
+
+        return contacts.ToArray();
     }
 
     private static string Normalize(string s)

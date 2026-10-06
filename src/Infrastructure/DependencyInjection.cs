@@ -102,6 +102,7 @@ public static class DependencyInjection
         builder.Services.AddScoped<ICalendarEventRepository, CalendarEventRepository>();
         builder.Services.AddScoped<ICalendarFeedRepository, CalendarFeedRepository>();
         builder.Services.AddScoped<IRehearsalBookingRepository, RehearsalBookingRepository>();
+        builder.Services.AddScoped<IYandexLoginGuessRepository, YandexLoginGuessRepository>();
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         builder.Services.AddScoped<ApplicationDbContextInitialiser>();
@@ -111,8 +112,6 @@ public static class DependencyInjection
             var options = sp.GetRequiredService<IOptions<TelegramOptions>>().Value;
             return new TelegramBotClient(options.BotToken);
         });
-
-        builder.Services.AddScoped<IYandexEmailSearchService, YandexEmailSearchService>();
 
         AddYandexCalendar(builder);
     }
@@ -139,6 +138,7 @@ public static class DependencyInjection
             builder.Services.AddScoped<ICalDavOperations, CalDavOperationsAdapter>();
             builder.Services.AddScoped<IExternalScheduleProvider, NullExternalScheduleProvider>();
             builder.Services.AddSingleton<ICalendarIntegration, YandexCalDavIntegration>();
+            builder.Services.AddScoped<IYandexEmailSearchService, NullYandexEmailSearchService>();
             return;
         }
 
@@ -165,6 +165,7 @@ public static class DependencyInjection
         builder.Services.AddScoped<ICalDavOperations, YandexWebCalendarOperations>();
         builder.Services.AddScoped<IExternalScheduleProvider, YandexWebScheduleProvider>();
         builder.Services.AddSingleton<ICalendarIntegration, YandexWebCalendarIntegration>();
+        builder.Services.AddScoped<IYandexEmailSearchService, YandexEmailSearchService>();
 
         // Cookies нужны и без LayerId (занятость, личное расписание); без них сервис сам ничего не делает
         builder.Services.AddHostedService<YandexCookieRefreshHostedService>();
