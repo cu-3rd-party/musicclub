@@ -16,6 +16,7 @@
     import {Input} from "$lib/components/ui/input";
     import {Label} from "$lib/components/ui/label";
     import {getYandexLogin, updateYandexLogin, type YandexLoginDto} from "$lib/api/yandex-login";
+    import {getApiErrorMessage} from "$lib/api/auth";
     import {Check, X} from "@lucide/svelte";
 
     let error = $state<string | null>(null);
@@ -99,7 +100,7 @@
             yandexLogin = await getYandexLogin();
         } catch (err) {
             console.error("Failed to load YandexLogin:", err);
-            yandexLoginError = "Не удалось загрузить YandexLogin";
+            yandexLoginError = "Не удалось загрузить логин";
         } finally {
             yandexLoginLoading = false;
         }
@@ -114,7 +115,7 @@
             yandexLoginEdit = false;
         } catch (err) {
             console.error("Failed to update YandexLogin:", err);
-            yandexLoginError = "Не удалось сохранить YandexLogin";
+            yandexLoginError = getApiErrorMessage(err, "Не удалось сохранить логин");
         } finally {
             yandexLoginSaving = false;
         }

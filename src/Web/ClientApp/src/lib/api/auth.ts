@@ -11,6 +11,8 @@ import type {
 
 type ApiErrorPayload = {
     message?: string;
+    // ValidationProblemDetails: { errors: { field: ["сообщение"] } }
+    errors?: Record<string, string[]>;
 };
 
 export async function telegramAuth(
@@ -75,7 +77,11 @@ export function getApiErrorMessage(
     fallbackMessage: string,
 ): string {
     if (axios.isAxiosError<ApiErrorPayload>(error)) {
-        return error.response?.data?.message ?? fallbackMessage;
+        const data = error.response?.data;
+        const validationMessage = data?.errors
+            ? Object.values(data.errors).flat()[0]
+            : undefined;
+        return data?.message ?? validationMessage ?? fallbackMessage;
     }
 
     if (error instanceof Error && error.message) {
