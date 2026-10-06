@@ -20,11 +20,24 @@ public class TelegramChatService(
     ISongRepository songs,
     ISongTopicRepository songTopics) : ITelegramChatService
 {
-    private readonly long _chatId = long.Parse(telegramOptions.Value.ChatId);
+    private readonly long _chatId = ParseChatId(telegramOptions.Value.ChatId, nameof(TelegramOptions.ChatId));
 
-    private readonly long _roadieChatId = string.IsNullOrEmpty(telegramOptions.Value.RoadieChatId)
-        ? long.Parse(telegramOptions.Value.ChatId)
-        : long.Parse(telegramOptions.Value.RoadieChatId);
+    private readonly long _roadieChatId = ParseChatId(
+        string.IsNullOrEmpty(telegramOptions.Value.RoadieChatId)
+            ? telegramOptions.Value.ChatId
+            : telegramOptions.Value.RoadieChatId,
+        nameof(TelegramOptions.RoadieChatId));
+
+    private static long ParseChatId(string? chatId, string optionName)
+    {
+        if (string.IsNullOrWhiteSpace(chatId))
+            throw new InvalidOperationException($"Telegram option '{optionName}' is required and cannot be empty");
+
+        if (!long.TryParse(chatId, out var result))
+            throw new InvalidOperationException($"Telegram option '{optionName}' must be a valid long integer, got: '{chatId}'");
+
+        return result;
+    }
 
     public async Task<SongTopic> CreateTopic(string title, Guid songId, CancellationToken cancellationToken = default)
     {
