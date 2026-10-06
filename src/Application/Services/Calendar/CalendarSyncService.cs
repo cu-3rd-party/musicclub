@@ -31,8 +31,8 @@ public class CalendarSyncService(
             icalUid,
             BuildEventTitle(booking),
             BuildEventDescription(booking),
-            booking.ScheduledAt.DateTime,
-            booking.ScheduledAt.AddMinutes(booking.DurationMinutes).DateTime,
+            booking.ScheduledAt.UtcDateTime,
+            booking.ScheduledAt.AddMinutes(booking.DurationMinutes).UtcDateTime,
             false,
             "Кинотеатр",
             null,
@@ -98,8 +98,8 @@ public class CalendarSyncService(
             existing.Uid,
             BuildEventTitle(booking),
             BuildEventDescription(booking),
-            booking.ScheduledAt.DateTime,
-            booking.ScheduledAt.AddMinutes(booking.DurationMinutes).DateTime,
+            booking.ScheduledAt.UtcDateTime,
+            booking.ScheduledAt.AddMinutes(booking.DurationMinutes).UtcDateTime,
             false,
             "Кинотеатр",
             existing.ETag,
@@ -109,6 +109,8 @@ public class CalendarSyncService(
 
         var updated = await calDavOperations.UpdateEventAsync(updatedInfo, ct);
 
+        // Реализация может пересоздать событие (веб-API Яндекса) — URL меняется
+        booking.CalDavEventUrl = updated.Url ?? booking.CalDavEventUrl;
         booking.CalDavEventETag = updated.ETag;
         booking.UpdatedAt = DateTimeOffset.UtcNow;
         bookingRepository.Update(booking);
@@ -120,11 +122,16 @@ public class CalendarSyncService(
         if (user == null || string.IsNullOrEmpty(user.YandexLogin))
             return false;
 
-        // TODO: получить URL календаря пользователя
-        // В текущей архитектуре CalDAV клиент использует один набор credentials (shared calendar)
-        // Для персонального доступа нужно использовать общий календарь
-        // Пока возвращаем false — если нет Yandex login, считаем что свободен
-        return false;
+        // Веб-API Яндекса видит занятость коллег по рабочему email; CalDAV-реализация вернёт false
+        try
+        {
+            return await calDavOperations.IsUserBusyAsync(BuildYandexEmail(user.YandexLogin), start, end, ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Не удалось проверить занятость пользователя {UserId}", userId);
+            return false;
+        }
     }
 
     public async Task<List<CalDavCalendarInfo>> GetUserCalendarsAsync(string yandexLogin, CancellationToken ct = default)
@@ -193,9 +200,10 @@ public class CalendarSyncService(
             existing.Created,
             participants);
 
-        await calDavOperations.UpdateEventAsync(updatedInfo, ct);
+        var updated = await calDavOperations.UpdateEventAsync(updatedInfo, ct);
 
-        booking.CalDavEventETag = updatedInfo.ETag;
+        booking.CalDavEventUrl = updated.Url ?? booking.CalDavEventUrl;
+        booking.CalDavEventETag = updated.ETag;
         booking.UpdatedAt = DateTimeOffset.UtcNow;
         bookingRepository.Update(booking);
     }

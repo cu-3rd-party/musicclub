@@ -42,8 +42,9 @@ public interface ICalDavOperations
     Task<List<CalDavEventInfo>> GetEventsAsync(string calendarUrl, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default);
 
     /// <summary>
-    /// Проверить занятость пользователя в интервале (через его календари).
+    /// Проверить занятость в интервале.
     /// </summary>
+    /// <param name="calendarUrl">URL календаря или email пользователя (если реализация умеет смотреть чужую занятость).</param>
     Task<bool> IsUserBusyAsync(string calendarUrl, DateTime start, DateTime end, CancellationToken ct = default);
 }
 

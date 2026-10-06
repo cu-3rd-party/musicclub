@@ -92,6 +92,10 @@ public class CalDavOperationsAdapter : ICalDavOperations
 
     public async Task<bool> IsUserBusyAsync(string calendarUrl, DateTime start, DateTime end, CancellationToken ct = default)
     {
+        // По CalDAV чужие календари не видны: на email пользователя ответить не можем
+        if (!calendarUrl.Contains('/'))
+            return false;
+
         var events = await _client.GetEventsAsync(calendarUrl, start, end.AddHours(2));
         return events.Any();
     }
