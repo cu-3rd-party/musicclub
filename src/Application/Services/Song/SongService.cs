@@ -67,7 +67,7 @@ public partial class SongService(
     {
         var user = await users.FindByIdAsync(currentUser.GetUserId()) ?? throw new ForbiddenAccessException();
         var permissions = await permissionService.GetPermissionValuesAsync(user, cancellationToken);
-        if (!permissions.Contains(Domain.Constants.Permission.ParticipationEditOwn))
+        if (!permissions.Contains(Domain.Constants.Permission.SongsEditOwn))
             throw new ForbiddenAccessException();
 
         if (request.Featured && !permissions.Contains(Domain.Constants.Permission.SongsEditFeatured))
@@ -142,11 +142,11 @@ public partial class SongService(
         song.Description = request.Description;
         song.LinkKind = linkKind;
         song.LinkUrl = request.Url;
-        song.ThumbnailUrl =
-            $"/data/{request.ThumbnailDataEntryId}"; // Да, это захардкоженный путь. Да, он заставляет ходить фронт к беку и обратно. И что ты мне сделаешь?
         var announceThumbnailChange = song.ThumbnailDataEntryId != request.ThumbnailDataEntryId;
         song.ThumbnailDataEntryId = request.ThumbnailDataEntryId;
-        if (!request.ThumbnailDataEntryId.HasValue) song.ThumbnailUrl = null;
+        song.ThumbnailUrl = request.ThumbnailDataEntryId.HasValue
+            ? $"/data/{request.ThumbnailDataEntryId}"
+            : null;
         if (permissions.Contains(Domain.Constants.Permission.SongsEditFeatured)) song.IsFeatured = request.Featured;
         song.UpdatedAt = DateTimeOffset.UtcNow;
         await unitOfWork.SaveChangesAsync(cancellationToken);

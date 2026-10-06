@@ -110,6 +110,9 @@ public partial class CalendarService(
         var user = await userRepository.FindByIdAsync(request.UserId, ct)
             ?? throw new NotFoundException($"Пользователь {request.UserId}", nameof(ApplicationUser));
 
+        if (request.StartAt >= request.EndAt)
+            throw new InvalidOperationException("Event start time must be before end time");
+
         var calendarEvent = new CalendarEvent
         {
             Id = Guid.NewGuid(),

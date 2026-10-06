@@ -64,8 +64,11 @@ public class TelegramChatService(
         await bot.DeleteForumTopic(_chatId, (int) topicId, cancellationToken: cancellationToken);
 
         var topic = await GetTopic(topicId, cancellationToken);
-        songTopics.Remove(topic);
-        await songTopics.SaveChangesAsync(cancellationToken);
+        if (topic != null)
+        {
+            songTopics.Remove(topic);
+            await songTopics.SaveChangesAsync(cancellationToken);
+        }
     }
 
     public async Task SendTopicMessage(long topicId, string message, CancellationToken cancellationToken = default)

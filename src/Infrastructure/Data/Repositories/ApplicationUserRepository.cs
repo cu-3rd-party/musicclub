@@ -106,11 +106,12 @@ public sealed class ApplicationUserRepository(ApplicationDbContext dbContext)
                 AllowRemoving = allowRemoving,
             };
             await dbContext.UserPreferencesEnumerable.AddAsync(prefs, cancellationToken);
-            return;
         }
-
-        prefs.AllowAdding = allowAdding;
-        prefs.AllowRemoving = allowRemoving;
+        else
+        {
+            prefs.AllowAdding = allowAdding;
+            prefs.AllowRemoving = allowRemoving;
+        }
     }
     
     public async Task<ApplicationUser?> FindByYandexLoginAsync(string yandexLogin, CancellationToken cancellationToken = default)
