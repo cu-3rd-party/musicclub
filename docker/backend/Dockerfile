@@ -4,61 +4,46 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-# Copy solution and project files for dependency restoration
-COPY Directory.Build.props ./
-COPY Directory.Packages.props ./
+# Layer 1: Copy only props and project files (minimal cache invalidation)
+COPY Directory.Build.props Directory.Packages.props *.slnx ./
 COPY src/Application/Application.csproj src/Application/
 COPY src/Domain/Domain.csproj src/Domain/
 COPY src/Infrastructure/Infrastructure.csproj src/Infrastructure/
 COPY src/Shared/Shared.csproj src/Shared/
 COPY src/Web/Web.csproj src/Web/
-COPY *.slnx ./
 
-# Restore dependencies (cached unless project files change)
+# Layer 2: Restore dependencies (cached unless .csproj or .props files change)
 RUN dotnet restore src/Web/Web.csproj
 
-# Copy only backend source (exclude frontend/node_modules)
-COPY src/Application/ src/Application/
-COPY src/Domain/ src/Domain/
-COPY src/Infrastructure/ src/Infrastructure/
-COPY src/Shared/ src/Shared/
-COPY src/Web/Backfill/ src/Web/Backfill/
-COPY src/Web/Bot/ src/Web/Bot/
-COPY src/Web/Endpoints/ src/Web/Endpoints/
-COPY src/Web/Infrastructure/ src/Web/Infrastructure/
-COPY src/Web/Middleware/ src/Web/Middleware/
-COPY src/Web/Properties/ src/Web/Properties/
-COPY src/Web/wwwroot/ src/Web/wwwroot/
-COPY src/Web/appsettings*.json src/Web/
-COPY src/Web/DependencyInjection.cs src/Web/
-COPY src/Web/GlobalUsings.cs src/Web/
-COPY src/Web/Program.cs src/Web/
+# Layer 3: Copy source code (invalidates cache only when source changes)
+COPY src/ src/
 
-# Build and publish
+# Layer 4: Build and publish
 # OpenApiGenerateDocuments=false: document generation runs the whole app (including DB init),
 # which must not happen during an image build; docs are served live via MapOpenApi at runtime
 WORKDIR /src/src/Web
 RUN dotnet publish Web.csproj -c Release -o /app/publish /p:UseAppHost=false /p:PublishRunWebpack=false /p:OpenApiGenerateDocuments=false
 
+# Layer 5: Install Chromium for Playwright (in build stage)
+# Moves installation to build stage so Chromium isn't re-downloaded in runtime
+# when the build output is copied - Chromium is part of the build layer cache
+WORKDIR /app/publish
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        wget \
+    && ./.playwright/node/linux-x64/node ./.playwright/package/cli.js install --with-deps chromium \
+    && rm -rf /var/lib/apt/lists/*
+
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
-# Copy published application
+# Copy published application (includes cached Chromium)
 COPY --from=build /app/publish .
+COPY --from=build /ms-playwright /ms-playwright
 
-# Install wget for health checks (not included in slim runtime images)
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends wget \
-    && rm -rf /var/lib/apt/lists/*
-
-# Chromium для Playwright (обновление cookies Яндекс.Календаря).
-# Ставим через node-драйвер, который Microsoft.Playwright кладёт в publish (.playwright/)
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-RUN ./.playwright/node/linux-x64/node ./.playwright/package/cli.js install --with-deps chromium \
-    && rm -rf /var/lib/apt/lists/*
-
-# cookies и профиль браузера Яндекса (монтируется volume)
+# Prepare directories for Yandex browser data (mounted as volume)
 RUN mkdir -p /app/data/yandex
 
 # Expose the port the app runs on
