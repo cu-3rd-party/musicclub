@@ -61,7 +61,25 @@ public class FakeTelegramBotClient : ITelegramBotClient
         CancellationToken cancellationToken = default)
     {
         Requests.Add(request!);
-        return Task.FromResult<TResponse>(default!);
+
+        // Правдоподобные ответы для запросов, результат которых использует код
+        object? response = request switch
+        {
+            SendMessageRequest send => new Message
+            {
+                Id = Requests.Count,
+                Chat = new Chat { Id = send.ChatId.Identifier ?? 0 },
+                Text = send.Text,
+            },
+            CreateForumTopicRequest topic => new ForumTopic
+            {
+                MessageThreadId = Requests.Count,
+                Name = topic.Name,
+            },
+            _ => null,
+        };
+
+        return Task.FromResult(response is TResponse typed ? typed : default!);
     }
 
     public Task<bool> TestApi(CancellationToken cancellationToken = default)
