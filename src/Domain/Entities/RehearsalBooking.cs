@@ -31,9 +31,9 @@ public class RehearsalBooking
     public long RequesterTgUserId { get; set; }
 
     /// <summary>
-    /// User ID Ильи (тренера), если требуется его участие.
+    /// User ID роуди, если требуется его участие.
     /// </summary>
-    public Guid? CoachUserId { get; set; }
+    public Guid? RoadieUserId { get; set; }
 
     /// <summary>
     /// ID песни, к которой привязана репетиция (опционально).

@@ -545,8 +545,9 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                         .HasColumnType("character varying(2048)")
                         .HasColumnName("calendar_url");
 
-                    b.Property<Guid?>("CoachUserId")
-                        .HasColumnType("uuid");
+                    b.Property<Guid?>("RoadieUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("roadie_user_id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .ValueGeneratedOnAdd()

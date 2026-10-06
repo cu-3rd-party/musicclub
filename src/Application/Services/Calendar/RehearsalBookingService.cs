@@ -26,9 +26,9 @@ public interface IRehearsalBookingService
         CancellationToken ct = default);
 
     /// <summary>
-    /// Создаёт бронирование с запросом к Илье (pending).
+    /// Создаёт бронирование с запросом к роуди (pending).
     /// </summary>
-    Task<RehearsalBooking> CreateBookingWithCoachAsync(
+    Task<RehearsalBooking> CreateBookingWithRoadieAsync(
         long requesterTgUserId,
         DateTime scheduledAt,
         Guid? songId,
@@ -135,14 +135,14 @@ public class RehearsalBookingService(
         return booking;
     }
 
-    public async Task<RehearsalBooking> CreateBookingWithCoachAsync(
+    public async Task<RehearsalBooking> CreateBookingWithRoadieAsync(
         long requesterTgUserId,
         DateTime scheduledAt,
         Guid? songId,
         int durationMinutes = DefaultDurationMinutes,
         CancellationToken ct = default)
     {
-        // Тренер пока не задан отдельно: заявку подтверждает любой с правом events.edit
+        // Роуди определяется по назначенному роуди песни: заявку подтверждает роуди или любой с правом events.edit
         await EnsureCanBookAsync(requesterTgUserId, songId, ct);
         var booking = NewBooking(requesterTgUserId, scheduledAt, songId, durationMinutes, BookingStatus.Pending);
 

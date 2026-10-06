@@ -30,7 +30,8 @@ public class RehearsalBookingConfiguration : IEntityTypeConfiguration<RehearsalB
         builder.Property(b => b.RequesterTgUserId)
             .IsRequired();
 
-        builder.Property(b => b.CoachUserId)
+        builder.Property(b => b.RoadieUserId)
+            .HasColumnName("roadie_user_id")
             .HasColumnType("uuid");
 
         builder.Property(b => b.SongId)

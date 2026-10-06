@@ -46,9 +46,9 @@ public interface IRehearsalBookingRepository : IRepository<RehearsalBooking>
         CancellationToken ct = default);
 
     /// <summary>
-    /// Находит все pending-бронирования, ожидающие подтверждения Ильёй.
+    /// Находит все pending-бронирования, ожидающие подтверждения роуди.
     /// </summary>
-    Task<IReadOnlyList<RehearsalBooking>> GetPendingForCoachAsync(
+    Task<IReadOnlyList<RehearsalBooking>> GetPendingForRoadieAsync(
         CancellationToken ct = default);
 
     /// <summary>

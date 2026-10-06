@@ -314,7 +314,7 @@ public class BotRehearsalCommandsHandler(
         RehearsalBooking booking;
         try
         {
-            booking = await bookingService.CreateBookingWithCoachAsync(user.Id, scheduledAt, song.Id, ct: ct);
+            booking = await bookingService.CreateBookingWithRoadieAsync(user.Id, scheduledAt, song.Id, ct: ct);
         }
         catch (BookingRuleException ex)
         {
@@ -369,7 +369,7 @@ public class BotRehearsalCommandsHandler(
             return;
         }
 
-        var pending = (await bookingRepository.GetPendingForCoachAsync(ct))
+        var pending = (await bookingRepository.GetPendingForRoadieAsync(ct))
             .Where(b => b.ScheduledAt > DateTimeOffset.UtcNow)
             .OrderBy(b => b.ScheduledAt)
             .ToList();

@@ -80,7 +80,7 @@ public class RehearsalBookingRepository : Repository<RehearsalBooking>, IRehears
             .ToListAsync(ct);
     }
 
-    public async Task<IReadOnlyList<RehearsalBooking>> GetPendingForCoachAsync(
+    public async Task<IReadOnlyList<RehearsalBooking>> GetPendingForRoadieAsync(
         CancellationToken ct = default)
     {
         return await Query()
