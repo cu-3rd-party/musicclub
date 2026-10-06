@@ -36,6 +36,7 @@ jobs:
     name: Run tests
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.environment != 'prod'
 
     services:
       postgres:
@@ -114,7 +115,7 @@ jobs:
   build:
     name: Build and push images
     needs: test
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/master' && (github.event_name != 'workflow_dispatch' || github.event.inputs.environment != 'prod')
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -259,8 +260,7 @@ jobs:
 
   deploy-prod:
     name: Deploy to prod
-    needs: build
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prod'
     runs-on: ubuntu-latest
     environment: prod
     timeout-minutes: 15
