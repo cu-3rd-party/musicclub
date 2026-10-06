@@ -1,4 +1,5 @@
 using CuMusicClub.Application.Services.Calendar;
+using CuMusicClub.Application.UnitTests.Common;
 using CuMusicClub.Domain.Abstractions;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Domain.Enums;
@@ -57,8 +58,8 @@ public class DayScheduleServiceTests
             .ReturnsAsync([_withLogin.Id, _withoutLogin.Id, _excluded.Id]);
 
         var users = new Mock<IApplicationUserRepository>();
-        foreach (var user in new[] { _withLogin, _withoutLogin, _excluded })
-            users.Setup(r => r.FindByIdAsync(It.Is<object[]>(k => (Guid) k[0] == user.Id))).ReturnsAsync(user);
+        users.Setup(r => r.Query())
+            .Returns(() => new[] { _withLogin, _withoutLogin, _excluded }.AsAsyncQueryable());
 
         _service = new DayScheduleService(_room.Object, _external.Object, _bookings.Object, assignments.Object,
             users.Object, NullLogger<DayScheduleService>.Instance);
