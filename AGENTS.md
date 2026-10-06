@@ -244,6 +244,23 @@ NGINX_PORT=80
 - **DTO:** суффикс `Dto` или `Request`/`Response`.
 - **Репозитории:** интерфейс `I{Entity}Repository`, реализация `{Entity}Repository`.
 
+## Известные исправления (2026-10-06)
+
+Проведен полный аудит логики бекенда. **Найдено и исправлено 10 багов:**
+
+1. **SongService.CreateAsync** — проверка неправильного права (`ParticipationEditOwn` → `SongsEditOwn`)
+2. **SongService.UpdateAsync** — `ThumbnailUrl` устанавливается с null `ThumbnailDataEntryId`
+3. **TelegramChatService.DeleteTopic** — потенциальный null reference при `Remove(topic)`
+4. **CalendarService.CreateEventAsync** — отсутствует валидация что `StartAt < EndAt`
+5. **ApplicationUserRepository.SetPreferencesAsync** — ранний return без сохранения данных
+6. **Data.Create endpoint** — добавлен лимит на размер файла (10MB max)
+7. **SongService.JoinRoleAsync/LeaveRoleAsync** — неправильная проверка preferences при null
+8. **RehearsalBookingRepository.ToUtc** — неправильная обработка `DateTime.Kind.Utc`
+9. **SongService.RoleManagement.ReplaceRolesAsync** — `song.IsFull` считается на основе старых данных
+10. **Data entry validation** — ограничена максимальная длина загружаемых файлов
+
+Все исправления закоммичены в `cbbdc7f` и `1502f3a`.
+
 ## Полезные команды
 
 ```bash
