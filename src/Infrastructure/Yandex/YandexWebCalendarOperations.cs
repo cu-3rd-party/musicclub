@@ -318,7 +318,7 @@ public sealed class YandexWebCalendarOperations(
         return result;
     }
 
-    private static IEnumerable<JsonElement> EnumerateEvents(JsonElement data)
+    internal static IEnumerable<JsonElement> EnumerateEvents(JsonElement data)
     {
         if (data.ValueKind == JsonValueKind.Object
             && data.TryGetProperty("events", out var events)
@@ -328,7 +328,7 @@ public sealed class YandexWebCalendarOperations(
         return [];
     }
 
-    private static string? GetString(JsonElement e, string property)
+    internal static string? GetString(JsonElement e, string property)
     {
         if (e.ValueKind != JsonValueKind.Object || !e.TryGetProperty(property, out var value))
             return null;
@@ -344,7 +344,7 @@ public sealed class YandexWebCalendarOperations(
     /// <summary>
     ///     Время от Яндекса: либо с Z/смещением, либо «наивное» локальное (МСК), как разбирал yandex_api.py.
     /// </summary>
-    private static DateTime ParseYandexTime(string? value)
+    internal static DateTime ParseYandexTime(string? value)
     {
         if (string.IsNullOrEmpty(value))
             return default;

@@ -1,5 +1,6 @@
 using CuMusicClub.Domain.Abstractions;
 using CuMusicClub.Domain.Entities;
+using CuMusicClub.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace CuMusicClub.Infrastructure.Data.Repositories;
@@ -36,6 +37,16 @@ public class CalendarEventRepository : Repository<CalendarEvent>, ICalendarEvent
     {
         return await Query()
             .Where(e => e.SourceType == sourceType && e.SourceId == sourceId && e.UserId == userId)
+            .ToListAsync(ct);
+    }
+
+    public async Task<IEnumerable<CalendarEvent>> GetActiveClubEventsAsync(DateTime from, DateTime to, CancellationToken ct = default)
+    {
+        return await Query()
+            .Where(e => e.DeletedAt == null
+                        && e.EventType != CalendarEventType.Personal
+                        && e.StartAt < to && e.EndAt > from)
+            .OrderBy(e => e.StartAt)
             .ToListAsync(ct);
     }
 }

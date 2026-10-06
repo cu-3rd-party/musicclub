@@ -15,6 +15,11 @@ public sealed record YandexWebAuthState(string CookieHeader, string Uid, string 
 /// </summary>
 public interface IYandexWebSession
 {
+    /// <summary>
+    ///     Есть ли чем авторизоваться: файл cookies, cookies в конфиге или логин/пароль для Playwright.
+    /// </summary>
+    bool IsConfigured { get; }
+
     Task<YandexWebAuthState> GetStateAsync(CancellationToken ct = default);
 
     /// <summary>
@@ -41,6 +46,17 @@ public sealed partial class YandexWebSession(
 
     private YandexWebAuthState? _state;
     private DateTime _lastRefreshUtc = DateTime.MinValue;
+
+    public bool IsConfigured
+    {
+        get
+        {
+            return _state != null
+                   || File.Exists(Path.GetFullPath(_options.CookiePath))
+                   || !string.IsNullOrWhiteSpace(_options.Cookie)
+                   || (!string.IsNullOrWhiteSpace(_options.Login) && !string.IsNullOrWhiteSpace(_options.Password));
+        }
+    }
 
     public async Task<YandexWebAuthState> GetStateAsync(CancellationToken ct = default)
     {

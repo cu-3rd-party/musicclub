@@ -129,6 +129,7 @@ public static class DependencyInjection
             builder.Services.Configure<YandexCaldavConfig>(builder.Configuration.GetSection("YandexCalDav"));
             YandexCalDavDi.AddYandexCalDav(builder.Services);
             builder.Services.AddScoped<ICalDavOperations, CalDavOperationsAdapter>();
+            builder.Services.AddScoped<IExternalScheduleProvider, NullExternalScheduleProvider>();
             return;
         }
 
@@ -153,6 +154,7 @@ public static class DependencyInjection
         builder.Services.AddSingleton<IYandexWebSession, YandexWebSession>();
         builder.Services.AddSingleton<IYandexMayaClient, YandexMayaClient>();
         builder.Services.AddScoped<ICalDavOperations, YandexWebCalendarOperations>();
+        builder.Services.AddScoped<IExternalScheduleProvider, YandexWebScheduleProvider>();
 
         // Без LayerId интеграция не настроена — не гоняем браузер зря
         if (yandexOptions.LayerId.HasValue)

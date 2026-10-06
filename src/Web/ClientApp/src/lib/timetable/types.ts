@@ -1,8 +1,22 @@
-import type { Song } from "$lib/songs/types";
+export type TimetableEventKind =
+    "Rehearsal" | "Performance" | "Personal" | "External";
 
 export type TimetableEvent = {
     id: string;
-    song: Song;
-    start: number; // minutes after midnight
-    end: number; // minutes after midnight
+    title: string;
+    kind: TimetableEventKind;
+    startAt: Date;
+    endAt: Date;
+    start: number; // minutes after midnight (в пределах дня колонки)
+    end: number; // minutes after midnight (в пределах дня колонки)
+    songId: string | null;
+    status: string | null;
+    location: string | null;
+    canDelete: boolean;
+};
+
+/** Событие с раскладкой по дорожкам, если события пересекаются. */
+export type PositionedTimetableEvent = TimetableEvent & {
+    lane: number;
+    lanes: number;
 };

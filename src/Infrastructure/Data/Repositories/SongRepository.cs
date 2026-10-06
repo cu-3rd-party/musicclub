@@ -89,4 +89,12 @@ public sealed class SongRepository(DbContext dbContext) : Repository<Song>(dbCon
             .ThenInclude(a => a!.User)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyDictionary<Guid, string>> GetTitlesByIdsAsync(IReadOnlyCollection<Guid> songIds,
+        CancellationToken cancellationToken = default)
+    {
+        return await Query()
+            .Where(s => songIds.Contains(s.Id))
+            .ToDictionaryAsync(s => s.Id, s => s.Title, cancellationToken);
+    }
 }

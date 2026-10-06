@@ -10,4 +10,7 @@ public interface ISongRoleAssignmentRepository : IRepository<SongRoleAssignment>
     /// <summary>ID всех пользователей, назначенных на роли песни.</summary>
     Task<IReadOnlyList<Guid>> GetMemberUserIdsBySongIdAsync(Guid songId,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Guid>> GetSongIdsByUserIdAsync(Guid userId,
+        CancellationToken cancellationToken = default);
 }

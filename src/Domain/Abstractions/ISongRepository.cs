@@ -24,4 +24,7 @@ public interface ISongRepository : IRepository<Song>
 
     /// <summary>Заполненные песни (все роли заняты) без созданного топика.</summary>
     Task<IReadOnlyList<Song>> GetFilledSongIdsWithoutTopicAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyDictionary<Guid, string>> GetTitlesByIdsAsync(IReadOnlyCollection<Guid> songIds,
+        CancellationToken cancellationToken = default);
 }

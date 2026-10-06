@@ -57,4 +57,12 @@ public interface IRehearsalBookingRepository : IRepository<RehearsalBooking>
     Task<IReadOnlyList<RehearsalBooking>> GetAllByStatusAsync(
         BookingStatus status,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Неотменённые бронирования (все статусы, кроме Rejected/Cancelled) в интервале.
+    /// </summary>
+    Task<IReadOnlyList<RehearsalBooking>> GetActiveInRangeAsync(
+        DateTimeOffset from,
+        DateTimeOffset to,
+        CancellationToken ct = default);
 }
