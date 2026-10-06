@@ -118,6 +118,12 @@ public class RehearsalBookingRepository : Repository<RehearsalBooking>, IRehears
     /// </summary>
     private static DateTime ToUtc(DateTime value)
     {
-        return value.Kind == DateTimeKind.Local ? value.ToUniversalTime() : value.FromMskToUtc();
+        return value.Kind switch
+        {
+            DateTimeKind.Local => value.ToUniversalTime(),
+            DateTimeKind.Utc => value,
+            DateTimeKind.Unspecified => value.FromMskToUtc(),
+            _ => value
+        };
     }
 }
