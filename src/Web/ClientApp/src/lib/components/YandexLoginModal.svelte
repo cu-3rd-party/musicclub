@@ -66,7 +66,7 @@
                 </Label>
                 <Input
                     id="yandex-login-modal"
-                    value={input}
+                    bind:value={input}
                     placeholder="ivan.ivanov"
                     onkeydown={(e) => {
                         if (e.key === "Enter") handleSubmit();

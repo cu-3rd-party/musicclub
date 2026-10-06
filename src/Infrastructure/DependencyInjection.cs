@@ -1,20 +1,21 @@
 ﻿using System.Text;
 using CuMusicClub.Application.Common.Options;
+using CuMusicClub.Application.Services.Calendar;
 using CuMusicClub.Domain.Abstractions;
-using CuMusicClub.Domain.Entities;
 using CuMusicClub.Infrastructure.Data;
 using CuMusicClub.Infrastructure.Data.Interceptors;
 using CuMusicClub.Infrastructure.Data.Repositories;
 using CuMusicClub.Infrastructure.Yandex;
+using CuMusicClub.Infrastructure.YandexCalDav;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Telegram.Bot;
+using YandexCalDavDi = CuMusicClub.Infrastructure.YandexCalDav.Config.DependencyInjection;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -98,6 +99,7 @@ public static class DependencyInjection
         builder.Services.AddScoped<ISongRoadieRepository, SongRoadieRepository>();
         builder.Services.AddScoped<ICalendarEventRepository, CalendarEventRepository>();
         builder.Services.AddScoped<ICalendarFeedRepository, CalendarFeedRepository>();
+        builder.Services.AddScoped<IRehearsalBookingRepository, RehearsalBookingRepository>();
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         builder.Services.AddScoped<ApplicationDbContextInitialiser>();
@@ -110,5 +112,9 @@ public static class DependencyInjection
 
         // Playwright для обновления cookies Яндекс.Календаря
         builder.Services.AddScoped<IYandexCookieRefresher, YandexCookieRefresher>();
+
+        // Yandex CalDAV client
+        YandexCalDavDi.AddYandexCalDav(builder.Services);
+        builder.Services.AddScoped<ICalDavOperations, CalDavOperationsAdapter>();
     }
 }

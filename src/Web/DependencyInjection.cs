@@ -27,6 +27,8 @@ public static class DependencyInjection
 
         builder.Services.Configure<BotOptions>(builder.Configuration.GetSection(BotOptions.SectionName));
         builder.Services.AddScoped<BotUpdateHandler>();
+        builder.Services.AddScoped<BotRehearsalCommandsHandler>();
+        builder.Services.AddScoped<BotScheduleCommandsHandler>();
         builder.Services.AddHostedService<TelegramBotHostedService>();
         builder.Services.AddHttpClient();
         builder.Services.AddHostedService<ThumbnailBackfillHostedService>();
@@ -34,5 +36,6 @@ public static class DependencyInjection
         builder.Services.AddHostedService<RoadieBackfillHostedService>();
         builder.Services.AddHostedService<RoadieAutoAssignHostedService>();
         builder.Services.AddHostedService<TopicBackfillHostedService>();
+        builder.Services.AddHostedService<CalendarSyncBackfillHostedService>();
     }
 }

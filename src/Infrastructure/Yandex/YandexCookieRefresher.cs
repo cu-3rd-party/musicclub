@@ -1,20 +1,18 @@
-using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Playwright;
 
 namespace CuMusicClub.Infrastructure.Yandex;
 
 /// <summary>
-/// Реализация сервиса обновления cookies Яндекс.Календаря через Playwright.
+///     Реализация сервиса обновления cookies Яндекс.Календаря через Playwright.
 /// </summary>
-public partial class YandexCookieRefresher : IYandexCookieRefresher
+public class YandexCookieRefresher : IYandexCookieRefresher
 {
-    private readonly string _cookiePath;
-    private readonly string _profileDir;
-    private readonly ILogger<YandexCookieRefresher> _logger;
-
     private const string TargetUrl = "https://calendar.yandex.ru/";
     private const string ProfileDirName = ".yandex_profile";
+    private readonly string _cookiePath;
+    private readonly ILogger<YandexCookieRefresher> _logger;
+    private readonly string _profileDir;
 
     public YandexCookieRefresher(
         ILogger<YandexCookieRefresher> logger,
@@ -26,30 +24,30 @@ public partial class YandexCookieRefresher : IYandexCookieRefresher
         _profileDir = profileDir ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ProfileDirName);
     }
 
-    public async Task<bool> RefreshCookiesAsync(bool headless = true, bool forceLogin = false, CancellationToken ct = default)
+    public async Task<bool> RefreshCookiesAsync(bool headless = true, bool forceLogin = false,
+        CancellationToken ct = default)
     {
-        _logger.LogInformation("🔄 Запуск обновления cookies Яндекс... (headless={Headless}, forceLogin={ForceLogin})", 
+        _logger.LogInformation("🔄 Запуск обновления cookies Яндекс... (headless={Headless}, forceLogin={ForceLogin})",
             headless, forceLogin);
 
         var absProfileDir = Path.GetFullPath(_profileDir);
         var absCookiePath = Path.GetFullPath(_cookiePath);
 
         var playwright = await Playwright.CreateAsync();
-        var browser = await playwright.Chromium.LaunchPersistentContextAsync(absProfileDir, new()
-        {
-            Headless = headless,
-            Args = new[] { "--disable-blink-features=AutomationControlled" },
-            ViewportSize = new() { Width = 1280, Height = 800 },
-        });
+        var browser = await playwright.Chromium.LaunchPersistentContextAsync(absProfileDir,
+            new BrowserTypeLaunchPersistentContextOptions
+            {
+                Headless = headless,
+                Args = new[] { "--disable-blink-features=AutomationControlled" },
+                ViewportSize = new ViewportSize { Width = 1280, Height = 800 }
+            });
 
         try
         {
-
             var page = browser.Pages.FirstOrDefault() ?? await browser.NewPageAsync();
 
             // Если есть существующий cookie.txt, загружаем cookies
             if (File.Exists(absCookiePath))
-            {
                 try
                 {
                     var oldCookieStr = await File.ReadAllTextAsync(absCookiePath, ct);
@@ -61,11 +59,11 @@ public partial class YandexCookieRefresher : IYandexCookieRefresher
                 {
                     _logger.LogWarning(ex, "⚠️ Не удалось прочитать старый cookie.txt");
                 }
-            }
 
             _logger.LogInformation("🌐 Переход на {TargetUrl}...", TargetUrl);
 
-            await page.GotoAsync(TargetUrl, new() { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 45000 });
+            await page.GotoAsync(TargetUrl,
+                new PageGotoOptions { WaitUntil = WaitUntilState.DOMContentLoaded, Timeout = 45000 });
             await page.WaitForTimeoutAsync(3000);
 
             // Проверяем, попали ли на страницу логина
@@ -78,17 +76,17 @@ public partial class YandexCookieRefresher : IYandexCookieRefresher
                     _logger.LogInformation("💡 Открываем окно браузера для входа...");
                     await browser.CloseAsync();
                     // Перезапускаем в не-headless режиме
-                    return await RefreshCookiesAsync(headless: false, forceLogin: true, ct);
+                    return await RefreshCookiesAsync(false, true, ct);
                 }
                 else
                 {
                     _logger.LogInformation("⏳ Пожалуйста, авторизуйтесь в открывшемся окне браузера...");
-                    
+
                     // Ждем авторизации (максимум 3 минуты)
                     for (var i = 0; i < 36; i++)
                     {
                         await Task.Delay(5000, ct);
-                        
+
                         if (!page.Url.Contains("passport.yandex.ru") && page.Url.Contains("calendar.yandex.ru"))
                         {
                             _logger.LogInformation("✅ Авторизация успешно выполнена!");
@@ -125,7 +123,7 @@ public partial class YandexCookieRefresher : IYandexCookieRefresher
 
             var yandexLogin = yandexCookies.FirstOrDefault(c => c.Name == "yandex_login")?.Value ?? "н/д";
             _logger.LogInformation(
-                "✅ Файл {CookiePath} успешно обновлен! (Получено {Count} cookies, логин: {Login})", 
+                "✅ Файл {CookiePath} успешно обновлен! (Получено {Count} cookies, логин: {Login})",
                 _cookiePath, yandexCookies.Count, yandexLogin);
 
             return true;
@@ -143,12 +141,12 @@ public partial class YandexCookieRefresher : IYandexCookieRefresher
     }
 
     /// <summary>
-    /// Парсит строку cookies в формат Playwright.
+    ///     Парсит строку cookies в формат Playwright.
     /// </summary>
     private static List<Cookie> ParseCookieString(string cookieStr)
     {
         var cookies = new List<Cookie>();
-        
+
         foreach (var item in cookieStr.Split(';'))
         {
             var parts = item.Split('=', 2);
@@ -162,7 +160,7 @@ public partial class YandexCookieRefresher : IYandexCookieRefresher
                 Name = key,
                 Value = value,
                 Domain = ".yandex.ru",
-                Path = "/",
+                Path = "/"
             });
         }
 

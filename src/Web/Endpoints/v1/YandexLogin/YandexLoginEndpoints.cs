@@ -12,13 +12,8 @@ namespace CuMusicClub.Web.Endpoints.v1.YandexLogin;
 /// </summary>
 public static class YandexLoginEndpoints
 {
-    public static void MapYandexLoginEndpoints(this IEndpointRouteBuilder app)
+    public static void Map(RouteGroupBuilder group)
     {
-        var group = app.MapGroup("/")
-            .RequireAuthorization()
-            .WithTags("YandexLogin")
-            .WithOpenApi();
-
         group.MapGet("/", GetYandexLogin)
             .WithName("GetYandexLogin")
             .WithSummary("Получить YandexLogin текущего пользователя")

@@ -80,6 +80,46 @@ public class ApplicationDbContext : DbContext
         get { return Set<UserPreferences>(); }
     }
 
+    public DbSet<RehearsalBooking> RehearsalBookings
+    {
+        get { return Set<RehearsalBooking>(); }
+    }
+
+    public DbSet<CalendarEvent> CalendarEvents
+    {
+        get { return Set<CalendarEvent>(); }
+    }
+
+    public DbSet<CalendarFeed> CalendarFeeds
+    {
+        get { return Set<CalendarFeed>(); }
+    }
+
+    public DbSet<Event> Events
+    {
+        get { return Set<Event>(); }
+    }
+
+    public DbSet<EventTrackItem> EventTrackItems
+    {
+        get { return Set<EventTrackItem>(); }
+    }
+
+    public DbSet<EventParticipant> EventParticipants
+    {
+        get { return Set<EventParticipant>(); }
+    }
+
+    public DbSet<SongRoadie> SongRoadies
+    {
+        get { return Set<SongRoadie>(); }
+    }
+
+    public DbSet<RoadieTicket> RoadieTickets
+    {
+        get { return Set<RoadieTicket>(); }
+    }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         builder.HasPostgresEnum<Domain.Enums.SongLinkType>();
