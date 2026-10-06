@@ -5,6 +5,7 @@
         <AssemblyName>CuMusicClub.Infrastructure.IntegrationTests</AssemblyName>
         <IsPackable>false</IsPackable>
         <IsTestProject>true</IsTestProject>
+        <UserSecretsId>a23eb711-3d7c-49a8-a6c6-409a4e03fd21</UserSecretsId>
     </PropertyGroup>
 
     <ItemGroup>

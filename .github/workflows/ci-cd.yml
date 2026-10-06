@@ -89,6 +89,7 @@ jobs:
       - name: Run integration tests
         run: dotnet test tests/Infrastructure.IntegrationTests --no-build --configuration Release --logger "trx;LogFileName=test-results-integration.trx" --verbosity minimal
         env:
+          ASPNETCORE_ENVIRONMENT: Development
           ConnectionStrings__CuMusicClubDb: "Server=localhost;Port=5432;Database=db;Username=admin;Password=password"
 
       - name: Upload test results
