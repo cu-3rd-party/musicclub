@@ -156,19 +156,28 @@ public class BotUpdateHandler(
         if (message.Text == null) return;
 
         var (_, userMessage) = GetCommandArgsStr(message.Text);
-        var text = string.IsNullOrEmpty(userMessage)
-            ? $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a> вызывает участников песни!"
-            : WebUtility.HtmlEncode(userMessage);
-
-        text = song
+        
+        var participants = song
             .Roles.Where(x => x.Assignment?.User.TgUserId != null)
             .Select(x => x.Assignment!.User)
             .DistinctBy(x => x.TgUserId)
-            .Aggregate(text,
-                (current, userToMention) => current + $"<a href=\"tg://user?id={userToMention.TgUserId}\">\u2060</a>");
+            .ToList();
+
+        var messageHeader = $"<b>🎤 {WebUtility.HtmlEncode(song.Title)}</b>\n";
+        messageHeader += $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a> вызывает участников";
+        
+        if (!string.IsNullOrEmpty(userMessage))
+        {
+            messageHeader += $"\n\n💬 <i>{WebUtility.HtmlEncode(userMessage)}</i>";
+        }
+
+        messageHeader += $"\n\n👥 Участников: {participants.Count}";
+
+        var text = participants.Aggregate(messageHeader,
+            (current, userToMention) => current + $"<a href=\"tg://user?id={userToMention.TgUserId}\">\u2060</a>");
 
         await bot.SendMessage(message.Chat.Id,
-            $"<a href=\"tg://user?id={user.Id}\">{user.Username}</a> {text}",
+            text,
             messageThreadId: (int) topicId,
             parseMode: ParseMode.Html,
             cancellationToken: cancellationToken);
