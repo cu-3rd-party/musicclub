@@ -135,7 +135,7 @@ public class DayScheduleService(
             var item = busyHit.Title != null
                 ? new RoomTimelineItem(points[i], points[i + 1], RoomSlotStatus.Busy, busyHit.Title)
                 : coach.Any(c => c.Start <= mid && mid < c.End)
-                    ? new RoomTimelineItem(points[i], points[i + 1], RoomSlotStatus.Coach, "Свободно (с Ильёй)")
+                    ? new RoomTimelineItem(points[i], points[i + 1], RoomSlotStatus.Coach, "Свободно (с роуди)")
                     : new RoomTimelineItem(points[i], points[i + 1], RoomSlotStatus.Free, "Свободно (сам)");
 
             if (result.Count > 0 && result[^1].Status == item.Status && result[^1].Title == item.Title)

@@ -114,10 +114,10 @@ public class TelegramBotHostedService : BackgroundService
         BotCommand[] groupCommands =
         [
             new() { Command = "slots", Description = "Свободные окна на неделю" },
-            new() { Command = "slots_with", Description = "Окна, когда в зале Илья" },
+            new() { Command = "slots_with", Description = "Окна, когда доступен роуди" },
             new() { Command = "check", Description = "Проверить время: /check 19.02 18:00" },
             new() { Command = "take", Description = "Забронировать: /take 19.02 18:00" },
-            new() { Command = "take_with", Description = "Заявка с Ильёй: /take_with 19.02 18:00" },
+            new() { Command = "take_with", Description = "Заявка с роуди: /take_with 19.02 18:00" },
             new() { Command = "cancel", Description = "Отменить бронь: /cancel 19.02 18:00" },
             new() { Command = "day", Description = "Расписание дня картинкой" },
             new() { Command = "status", Description = "Брони на день" },

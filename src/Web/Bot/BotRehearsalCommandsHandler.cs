@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using CuMusicClub.Application.Common.Exceptions;
 using CuMusicClub.Application.Common.Extensions;
 using CuMusicClub.Application.Services.Calendar;
+using CuMusicClub.Application.Services.Roadie;
 using CuMusicClub.Domain.Abstractions;
 using CuMusicClub.Domain.Constants;
 using CuMusicClub.Domain.Entities;
@@ -27,6 +28,7 @@ public class BotRehearsalCommandsHandler(
     ITelegramBotClient botClient,
     IRehearsalBookingRepository bookingRepository,
     IApplicationUserRepository userRepository,
+    IRoadieService roadieService,
     ILogger<BotRehearsalCommandsHandler> logger)
 {
     public const string CallbackPrefix = "booking:";
@@ -212,7 +214,7 @@ public class BotRehearsalCommandsHandler(
 
         var sb = new StringBuilder();
         sb.AppendLine(withCoach
-            ? "📅 <b>Свободные окна с Ильёй на 7 дней</b>"
+            ? "📅 <b>Свободные окна с роуди на 7 дней</b>"
             : "📅 <b>Свободные окна на 7 дней</b>");
         sb.AppendLine($"🎵 {Html(song.Title)}");
         if (excluded.Count > 0)
@@ -222,7 +224,7 @@ public class BotRehearsalCommandsHandler(
         if (days.Count == 0)
         {
             sb.AppendLine(withCoach
-                ? "Окон со слотами Ильи не нашлось. Попробуйте /slots — без тренера."
+                ? "Окон с роуди не нашлось. Попробуйте /slots — общих окон."
                 : "Общих свободных окон не нашлось. Попробуйте исключить кого-то: <code>/slots без @username</code>");
         }
         else
@@ -231,8 +233,8 @@ public class BotRehearsalCommandsHandler(
             {
                 sb.AppendLine($"<b>{BotDateParser.FormatDayHeader(date)}</b>");
                 foreach (var w in windows)
-                    sb.AppendLine($"{(w.WithCoach ? "🟡" : "✅")} <code>{Range(w.Start, w.End)}</code>"
-                                  + (w.WithCoach ? " с Ильёй" : ""));
+                    sb.AppendLine($"{(w.WithCoach ? "🎸" : "✅")} <code>{Range(w.Start, w.End)}</code>"
+                                  + (w.WithCoach ? " с роуди" : ""));
             }
 
             sb.AppendLine();
@@ -294,6 +296,15 @@ public class BotRehearsalCommandsHandler(
         var song = await ResolveSongAsync(message, "/take_with", ct);
         if (song == null) return;
 
+        var roadie = await roadieService.GetRoadie(song, ct);
+        if (roadie == null)
+        {
+            await SendTextAsync(message,
+                $"❌ У группы «{Html(song.Title)}» ещё нет назначенного роуди.\n" +
+                $"Запросите роуди командой: <code>/ticket_roadie</code>");
+            return;
+        }
+
         if (!BotDateParser.TryParseDateTime(args, BotDateParser.NowMsk(), out var scheduledAt))
         {
             await SendUsageAsync(message, "/take_with");
@@ -316,10 +327,14 @@ public class BotRehearsalCommandsHandler(
             return;
         }
 
-        // Скрытые упоминания — чтобы организаторам пришло уведомление
+        var roadieMention = roadie.TgUserId is not null
+            ? $"<a href=\"tg://user?id={roadie.TgUserId}\">⁠</a>"
+            : "";
+
+        // Упоминания роуди и организаторов — чтобы пришло уведомление
         var approvers = await userRepository.GetUsersByPermissionAsync(Permission.EventsEdit, ct);
-        var pings = string.Concat(approvers
-            .Where(a => a.TgUserId is not null && a.TgUserId != user.Id)
+        var approverPings = string.Concat(approvers
+            .Where(a => a.TgUserId is not null && a.TgUserId != user.Id && a.Id != roadie.Id)
             .Select(a => $"<a href=\"tg://user?id={a.TgUserId}\">\u2060</a>"));
 
         var keyboard = new InlineKeyboardMarkup([
@@ -331,11 +346,12 @@ public class BotRehearsalCommandsHandler(
 
         await botClient.SendMessage(
             message.Chat.Id,
-            $"📝 <b>Заявка на репетицию с Ильёй</b>\n" +
+            $"📝 <b>Заявка на репетицию с роуди</b>\n" +
+            $"🎸 Роуди: {Html(roadie.DisplayName)}\n" +
             $"📅 {FormatBookingRange(booking)}\n" +
             $"🎵 {Html(song.Title)} — {Html(song.Artist)}\n" +
             $"👤 {Mention(user)}\n\n" +
-            $"⏳ Ждёт подтверждения организатора.{pings}",
+            $"⏳ Ждёт подтверждения.{roadieMention}{approverPings}",
             messageThreadId: message.MessageThreadId,
             parseMode: ParseMode.Html,
             replyMarkup: keyboard,
