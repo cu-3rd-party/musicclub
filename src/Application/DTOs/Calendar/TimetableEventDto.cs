@@ -49,6 +49,11 @@ public class TimetableEventDto
     /// Можно ли удалить событие (только свои личные события).
     /// </summary>
     public bool CanDelete { get; set; }
+
+    /// <summary>
+    /// Для репетиций: есть ли событие в Яндекс.Календаре (false — пока только в боте).
+    /// </summary>
+    public bool? SyncedToCalendar { get; set; }
 }
 
 public enum TimetableScope

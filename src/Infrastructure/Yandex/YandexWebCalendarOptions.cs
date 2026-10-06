@@ -30,6 +30,13 @@ public class YandexWebCalendarOptions
     public YandexCalendarProvider Provider { get; set; } = YandexCalendarProvider.Web;
 
     /// <summary>
+    ///     Писать ли бронирования бота в календарь. false — бронирования только в боте
+    ///     (занятость и личное расписание из Яндекса при этом продолжают работать).
+    ///     Когда снова включат — CalendarSyncBackfillHostedService догонит пропущенное.
+    /// </summary>
+    public bool SyncEnabled { get; set; } = true;
+
+    /// <summary>
     ///     ID слоя (календаря) в Яндекс.Календаре, куда бот пишет репетиции.
     ///     Виден в URL при редактировании календаря (layerId=...).
     /// </summary>

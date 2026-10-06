@@ -130,6 +130,7 @@ public static class DependencyInjection
             YandexCalDavDi.AddYandexCalDav(builder.Services);
             builder.Services.AddScoped<ICalDavOperations, CalDavOperationsAdapter>();
             builder.Services.AddScoped<IExternalScheduleProvider, NullExternalScheduleProvider>();
+            builder.Services.AddSingleton<ICalendarIntegration, YandexCalDavIntegration>();
             return;
         }
 
@@ -155,9 +156,9 @@ public static class DependencyInjection
         builder.Services.AddSingleton<IYandexMayaClient, YandexMayaClient>();
         builder.Services.AddScoped<ICalDavOperations, YandexWebCalendarOperations>();
         builder.Services.AddScoped<IExternalScheduleProvider, YandexWebScheduleProvider>();
+        builder.Services.AddSingleton<ICalendarIntegration, YandexWebCalendarIntegration>();
 
-        // Без LayerId интеграция не настроена — не гоняем браузер зря
-        if (yandexOptions.LayerId.HasValue)
-            builder.Services.AddHostedService<YandexCookieRefreshHostedService>();
+        // Cookies нужны и без LayerId (занятость, личное расписание); без них сервис сам ничего не делает
+        builder.Services.AddHostedService<YandexCookieRefreshHostedService>();
     }
 }

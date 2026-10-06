@@ -133,7 +133,8 @@ public class TimetableService(
             Kind = TimetableEventKind.Rehearsal,
             Location = "Кинотеатр",
             SongId = b.SongId,
-            Status = b.Status.ToString()
+            Status = b.Status.ToString(),
+            SyncedToCalendar = !string.IsNullOrEmpty(b.CalDavEventUrl)
         }).ToList();
     }
 

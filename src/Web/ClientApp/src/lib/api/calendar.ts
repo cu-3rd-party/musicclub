@@ -105,6 +105,7 @@ export interface TimetableEventDto {
     songId?: string | null;
     status?: string | null;
     canDelete: boolean;
+    syncedToCalendar?: boolean | null;
 }
 
 /**

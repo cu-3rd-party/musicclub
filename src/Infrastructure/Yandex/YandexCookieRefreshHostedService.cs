@@ -16,9 +16,9 @@ public sealed class YandexCookieRefreshHostedService(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var interval = options.Value.RefreshInterval;
-        if (interval <= TimeSpan.Zero)
+        if (interval <= TimeSpan.Zero || !session.IsConfigured)
         {
-            logger.LogInformation("Фоновое обновление cookies Яндекса отключено");
+            logger.LogInformation("Фоновое обновление cookies Яндекса отключено (нет интервала или cookies/логина)");
             return;
         }
 

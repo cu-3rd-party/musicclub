@@ -35,7 +35,7 @@ public class YandexCookieRefresher(
             new BrowserTypeLaunchPersistentContextOptions
             {
                 Headless = headless,
-                Args = ["--disable-blink-features=AutomationControlled", "--no-sandbox"],
+                Args = ["--disable-blink-features=AutomationControlled", "--no-sandbox", "--disable-dev-shm-usage"],
                 ViewportSize = new ViewportSize { Width = 1280, Height = 800 },
                 Locale = "ru-RU",
                 TimezoneId = _options.TimeZone

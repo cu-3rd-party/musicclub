@@ -12,6 +12,7 @@ namespace CuMusicClub.Application.Services.Calendar;
 /// </summary>
 public class CalendarSyncService(
     ICalDavOperations calDavOperations,
+    ICalendarIntegration integration,
     IApplicationUserRepository userRepository,
     IRehearsalBookingRepository bookingRepository,
     ILogger<CalendarSyncService> logger) : ICalendarSyncService
@@ -19,11 +20,35 @@ public class CalendarSyncService(
     private const string SharedCalendarDisplayName = "MusicClub — Репетиции";
     private const string OrganizerEmail = "musicclub";
 
-    public async Task CreateBookingEventAsync(RehearsalBooking booking, CancellationToken ct = default)
+    /// <summary>
+    /// Пауза между запросами backfill, чтобы не упереться в лимиты Яндекса.
+    /// </summary>
+    private static readonly TimeSpan BackfillDelay = TimeSpan.FromMilliseconds(500);
+
+    public Task CreateBookingEventAsync(RehearsalBooking booking, CancellationToken ct = default)
     {
+        return CreateBookingEventAsync(booking, true, ct);
+    }
+
+    private async Task CreateBookingEventAsync(RehearsalBooking booking, bool inviteParticipants,
+        CancellationToken ct)
+    {
+        if (!integration.IsSyncEnabled)
+        {
+            logger.LogDebug("Синхронизация с календарём выключена — бронирование {BookingId} только в боте", booking.Id);
+            return;
+        }
+
+        // Уже в календаре (например, backfill и подтверждение пересеклись) — второй раз не создаём
+        if (!string.IsNullOrEmpty(booking.CalDavEventUrl))
+            return;
+
         var calendarUrl = await EnsureSharedCalendarExistsAsync(ct);
 
-        var participants = await BuildParticipantsForBookingAsync(booking, ct);
+        // Прошлые репетиции кладём без участников, чтобы не рассылать приглашения задним числом
+        var participants = inviteParticipants
+            ? await BuildParticipantsForBookingAsync(booking, ct)
+            : [];
 
         var icalUid = $"rehearsal-{booking.Id}@musicclub";
 
@@ -54,30 +79,37 @@ public class CalendarSyncService(
     {
         if (string.IsNullOrEmpty(booking.CalDavEventUrl))
         {
-            logger.LogWarning("Нет CalDAV URL для удаления бронирования {BookingId}", booking.Id);
+            logger.LogDebug("Бронирование {BookingId} не было в календаре — удалять нечего", booking.Id);
             return;
         }
+
+        // Ссылку не трогаем: backfill удалит событие, когда интеграцию снова включат
+        if (!integration.IsSyncEnabled)
+            return;
 
         try
         {
             await calDavOperations.DeleteEventAsync(booking.CalDavEventUrl, ct);
             logger.LogInformation("Удалено CalDAV-событие для бронирования {BookingId}", booking.Id);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            // Ссылку оставляем — backfill попробует удалить ещё раз
             logger.LogWarning(ex, "Не удалось удалить CalDAV-событие для бронирования {BookingId}", booking.Id);
+            return;
         }
-        finally
-        {
-            booking.CalDavEventUrl = null;
-            booking.CalDavEventETag = null;
-            booking.UpdatedAt = DateTimeOffset.UtcNow;
-            bookingRepository.Update(booking);
-        }
+
+        booking.CalDavEventUrl = null;
+        booking.CalDavEventETag = null;
+        booking.UpdatedAt = DateTimeOffset.UtcNow;
+        bookingRepository.Update(booking);
     }
 
     public async Task UpdateBookingEventAsync(RehearsalBooking booking, CancellationToken ct = default)
     {
+        if (!integration.IsSyncEnabled)
+            return;
+
         if (string.IsNullOrEmpty(booking.CalDavEventUrl))
         {
             await CreateBookingEventAsync(booking, ct);
@@ -122,6 +154,9 @@ public class CalendarSyncService(
         if (user == null || string.IsNullOrEmpty(user.YandexLogin))
             return false;
 
+        if (!integration.IsSyncEnabled)
+            return false;
+
         // Веб-API Яндекса видит занятость коллег по рабочему email; CalDAV-реализация вернёт false
         try
         {
@@ -139,31 +174,60 @@ public class CalendarSyncService(
         return await calDavOperations.GetCalendarsAsync(ct);
     }
 
-    public async Task<int> BackfillMissingEventsAsync(CancellationToken ct = default)
+    public async Task<CalendarBackfillResult> BackfillMissingEventsAsync(CancellationToken ct = default)
     {
-        var allBookings = await bookingRepository.GetAllByStatusAsync(BookingStatus.Confirmed, ct);
+        if (!integration.IsSyncEnabled)
+            return new CalendarBackfillResult(0, 0, 0);
 
-        var missingBookings = allBookings
+        int created = 0, deleted = 0, failed = 0;
+        var now = DateTimeOffset.UtcNow;
+
+        // Подтверждённые бронирования, которых нет в календаре: созданные, пока интеграция была выключена,
+        // или те, где Яндекс в момент бронирования не ответил
+        var missing = (await bookingRepository.GetAllByStatusAsync(BookingStatus.Confirmed, ct))
             .Where(b => string.IsNullOrEmpty(b.CalDavEventUrl))
             .ToList();
 
-        var createdCount = 0;
-
-        foreach (var booking in missingBookings)
+        foreach (var booking in missing)
         {
             try
             {
-                await CreateBookingEventAsync(booking, ct);
-                createdCount++;
-                logger.LogInformation("Backfilled CalDAV event for booking {BookingId}", booking.Id);
+                var isPast = booking.ScheduledAt.AddMinutes(booking.DurationMinutes) < now;
+                await CreateBookingEventAsync(booking, !isPast, ct);
+                await bookingRepository.SaveChangesAsync(ct);
+                created++;
+                logger.LogInformation("Backfill: бронирование {BookingId} ({ScheduledAt:u}) добавлено в календарь",
+                    booking.Id, booking.ScheduledAt);
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                logger.LogError(ex, "Failed to backfill CalDAV event for booking {BookingId}", booking.Id);
+                failed++;
+                logger.LogError(ex, "Backfill: не удалось добавить бронирование {BookingId} в календарь", booking.Id);
             }
+
+            await Task.Delay(BackfillDelay, ct);
         }
 
-        return createdCount;
+        // Отменённые/отклонённые, чьи события остались в календаре (отменили, пока интеграция была выключена)
+        var stale = (await bookingRepository.GetAllByStatusAsync(BookingStatus.Cancelled, ct))
+            .Concat(await bookingRepository.GetAllByStatusAsync(BookingStatus.Rejected, ct))
+            .Where(b => !string.IsNullOrEmpty(b.CalDavEventUrl))
+            .ToList();
+
+        foreach (var booking in stale)
+        {
+            await DeleteBookingEventAsync(booking, ct);
+            await bookingRepository.SaveChangesAsync(ct);
+
+            if (string.IsNullOrEmpty(booking.CalDavEventUrl))
+                deleted++;
+            else
+                failed++;
+
+            await Task.Delay(BackfillDelay, ct);
+        }
+
+        return new CalendarBackfillResult(created, deleted, failed);
     }
 
     public async Task UpdateEventParticipantsAsync(
@@ -171,7 +235,7 @@ public class CalendarSyncService(
         IEnumerable<string> newYandexEmails,
         CancellationToken ct = default)
     {
-        if (string.IsNullOrEmpty(booking.CalDavEventUrl))
+        if (!integration.IsSyncEnabled || string.IsNullOrEmpty(booking.CalDavEventUrl))
             return;
 
         var existing = await calDavOperations.GetEventAsync(booking.CalDavEventUrl, ct);

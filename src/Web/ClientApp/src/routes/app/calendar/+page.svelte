@@ -73,6 +73,7 @@
             status: dto.status ?? null,
             location: dto.location ?? null,
             canDelete: dto.canDelete,
+            syncedToCalendar: dto.syncedToCalendar ?? null,
         };
     }
 
@@ -298,6 +299,12 @@
                 </p>
                 {#if selected.location}
                     <p class="text-muted-foreground">{selected.location}</p>
+                {/if}
+                {#if selected.syncedToCalendar === false && selected.status === "Confirmed"}
+                    <p class="text-muted-foreground">
+                        Пока только в боте — появится в Яндекс.Календаре после
+                        синхронизации
+                    </p>
                 {/if}
             </div>
 

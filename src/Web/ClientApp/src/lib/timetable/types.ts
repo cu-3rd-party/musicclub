@@ -13,6 +13,7 @@ export type TimetableEvent = {
     status: string | null;
     location: string | null;
     canDelete: boolean;
+    syncedToCalendar: boolean | null;
 };
 
 /** Событие с раскладкой по дорожкам, если события пересекаются. */
