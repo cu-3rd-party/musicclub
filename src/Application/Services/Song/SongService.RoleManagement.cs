@@ -53,13 +53,14 @@ public partial class SongService
         // After removing roles, check if the song is now full (all remaining roles are filled)
         // and create a topic if one doesn't exist yet.
         // This handles the corner case where deleting the only unfilled role makes the song full.
-        if (song.SongTopic == null && song.IsFull)
+        if (song.SongTopic == null)
         {
             // Reload the song with full details to ensure we have the latest state
             var fullSong = await songs.FindByIdWithDetailsAsync(songId, cancellationToken)
                            ?? throw new NotFoundException(songId.ToString(), nameof(Domain.Entities.Song));
 
-            await new SongServiceTopics(telegramChatService).CreateTopicForFullSongAsync(fullSong, cancellationToken);
+            if (fullSong.IsFull)
+                await new SongServiceTopics(telegramChatService).CreateTopicForFullSongAsync(fullSong, cancellationToken);
         }
     }
 }
