@@ -1,6 +1,7 @@
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Net;
+using CuMusicClub.Application.Common.Extensions;
 using CuMusicClub.Application.Services.Calendar;
 using CuMusicClub.Application.Services.Telegram;
 using CuMusicClub.Domain.Abstractions;
@@ -14,33 +15,23 @@ namespace CuMusicClub.Web.Bot;
 
 /// <summary>
 /// Обработчик команд бронирования репетиций:
-/// /check, /slots, /slots_with, /take, /take_with, /approve, /reject, /cancel
+/// /check, /slots, /slots_with, /take, /take_with, /approve, /reject, /cancel.
+/// Свободные окна и проверка слота считаются через <see cref="IDayScheduleService"/> — так же, как в /day.
 /// </summary>
 public class BotRehearsalCommandsHandler(
     IRehearsalBookingService bookingService,
     ISongRepository songRepository,
     ISongTopicRepository songTopicRepository,
-    ITelegramChatService telegramChatService,
+    IDayScheduleService dayScheduleService,
     ITelegramBotClient botClient,
     IRehearsalBookingRepository bookingRepository,
     ILogger<BotRehearsalCommandsHandler> logger)
 {
-    private static readonly Regex CommandRegex = new(
-        @"^\/(?<command>[a-z0-9_]+)(?:@(?<botusername>[a-zA-Z0-9_]+))?(?:\s+(?<args>.*))?$",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Singleline);
+    private const int DefaultDurationMinutes = 80;
+    private const int MinSlotMinutes = 60;
+    private const int SlotsDays = 7;
 
-    private static readonly Regex DateRegex = new(@"^(\d{1,2})[./-](\d{1,2})$", RegexOptions.Compiled);
-    private static readonly Regex TimeRegex = new(@"^(\d{1,2}):?(\d{2})$", RegexOptions.Compiled);
-    private static readonly Dictionary<string, int> DayAliases = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["пн"] = 1, ["mon"] = 1,
-        ["вт"] = 2, ["tue"] = 2,
-        ["ср"] = 3, ["wed"] = 3,
-        ["чт"] = 4, ["thu"] = 4,
-        ["пт"] = 5, ["fri"] = 5,
-        ["сб"] = 6, ["sat"] = 6,
-        ["вс"] = 7, ["sun"] = 7,
-    };
+    private static readonly Regex MentionRegex = new(@"@?([A-Za-z0-9_]{3,})", RegexOptions.Compiled);
 
     public async Task HandleRehearsalCommandAsync(
         string command,
@@ -82,124 +73,193 @@ public class BotRehearsalCommandsHandler(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error handling rehearsal command {Command}", command);
-            await botClient.SendMessage(
-                message.Chat.Id,
-                "❌ Произошла ошибка. Попробуйте позже.",
-                cancellationToken: ct);
+            await SendTextAsync(message, "❌ Что-то пошло не так. Попробуйте позже.");
         }
     }
 
     private async Task HandleCheckAsync(string? args, Message message, User user, CancellationToken ct)
     {
-        var topic = ResolveTopic(message);
-        if (topic == null)
-        {
-            await SendTextAsync(message, "❌ Команда /check должна использоваться в теме песни.");
-            return;
-        }
+        var song = await ResolveSongAsync(message, "/check", ct);
+        if (song == null) return;
 
-        var song = await songRepository.FindByIdAsync(topic.SongId, ct);
-        if (song == null)
-        {
-            await SendTextAsync(message, "❌ Песня не найдена.");
-            return;
-        }
-
-        var parsed = ParseDateAndTime(args);
-        if (parsed == null)
+        if (!BotDateParser.TryParseDateTime(args, BotDateParser.NowMsk(), out var start))
         {
             await SendTextAsync(message,
-                "📋 Формат: /check ДД.MM ЧЧ:ММ или /check пн 17-19\n" +
-                "Пример: /check 19.02 18:00");
+                "📋 Формат: <code>/check ДАТА ВРЕМЯ</code>\n" +
+                $"Дата — {BotDateParser.DateHint}.\n" +
+                "Примеры: <code>/check 19.02 18:00</code>, <code>/check пт 17</code>");
             return;
         }
 
-        var (date, hour, minute) = parsed.Value;
-        var result = await bookingService.CheckAvailabilityAsync(song.Id, date, hour, minute, ct);
-
-        var statusIcon = result.IsAvailable ? "✅" : "⛔";
-        var statusText = result.IsAvailable
-            ? "Свободен"
-            : $"Занят: {string.Join(", ", result.BusyUsers)}";
-
-        await SendTextAsync(message, $"{statusIcon} {result.Message}");
-    }
-
-    private async Task HandleSlotsAsync(string? args, Message message, User user, CancellationToken ct, bool withCoach)
-    {
-        var topic = ResolveTopic(message);
-        if (topic == null)
-        {
-            await SendTextAsync(message, "❌ Команда /slots должна использоваться в теме песни.");
-            return;
-        }
-
-        var song = await songRepository.FindByIdAsync(topic.SongId, ct);
-        if (song == null)
-        {
-            await SendTextAsync(message, "❌ Песня не найдена.");
-            return;
-        }
-
-        var from = DateTime.Today;
-        var excludeUsernames = ParseExcludedUsers(args);
-
-        var result = withCoach
-            ? await bookingService.FindWeeklySlotsWithCoachAsync(song.Id, from, excludeUsernames, ct)
-            : await bookingService.FindWeeklySlotsAsync(song.Id, from, excludeUsernames, ct);
-
-        var title = withCoach
-            ? "📅 Свободные слоты на неделю (с Ильёй)"
-            : "📅 Свободные слоты на неделю";
-
-        if (result.AvailableSlots.Count == 0)
-        {
-            await SendTextAsync(message, $"{title}\n\n{result.Message}");
-            return;
-        }
+        var startUtc = ToUtcOffset(start);
+        var endUtc = startUtc.AddMinutes(DefaultDurationMinutes);
+        var schedule = await dayScheduleService.GetDayAsync(DateOnly.FromDateTime(start), song.Id, [], ct);
 
         var sb = new StringBuilder();
-        sb.AppendLine($"{title}");
+        sb.AppendLine($"🔍 <b>{BotDateParser.FormatDate(start)}, {Range(startUtc, endUtc)}</b>");
+        sb.AppendLine($"🎵 {Html(song.Title)}");
         sb.AppendLine();
 
-        foreach (var slot in result.AvailableSlots.Take(20))
+        var problems = 0;
+
+        if (startUtc < DateTimeOffset.UtcNow)
         {
-            sb.AppendLine($"  ⏰ {slot:dd.MM ddd HH:mm}");
+            sb.AppendLine("⚠️ Это время уже прошло.");
+            problems++;
         }
 
-        if (result.AvailableSlots.Count > 20)
-            sb.AppendLine($"  ... и ещё {result.AvailableSlots.Count - 20}");
+        if (start.Hour < DayScheduleService.WorkStartHour ||
+            start.AddMinutes(DefaultDurationMinutes) >
+            start.Date.AddHours(DayScheduleService.WorkEndHour))
+        {
+            sb.AppendLine(
+                $"⚠️ Выходит за рабочие часы зала ({DayScheduleService.WorkStartHour}:00–{DayScheduleService.WorkEndHour}:00).");
+            problems++;
+        }
+
+        var roomBusy = schedule.Room
+            .Where(r => r.Status == RoomSlotStatus.Busy && r.Start < endUtc && r.End > startUtc)
+            .ToList();
+        var coachSlot = schedule.Room
+            .Any(r => r.Status == RoomSlotStatus.Coach && r.Start < endUtc && r.End > startUtc);
+
+        if (!schedule.RoomKnown)
+            sb.AppendLine("🏠 Зал: ❔ расписание зала недоступно");
+        else if (roomBusy.Count > 0)
+        {
+            sb.AppendLine("🏠 Зал: ⛔ занят — " + string.Join(", ",
+                roomBusy.Select(r => $"{Html(r.Title)} <code>{Range(r.Start, r.End)}</code>")));
+            problems++;
+        }
+        else
+            sb.AppendLine(coachSlot ? "🏠 Зал: 🟡 свободен, слот Ильи" : "🏠 Зал: ✅ свободен");
+
+        var busyMembers = schedule.Members
+            .Where(m => m.Events.Any(e => e.Start < endUtc && e.End > startUtc))
+            .Select(m => Html(m.Name))
+            .ToList();
+        var unknownMembers = schedule.Members
+            .Where(m => m.Status != MemberScheduleStatus.Ok)
+            .Select(m => Html(m.Name))
+            .ToList();
+
+        if (schedule.Members.Count == 0)
+            sb.AppendLine("👥 Участники: у песни нет назначенных ролей");
+        else if (busyMembers.Count > 0)
+        {
+            sb.AppendLine("👥 Заняты: " + string.Join(", ", busyMembers));
+            problems++;
+        }
+        else
+            sb.AppendLine("👥 Участники: ✅ все свободны");
+
+        if (unknownMembers.Count > 0)
+            sb.AppendLine("❔ Не проверены (нет календаря): " + string.Join(", ", unknownMembers));
+
+        sb.AppendLine();
+        sb.AppendLine(problems == 0
+            ? $"👍 Можно бронировать: <code>/take {start:dd.MM HH:mm}</code>"
+            : "👎 Лучше выбрать другое время — см. /slots");
 
         await SendTextAsync(message, sb.ToString());
     }
 
+    private async Task HandleSlotsAsync(string? args, Message message, User user, CancellationToken ct, bool withCoach)
+    {
+        var command = withCoach ? "/slots_with" : "/slots";
+        var song = await ResolveSongAsync(message, command, ct);
+        if (song == null) return;
+
+        var excluded = ParseExcludedUsers(args);
+        var now = DateTimeOffset.UtcNow;
+        var today = BotDateParser.NowMsk().Date;
+
+        var status = await botClient.SendMessage(
+            message.Chat.Id,
+            "⏳ Ищу свободные окна на неделю…",
+            messageThreadId: message.MessageThreadId,
+            cancellationToken: ct);
+
+        var days = new List<(DateTime Date, List<FreeWindow> Windows)>();
+        var roomKnown = true;
+        var unknownMembers = new SortedSet<string>(StringComparer.CurrentCulture);
+        var membersCount = 0;
+
+        for (var i = 0; i < SlotsDays; i++)
+        {
+            var date = today.AddDays(i);
+            var schedule = await dayScheduleService.GetDayAsync(DateOnly.FromDateTime(date), song.Id, excluded, ct);
+
+            roomKnown &= schedule.RoomKnown;
+            membersCount = Math.Max(membersCount, schedule.Members.Count);
+            foreach (var member in schedule.Members.Where(m => m.Status != MemberScheduleStatus.Ok))
+                unknownMembers.Add(member.Name);
+
+            var windows = schedule.FreeWindows
+                .Where(w => !withCoach || w.WithCoach)
+                // Сегодня показываем только то, что ещё не началось
+                .Select(w => w.Start < now ? w with { Start = RoundUpToQuarter(now) } : w)
+                .Where(w => w.End - w.Start >= TimeSpan.FromMinutes(MinSlotMinutes))
+                .ToList();
+
+            if (windows.Count > 0)
+                days.Add((date, windows));
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine(withCoach
+            ? "📅 <b>Свободные окна с Ильёй на 7 дней</b>"
+            : "📅 <b>Свободные окна на 7 дней</b>");
+        sb.AppendLine($"🎵 {Html(song.Title)}");
+        if (excluded.Count > 0)
+            sb.AppendLine($"<i>Без учёта: {Html(string.Join(", ", excluded.Select(u => "@" + u)))}</i>");
+        sb.AppendLine();
+
+        if (days.Count == 0)
+        {
+            sb.AppendLine(withCoach
+                ? "Окон со слотами Ильи не нашлось. Попробуйте /slots — без тренера."
+                : "Общих свободных окон не нашлось. Попробуйте исключить кого-то: <code>/slots без @username</code>");
+        }
+        else
+        {
+            foreach (var (date, windows) in days)
+            {
+                sb.AppendLine($"<b>{BotDateParser.FormatDayHeader(date)}</b>");
+                foreach (var w in windows)
+                    sb.AppendLine($"{(w.WithCoach ? "🟡" : "✅")} <code>{Range(w.Start, w.End)}</code>"
+                                  + (w.WithCoach ? " с Ильёй" : ""));
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("Забронировать: <code>/take ДД.ММ ЧЧ:ММ</code>");
+        }
+
+        if (!roomKnown)
+            sb.AppendLine("⚠️ Расписание зала недоступно — занятость зала не учтена.");
+        if (membersCount == 0)
+            sb.AppendLine("⚠️ У песни нет участников с ролями — учтён только зал.");
+        if (unknownMembers.Count > 0)
+            sb.AppendLine($"❔ Не учтены (нет календаря): {Html(string.Join(", ", unknownMembers))}");
+
+        await botClient.EditMessageText(
+            message.Chat.Id,
+            status.MessageId,
+            sb.ToString(),
+            parseMode: ParseMode.Html,
+            cancellationToken: CancellationToken.None);
+    }
+
     private async Task HandleTakeAsync(string? args, Message message, User user, CancellationToken ct)
     {
-        var topic = ResolveTopic(message);
-        if (topic == null)
+        var song = await ResolveSongAsync(message, "/take", ct);
+        if (song == null) return;
+
+        if (!BotDateParser.TryParseDateTime(args, BotDateParser.NowMsk(), out var scheduledAt))
         {
-            await SendTextAsync(message, "❌ Команда /take должна использоваться в теме песни.");
+            await SendUsageAsync(message, "/take");
             return;
         }
-
-        var song = await songRepository.FindByIdAsync(topic.SongId, ct);
-        if (song == null)
-        {
-            await SendTextAsync(message, "❌ Песня не найдена.");
-            return;
-        }
-
-        var parsed = ParseDateAndTime(args);
-        if (parsed == null)
-        {
-            await SendTextAsync(message,
-                "📋 Формат: /take ДД.MM ЧЧ:ММ\n" +
-                "Пример: /take 19.02 18:00");
-            return;
-        }
-
-        var (date, hour, minute) = parsed.Value;
-        var scheduledAt = new DateTime(date.Year, date.Month, date.Day, hour, minute, 0);
 
         try
         {
@@ -220,31 +280,14 @@ public class BotRehearsalCommandsHandler(
 
     private async Task HandleTakeWithAsync(string? args, Message message, User user, CancellationToken ct)
     {
-        var topic = ResolveTopic(message);
-        if (topic == null)
+        var song = await ResolveSongAsync(message, "/take_with", ct);
+        if (song == null) return;
+
+        if (!BotDateParser.TryParseDateTime(args, BotDateParser.NowMsk(), out var scheduledAt))
         {
-            await SendTextAsync(message, "❌ Команда /take_with должна использоваться в теме песни.");
+            await SendUsageAsync(message, "/take_with");
             return;
         }
-
-        var song = await songRepository.FindByIdAsync(topic.SongId, ct);
-        if (song == null)
-        {
-            await SendTextAsync(message, "❌ Песня не найдена.");
-            return;
-        }
-
-        var parsed = ParseDateAndTime(args);
-        if (parsed == null)
-        {
-            await SendTextAsync(message,
-                "📋 Формат: /take_with ДД.MM ЧЧ:ММ\n" +
-                "Пример: /take_with 19.02 18:00");
-            return;
-        }
-
-        var (date, hour, minute) = parsed.Value;
-        var scheduledAt = new DateTime(date.Year, date.Month, date.Day, hour, minute, 0);
 
         try
         {
@@ -304,17 +347,11 @@ public class BotRehearsalCommandsHandler(
 
     private async Task HandleCancelAsync(string? args, Message message, User user, CancellationToken ct)
     {
-        var parsed = ParseDateAndTime(args);
-        if (parsed == null)
+        if (!BotDateParser.TryParseDateTime(args, BotDateParser.NowMsk(), out var scheduledAt))
         {
-            await SendTextAsync(message,
-                "📋 Формат: /cancel ДД.MM ЧЧ:ММ\n" +
-                "Пример: /cancel 19.02 18:00");
+            await SendUsageAsync(message, "/cancel");
             return;
         }
-
-        var (date, hour, minute) = parsed.Value;
-        var scheduledAt = new DateTime(date.Year, date.Month, date.Day, hour, minute, 0);
 
         try
         {
@@ -327,13 +364,23 @@ public class BotRehearsalCommandsHandler(
         }
     }
 
-    private SongTopic? ResolveTopic(Message message)
+    private async Task<Song?> ResolveSongAsync(Message message, string command, CancellationToken ct)
     {
-        if (!message.IsTopicMessage || message.MessageThreadId == null) return null;
+        SongTopic? topic = null;
+        if (message.IsTopicMessage && message.MessageThreadId is { } threadId)
+            topic = await songTopicRepository.FindByTopicIdAsync(threadId, ct);
 
-        return songTopicRepository.FindByTopicIdAsync(
-                (long) message.MessageThreadId, CancellationToken.None)
-            .GetAwaiter().GetResult();
+        if (topic == null)
+        {
+            await SendTextAsync(message, $"❌ Команду {command} нужно отправлять в топике песни.");
+            return null;
+        }
+
+        var song = await songRepository.FindByIdAsync(topic.SongId, ct);
+        if (song == null)
+            await SendTextAsync(message, "❌ Песня для этого топика не найдена.");
+
+        return song;
     }
 
     private async Task<RehearsalBooking?> ResolvePendingBooking(
@@ -345,99 +392,54 @@ public class BotRehearsalCommandsHandler(
         return pending.FirstOrDefault();
     }
 
-    private DateTime? ParseDatePart(string dateStr)
+    private Task SendUsageAsync(Message message, string command)
     {
-        // ДД.MM
-        if (DateRegex.Match(dateStr) is { Success: true } dateMatch)
-        {
-            var day = int.Parse(dateMatch.Groups[1].Value);
-            var month = int.Parse(dateMatch.Groups[2].Value);
-            var year = DateTime.Today.Year;
-            return new DateTime(year, month, day);
-        }
-
-        // пн, вт, ... (ближайший день)
-        if (DayAliases.TryGetValue(dateStr, out var dayOfWeek))
-        {
-            var today = (int) DateTime.Today.DayOfWeek;
-            today = today == 0 ? 7 : today; // Sunday = 7
-            var diff = dayOfWeek - today;
-            if (diff <= 0) diff += 7;
-            return DateTime.Today.AddDays(diff);
-        }
-
-        return null;
+        return SendTextAsync(message,
+            $"📋 Формат: <code>{command} ДАТА ВРЕМЯ</code>\n" +
+            $"Дата — {BotDateParser.DateHint}.\n" +
+            $"Пример: <code>{command} 19.02 18:00</code>");
     }
 
-    private (DateTime date, int hour, int minute)? ParseDateAndTime(string? args)
+    /// <summary>
+    /// «/slots без @user1 @user2» → [user1, user2].
+    /// </summary>
+    private static List<string> ParseExcludedUsers(string? args)
     {
-        if (string.IsNullOrWhiteSpace(args)) return null;
+        if (string.IsNullOrWhiteSpace(args)) return [];
 
-        var parts = args.Split([' ', '-'], StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length < 1) return null;
+        var withoutIndex = args.IndexOf("без", StringComparison.OrdinalIgnoreCase);
+        if (withoutIndex < 0) return [];
 
-        var date = ParseDatePart(parts[0]);
-        if (date == null) return null;
-
-        var hour = 18;
-        var minute = 0;
-
-        if (parts.Length >= 2)
-        {
-            var timeStr = parts[1];
-            if (TimeRegex.Match(timeStr) is { Success: true } timeMatch)
-            {
-                hour = int.Parse(timeMatch.Groups[1].Value);
-                minute = int.Parse(timeMatch.Groups[2].Value);
-            }
-            else if (int.TryParse(timeStr, out var h))
-            {
-                hour = h;
-            }
-        }
-
-        if (parts.Length >= 3 && parts[1].Contains("-"))
-        {
-            var rangeParts = parts[1].Split('-');
-            if (rangeParts.Length == 2 && int.TryParse(rangeParts[0], out var startH))
-                hour = startH;
-        }
-
-        return (date.Value, hour, minute);
+        return MentionRegex.Matches(args[(withoutIndex + "без".Length)..])
+            .Select(m => m.Groups[1].Value)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
-    private List<string>? ParseExcludedUsers(string? args)
+    private static DateTimeOffset ToUtcOffset(DateTime msk)
     {
-        var result = new List<string>();
-        if (string.IsNullOrWhiteSpace(args)) return null;
+        return new DateTimeOffset(msk.FromMskToUtc(), TimeSpan.Zero);
+    }
 
-        var parts = args.Split([' '], StringSplitOptions.RemoveEmptyEntries);
-        var skipMode = false;
+    private static DateTimeOffset RoundUpToQuarter(DateTimeOffset value)
+    {
+        var quarter = TimeSpan.FromMinutes(15).Ticks;
+        return new DateTimeOffset((value.UtcTicks + quarter - 1) / quarter * quarter, TimeSpan.Zero);
+    }
 
-        foreach (var part in parts)
-        {
-            if (part.Equals("без", StringComparison.OrdinalIgnoreCase))
-            {
-                skipMode = true;
-                continue;
-            }
+    private static string FormatMsk(DateTimeOffset value)
+    {
+        return value.UtcDateTime.FromUtcToMsk().ToString("dd.MM HH:mm");
+    }
 
-            if (skipMode && part.StartsWith("@"))
-            {
-                result.Add(part[1..]);
-                continue;
-            }
+    private static string Range(DateTimeOffset start, DateTimeOffset end)
+    {
+        return $"{start.UtcDateTime.FromUtcToMsk():HH:mm}–{end.UtcDateTime.FromUtcToMsk():HH:mm}";
+    }
 
-            if (skipMode)
-            {
-                result.Add(part);
-                continue;
-            }
-
-            skipMode = false;
-        }
-
-        return result.Count > 0 ? result : null;
+    private static string Html(string? text)
+    {
+        return WebUtility.HtmlEncode(text ?? "");
     }
 
     private Task SendTextAsync(Message message, string text)
