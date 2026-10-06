@@ -1,3 +1,4 @@
+using CuMusicClub.Application.Common.Extensions;
 using CuMusicClub.Domain.Abstractions;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Domain.Enums;
@@ -17,6 +18,9 @@ public class RehearsalBookingRepository : Repository<RehearsalBooking>, IRehears
         DateTime to,
         CancellationToken ct = default)
     {
+        from = ToUtc(from);
+        to = ToUtc(to);
+
         return await Query()
             .Where(b => b.Status == status
                      && b.ScheduledAt >= from
@@ -48,6 +52,9 @@ public class RehearsalBookingRepository : Repository<RehearsalBooking>, IRehears
         DateTime to,
         CancellationToken ct = default)
     {
+        from = ToUtc(from);
+        to = ToUtc(to);
+
         return await Query()
             .Where(b => b.ScheduledAt >= from
                      && b.ScheduledAt <= to
@@ -62,6 +69,9 @@ public class RehearsalBookingRepository : Repository<RehearsalBooking>, IRehears
         DateTime to,
         CancellationToken ct = default)
     {
+        from = ToUtc(from);
+        to = ToUtc(to);
+
         return await Query()
             .Where(b => b.RequesterTgUserId == tgUserId
                      && b.ScheduledAt >= from
@@ -87,5 +97,27 @@ public class RehearsalBookingRepository : Repository<RehearsalBooking>, IRehears
             .Where(b => b.Status == status)
             .OrderBy(b => b.ScheduledAt)
             .ToListAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<RehearsalBooking>> GetActiveInRangeAsync(
+        DateTimeOffset from,
+        DateTimeOffset to,
+        CancellationToken ct = default)
+    {
+        return await Query()
+            .Where(b => b.Status != BookingStatus.Rejected
+                     && b.Status != BookingStatus.Cancelled
+                     && b.ScheduledAt >= from
+                     && b.ScheduledAt < to)
+            .OrderBy(b => b.ScheduledAt)
+            .ToListAsync(ct);
+    }
+
+    /// <summary>
+    /// Npgsql пишет в timestamptz только UTC; Unspecified трактуем как МСК (см. DateExtensions).
+    /// </summary>
+    private static DateTime ToUtc(DateTime value)
+    {
+        return value.Kind == DateTimeKind.Local ? value.ToUniversalTime() : value.FromMskToUtc();
     }
 }

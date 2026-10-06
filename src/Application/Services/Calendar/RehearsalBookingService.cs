@@ -205,7 +205,7 @@ public class RehearsalBookingService(
         var booking = new RehearsalBooking
         {
             Id = Guid.NewGuid(),
-            ScheduledAt = new DateTimeOffset(scheduledAt, TimeSpan.FromHours(3)), // MSK
+            ScheduledAt = new DateTimeOffset(scheduledAt, TimeSpan.FromHours(3)).ToUniversalTime(), // MSK
             DurationMinutes = durationMinutes,
             Status = BookingStatus.Confirmed,
             RequesterTgUserId = requesterTgUserId,
@@ -248,7 +248,7 @@ public class RehearsalBookingService(
         var booking = new RehearsalBooking
         {
             Id = Guid.NewGuid(),
-            ScheduledAt = new DateTimeOffset(scheduledAt, TimeSpan.FromHours(3)),
+            ScheduledAt = new DateTimeOffset(scheduledAt, TimeSpan.FromHours(3)).ToUniversalTime(),
             DurationMinutes = durationMinutes,
             Status = BookingStatus.Pending,
             RequesterTgUserId = requesterTgUserId,
@@ -329,9 +329,10 @@ public class RehearsalBookingService(
             scheduledAt.Date.AddDays(1),
             ct);
 
+        // В БД время в UTC, пользователь вводит МСК
         var matching = bookings.FirstOrDefault(b =>
-            b.ScheduledAt.Hour == scheduledAt.Hour
-            && b.ScheduledAt.Minute == scheduledAt.Minute
+            b.ScheduledAt.ToOffset(TimeSpan.FromHours(3)).Hour == scheduledAt.Hour
+            && b.ScheduledAt.ToOffset(TimeSpan.FromHours(3)).Minute == scheduledAt.Minute
             && b.Status == BookingStatus.Confirmed);
 
         if (matching == null)

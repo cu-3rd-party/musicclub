@@ -72,7 +72,7 @@ public class WeeklyDigestService(
         // Группируем по дням
         var grouped = bookings
             .OrderBy(b => b.ScheduledAt)
-            .GroupBy(b => b.ScheduledAt.Date);
+            .GroupBy(b => b.ScheduledAt.ToOffset(TimeSpan.FromHours(3)).Date);
 
         foreach (var dayGroup in grouped)
         {
@@ -80,9 +80,9 @@ public class WeeklyDigestService(
 
             foreach (var booking in dayGroup)
             {
-                var time = booking.ScheduledAt.ToString("HH:mm");
+                var time = booking.ScheduledAt.ToOffset(TimeSpan.FromHours(3)).ToString("HH:mm");
                 var duration = booking.DurationMinutes;
-                var end = booking.ScheduledAt.AddMinutes(duration);
+                var end = booking.ScheduledAt.ToOffset(TimeSpan.FromHours(3)).AddMinutes(duration);
 
                 sb.Append($"  ⏰ <code>{time}–{end:HH:mm}</code>");
 

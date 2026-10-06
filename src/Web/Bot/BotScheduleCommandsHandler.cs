@@ -99,8 +99,8 @@ public class BotScheduleCommandsHandler(
 
         foreach (var booking in bookings.OrderBy(b => b.ScheduledAt))
         {
-            var time = booking.ScheduledAt.ToString("HH:mm");
-            var end = booking.ScheduledAt.AddMinutes(booking.DurationMinutes).ToString("HH:mm");
+            var time = booking.ScheduledAt.ToOffset(TimeSpan.FromHours(3)).ToString("HH:mm");
+            var end = booking.ScheduledAt.ToOffset(TimeSpan.FromHours(3)).AddMinutes(booking.DurationMinutes).ToString("HH:mm");
             sb.AppendLine($"⏰ <code>{time}–{end}</code>");
         }
 
@@ -161,8 +161,8 @@ public class BotScheduleCommandsHandler(
         {
             foreach (var booking in bookings.OrderBy(b => b.ScheduledAt))
             {
-                var time = booking.ScheduledAt.ToString("HH:mm");
-                var end = booking.ScheduledAt.AddMinutes(booking.DurationMinutes).ToString("HH:mm");
+                var time = booking.ScheduledAt.ToOffset(TimeSpan.FromHours(3)).ToString("HH:mm");
+                var end = booking.ScheduledAt.ToOffset(TimeSpan.FromHours(3)).AddMinutes(booking.DurationMinutes).ToString("HH:mm");
                 sb.AppendLine($"⏰ {time}–{end}");
             }
         }

@@ -18,6 +18,7 @@ public static partial class Calendar
         group.MapPost("/feed/regenerate", RegenerateFeed);
         group.MapDelete("/feed", RevokeFeed);
         group.MapGet("/events", GetEvents);
+        group.MapGet("/timetable", GetTimetable);
         group.MapPost("/events", CreateEvent);
         group.MapDelete("/events/{eventId:guid}", DeleteEvent);
     }
@@ -74,6 +75,30 @@ public static partial class Calendar
         return TypedResults.Ok(events);
     }
 
+    [EndpointSummary("Get timetable events")]
+    [EndpointDescription(
+        "scope=mine — личные события, репетиции моих песен и мой Яндекс.Календарь; " +
+        "scope=club — все репетиции и выступления музклуба. Интервал [from, to) не длиннее 42 дней.")]
+    private static async Task<Results<Ok<List<TimetableEventDto>>, BadRequest<string>>> GetTimetable(
+        ClaimsPrincipal claimsPrincipal,
+        ITimetableService service,
+        [FromQuery] DateTimeOffset from,
+        [FromQuery] DateTimeOffset to,
+        [FromQuery] string? scope,
+        CancellationToken cancellationToken)
+    {
+        if (!Enum.TryParse<TimetableScope>(scope ?? nameof(TimetableScope.Mine), true, out var parsedScope)
+            || !Enum.IsDefined(parsedScope))
+            return TypedResults.BadRequest("scope должен быть mine или club");
+
+        if (to <= from || to - from > TimeSpan.FromDays(42))
+            return TypedResults.BadRequest("Интервал должен быть положительным и не длиннее 42 дней");
+
+        var events = await service.GetTimetableAsync(
+            claimsPrincipal.GetUserId(), parsedScope, from, to, cancellationToken);
+        return TypedResults.Ok(events);
+    }
+
     [EndpointSummary("Create a personal calendar event")]
     private static async Task<Created<CalendarEventDto>> CreateEvent(
         ClaimsPrincipal claimsPrincipal,
@@ -91,11 +116,12 @@ public static partial class Calendar
 
     [EndpointSummary("Delete a calendar event")]
     private static async Task<NoContent> DeleteEvent(
+        ClaimsPrincipal claimsPrincipal,
         ICalendarService service,
         Guid eventId,
         CancellationToken cancellationToken)
     {
-        await service.DeleteEventAsync(eventId, cancellationToken);
+        await service.DeleteEventAsync(claimsPrincipal.GetUserId(), eventId, cancellationToken);
         return TypedResults.NoContent();
     }
 

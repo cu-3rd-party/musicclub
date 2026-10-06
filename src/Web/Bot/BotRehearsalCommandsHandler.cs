@@ -208,7 +208,7 @@ public class BotRehearsalCommandsHandler(
 
             await SendTextAsync(message,
                 $"✅ Репетиция забронирована!\n" +
-                $"📅 {booking.ScheduledAt:dd.MM HH:mm}\n" +
+                $"📅 {booking.ScheduledAt.ToOffset(TimeSpan.FromHours(3)):dd.MM HH:mm}\n" +
                 $"🎵 {song.Title} — {song.Artist}");
         }
         catch (Exception ex)
@@ -254,7 +254,7 @@ public class BotRehearsalCommandsHandler(
             // TODO: отправить уведомление Илье с кнопками approve/reject
             await SendTextAsync(message,
                 $"📝 Запрос на репетицию отправлен!\n" +
-                $"📅 {booking.ScheduledAt:dd.MM HH:mm}\n" +
+                $"📅 {booking.ScheduledAt.ToOffset(TimeSpan.FromHours(3)):dd.MM HH:mm}\n" +
                 $"⏳ Ожидает подтверждения Ильёй.");
         }
         catch (Exception ex)
@@ -275,7 +275,7 @@ public class BotRehearsalCommandsHandler(
             var approved = await bookingService.ApproveBookingAsync(booking.Id, user.Id, ct);
             await SendTextAsync(message,
                 $"✅ Бронирование подтверждено!\n" +
-                $"📅 {approved.ScheduledAt:dd.MM HH:mm}\n" +
+                $"📅 {approved.ScheduledAt.ToOffset(TimeSpan.FromHours(3)):dd.MM HH:mm}\n" +
                 $"🎸 Репетиция добавлена в календарь.");
         }
         catch (Exception ex)
@@ -294,7 +294,7 @@ public class BotRehearsalCommandsHandler(
             var rejected = await bookingService.RejectBookingAsync(booking.Id, user.Id, ct);
             await SendTextAsync(message,
                 $"❌ Бронирование отклонено.\n" +
-                $"📅 {rejected.ScheduledAt:dd.MM HH:mm}");
+                $"📅 {rejected.ScheduledAt.ToOffset(TimeSpan.FromHours(3)):dd.MM HH:mm}");
         }
         catch (Exception ex)
         {

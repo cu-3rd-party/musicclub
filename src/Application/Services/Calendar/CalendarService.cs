@@ -116,8 +116,8 @@ public partial class CalendarService(
             UserId = request.UserId,
             Title = request.Title,
             Description = request.Description,
-            StartAt = request.StartAt.DateTime,
-            EndAt = request.EndAt.DateTime,
+            StartAt = request.StartAt.UtcDateTime,
+            EndAt = request.EndAt.UtcDateTime,
             Location = request.Location,
             EventType = request.EventType,
             SourceType = request.SourceType,
@@ -136,10 +136,14 @@ public partial class CalendarService(
         return MapToEventDto(calendarEvent);
     }
 
-    public async Task DeleteEventAsync(Guid eventId, CancellationToken ct)
+    public async Task DeleteEventAsync(Guid userId, Guid eventId, CancellationToken ct)
     {
         var calendarEvent = await eventRepository.FindByIdAsync(eventId, ct)
             ?? throw new NotFoundException(eventId.ToString(), nameof(CalendarEvent));
+
+        // Удалять можно только свои события
+        if (calendarEvent.UserId != userId)
+            throw new ForbiddenAccessException();
 
         await using var transaction = await unitOfWork.BeginTransactionAsync(ct);
 
