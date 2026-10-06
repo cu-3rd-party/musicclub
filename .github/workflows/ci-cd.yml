@@ -1,13 +1,25 @@
-name: Deploy dev
+name: CI/CD
 
 on:
   push:
     branches:
       - master
+  pull_request:
+    branches:
+      - master
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: false
+        default: ''
+        type: choice
+        options:
+          - ''
+          - prod
 
 concurrency:
-  group: deploy-dev
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -66,6 +78,7 @@ jobs:
   build:
     name: Build and push images
     needs: test
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     outputs:
       backend-tag: ${{ env.IMAGE_BACKEND }}:${{ env.COMMIT_SHA }}
@@ -119,9 +132,10 @@ jobs:
             .
           docker push ${{ env.IMAGE_FRONTEND }}:${{ env.COMMIT_SHA }}
 
-  deploy:
+  deploy-dev:
     name: Deploy to dev
     needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     environment: dev
     timeout-minutes: 15
@@ -183,6 +197,96 @@ jobs:
             -o SendEnv=COMMIT_SHA,GITHUB_REPOSITORY_OWNER,GITHUB_TOKEN,GITHUB_ACTOR \
             "${USERNAME}@${HOST}" << EOF
               set -euo pipefail
+
+              export COMMIT_SHA="${COMMIT_SHA}"
+              export GITHUB_REPOSITORY_OWNER="${GITHUB_REPOSITORY_OWNER}"
+              export GITHUB_TOKEN="${GITHUB_TOKEN}"
+              export GITHUB_ACTOR="${GITHUB_ACTOR}"
+
+              cd "${DEPLOY_PATH}"
+
+              docker login ghcr.io -u "${GITHUB_ACTOR}" -p "${GITHUB_TOKEN}"
+
+              docker compose \
+                -f docker-compose.yml \
+                -f docker-compose.prod.yml \
+                up -d \
+                --pull always \
+                --remove-orphans
+
+              docker image prune -f
+          EOF
+
+  deploy-prod:
+    name: Deploy to prod
+    needs: build
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: prod
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          HOST: ${{ secrets.HOST }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Sync application
+        env:
+          HOST: ${{ secrets.HOST }}
+          USERNAME: ${{ secrets.USERNAME }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=yes" \
+            docker-compose.yml \
+            docker-compose.prod.yml \
+            traefik \
+            "${USERNAME}@${HOST}:${DEPLOY_PATH}/"
+
+      - name: Write environment
+        env:
+          ENV_FILE: ${{ secrets.ENV }}
+          HOST: ${{ secrets.HOST }}
+          USERNAME: ${{ secrets.USERNAME }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          printf '%s\n' "$ENV_FILE" | \
+            ssh -i ~/.ssh/id_ed25519 \
+              -o StrictHostKeyChecking=yes \
+              "${USERNAME}@${HOST}" \
+              "cat > '${DEPLOY_PATH}/.env' && chmod 600 '${DEPLOY_PATH}/.env'"
+
+      - name: Deploy
+        env:
+          HOST: ${{ secrets.HOST }}
+          USERNAME: ${{ secrets.USERNAME }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          COMMIT_SHA: ${{ github.sha }}
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: |
+          ssh -i ~/.ssh/id_ed25519 \
+            -o StrictHostKeyChecking=yes \
+            -o SendEnv=COMMIT_SHA,GITHUB_REPOSITORY_OWNER,GITHUB_TOKEN,GITHUB_ACTOR \
+            "${USERNAME}@${HOST}" << EOF
+              set -euo pipefail
+
+              export COMMIT_SHA="${COMMIT_SHA}"
+              export GITHUB_REPOSITORY_OWNER="${GITHUB_REPOSITORY_OWNER}"
+              export GITHUB_TOKEN="${GITHUB_TOKEN}"
+              export GITHUB_ACTOR="${GITHUB_ACTOR}"
 
               cd "${DEPLOY_PATH}"
 
