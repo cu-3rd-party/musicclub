@@ -265,9 +265,10 @@ public class RehearsalBookingService(
         var memberUserIds = (await songRoleAssignmentRepository
             .GetMemberUserIdsBySongIdAsync(songId, ct)).ToList();
 
-        var users = await userRepository.Query()
-            .Where(u => memberUserIds.Contains(u.Id) && !string.IsNullOrEmpty(u.YandexLogin))
-            .ToListAsync(ct);
+        var queryable = userRepository.Query()
+            .Where(u => memberUserIds.Contains(u.Id) && !string.IsNullOrEmpty(u.YandexLogin));
+
+        var users = await queryable.ToListAsync(ct);
 
         var usersWithYandex = users.Select(user => new UserWithYandex(
             user.Id,

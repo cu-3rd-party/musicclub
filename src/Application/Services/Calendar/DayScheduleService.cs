@@ -197,9 +197,10 @@ public class DayScheduleService(
 
         var userIds = (await songRoleAssignmentRepository.GetMemberUserIdsBySongIdAsync(songId, ct)).Distinct().ToList();
 
-        var users = await userRepository.Query()
-            .Where(u => userIds.Contains(u.Id))
-            .ToListAsync(ct);
+        var queryable = userRepository.Query()
+            .Where(u => userIds.Contains(u.Id));
+
+        var users = await queryable.ToListAsync(ct);
 
         var result = new List<MemberSchedule>();
         foreach (var user in users)
