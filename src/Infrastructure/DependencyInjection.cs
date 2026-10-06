@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using CuMusicClub.Application.Common.Options;
 using CuMusicClub.Application.Services.Calendar;
+using CuMusicClub.Application.Services.User;
 using CuMusicClub.Domain.Abstractions;
 using CuMusicClub.Infrastructure.Data;
 using CuMusicClub.Infrastructure.Data.Interceptors;

@@ -1,8 +1,8 @@
 using System.Text;
+using CuMusicClub.Application.Services.User;
 using CuMusicClub.Domain.Abstractions;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Domain.Enums;
-using CuMusicClub.Infrastructure.Yandex;
 using Microsoft.Extensions.Logging;
 
 namespace CuMusicClub.Application.Services.Calendar;

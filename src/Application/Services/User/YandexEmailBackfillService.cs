@@ -1,6 +1,5 @@
 using CuMusicClub.Domain.Abstractions;
 using CuMusicClub.Domain.Entities;
-using CuMusicClub.Infrastructure.Yandex;
 using Microsoft.Extensions.Logging;
 
 namespace CuMusicClub.Application.Services.User;

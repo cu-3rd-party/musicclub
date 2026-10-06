@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CuMusicClub.Application.Services.User;
 using Microsoft.Extensions.Logging;
 
 namespace CuMusicClub.Infrastructure.Yandex;

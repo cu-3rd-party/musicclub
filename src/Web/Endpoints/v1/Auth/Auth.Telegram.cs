@@ -19,7 +19,7 @@ public static partial class Auth
     }
 
     [EndpointSummary("Request telegram /start deeplink for usage in bot")]
-    private static async Task<Results<Ok<TelegramDto>, TooManyRequests, BadRequest>> TelegramDeeplink(
+    private static async Task<Results<Ok<TelegramDto>, StatusCodeHttpResult, BadRequest>> TelegramDeeplink(
         ITelegramAuthService service,
         SimpleRateLimiter rateLimiter,
         HttpContext httpContext,
@@ -28,7 +28,7 @@ public static partial class Auth
         var clientIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         if (!rateLimiter.IsAllowed(clientIp))
         {
-            return TypedResults.TooManyRequests();
+            return TypedResults.StatusCode(StatusCodes.Status429TooManyRequests);
         }
 
         return TypedResults.Ok(await service.CreateDeeplink(cancellationToken));

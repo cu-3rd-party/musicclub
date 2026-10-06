@@ -1,4 +1,5 @@
 using CuMusicClub.Application.Services.Calendar;
+using CuMusicClub.Application.Services.User;
 using CuMusicClub.Domain.Abstractions;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Domain.Enums;
@@ -66,7 +67,7 @@ public class CalendarSyncServiceTests
         _songs = new Mock<ISongRepository>();
 
         _service = new CalendarSyncService(_calDav.Object, _integration.Object, users.Object, _bookings.Object,
-            _songs.Object, NullLogger<CalendarSyncService>.Instance);
+            _songs.Object, Mock.Of<IYandexEmailSearchService>(), NullLogger<CalendarSyncService>.Instance);
     }
 
     private static RehearsalBooking Booking(DateTimeOffset scheduledAt,

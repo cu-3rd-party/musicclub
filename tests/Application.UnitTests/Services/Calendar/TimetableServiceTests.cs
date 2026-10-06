@@ -61,14 +61,14 @@ public class TimetableServiceTests
             users.Object, _external.Object, NullLogger<TimetableService>.Instance);
     }
 
-    private RehearsalBooking Booking(Guid? songId, long requester = 1, Guid? coach = null, int dayOffset = 1)
+    private RehearsalBooking Booking(Guid? songId, long requester = 1, Guid? roadie = null, int dayOffset = 1)
     {
         return new RehearsalBooking
         {
             Id = Guid.NewGuid(),
             SongId = songId,
             RequesterTgUserId = requester,
-            CoachUserId = coach,
+            RoadieUserId = roadie,
             ScheduledAt = From.AddDays(dayOffset).AddHours(18),
             DurationMinutes = 80,
             Status = BookingStatus.Confirmed
@@ -80,15 +80,15 @@ public class TimetableServiceTests
     {
         var mySong = Booking(_mySongId);
         var myRequest = Booking(null, 42);
-        var asCoach = Booking(_otherSongId, coach: _user.Id);
+        var asRoadie = Booking(_otherSongId, roadie: _user.Id);
         var foreign = Booking(_otherSongId);
         _bookings.Setup(r => r.GetActiveInRangeAsync(From, To, It.IsAny<CancellationToken>()))
-            .ReturnsAsync([mySong, myRequest, asCoach, foreign]);
+            .ReturnsAsync([mySong, myRequest, asRoadie, foreign]);
 
         var result = await _service.GetTimetableAsync(_user.Id, TimetableScope.Mine, From, To);
 
         result.Select(e => e.Id).ShouldBe(
-            [$"booking:{mySong.Id}", $"booking:{myRequest.Id}", $"booking:{asCoach.Id}"], true);
+            [$"booking:{mySong.Id}", $"booking:{myRequest.Id}", $"booking:{asRoadie.Id}"], true);
         result.Single(e => e.Id == $"booking:{mySong.Id}").Title.ShouldBe("Моя песня");
         result.Single(e => e.Id == $"booking:{myRequest.Id}").Title.ShouldBe("Репетиция");
     }

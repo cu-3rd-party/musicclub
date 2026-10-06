@@ -1,4 +1,4 @@
-namespace CuMusicClub.Infrastructure.Yandex;
+namespace CuMusicClub.Application.Services.User;
 
 /// <summary>
 /// Searches for Yandex emails by user name/surname using Yandex Calendar's suggest-contacts API.
