@@ -1,5 +1,6 @@
 <script lang="ts">
-    import {goto} from "$app/navigation";
+    import {goto, invalidateAll} from "$app/navigation";
+    import {onMount} from "svelte";
     import {resolve} from "$app/paths";
     import {
         FieldGroup,
@@ -26,6 +27,17 @@
     let isPolling = $state(false);
 
     const POLL_INTERVAL_MS = 2000;
+    // Ссылка входа живёт 15 минут на бэкенде (TelegramAuthService.AuthLinkLifetime)
+    const LINK_REFRESH_MS = 10 * 60 * 1000;
+    const POLL_TIMEOUT_MS = 14 * 60 * 1000;
+
+    onMount(() => {
+        // Пока вкладка открыта без входа, держим ссылку свежей
+        const id = window.setInterval(() => {
+            if (!isPolling) invalidateAll();
+        }, LINK_REFRESH_MS);
+        return () => window.clearInterval(id);
+    });
 
     async function handleTelegramLogin(): Promise<void> {
         if (isPolling) {
@@ -39,13 +51,17 @@
             window.open(deeplink.url, "_blank");
 
             const session = await pollForSession();
-            if (session) {
-                setStoredAuthSession({
-                    ...session,
-                    accessTokenAcquiredAt: new Date().toISOString(),
-                });
-                await goto(resolve(DEFAULT_APP_PAGE));
+            if (!session) {
+                errorMessage = "Вход не подтверждён. Нажмите кнопку ещё раз и подтвердите вход в боте.";
+                await invalidateAll();
+                return;
             }
+
+            setStoredAuthSession({
+                ...session,
+                accessTokenAcquiredAt: new Date().toISOString(),
+            });
+            await goto(resolve(DEFAULT_APP_PAGE));
         } catch (error) {
             errorMessage = getApiErrorMessage(error, "Не удалось выполнить вход.");
         } finally {
@@ -55,7 +71,13 @@
 
     function pollForSession(): Promise<import("$lib/auth/types").AuthSession | null> {
         return new Promise((resolve) => {
+            const startedAt = Date.now();
             const intervalId = window.setInterval(async () => {
+                if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
+                    window.clearInterval(intervalId);
+                    resolve(null);
+                    return;
+                }
                 try {
                     const session = await getDeeplink(deeplink);
                     if (session) {
@@ -96,8 +118,13 @@
                                 d="M41.4193 7.30899C41.4193 7.30899 45.3046 5.79399 44.9808 9.47328C44.8729 10.9883 43.9016 16.2908 43.1461 22.0262L40.5559 39.0159C40.5559 39.0159 40.3401 41.5048 38.3974 41.9377C36.4547 42.3705 33.5408 40.4227 33.0011 39.9898C32.5694 39.6652 24.9068 34.7955 22.2086 32.4148C21.4531 31.7655 20.5897 30.4669 22.3165 28.9519L33.6487 18.1305C34.9438 16.8319 36.2389 13.8019 30.8426 17.4812L15.7331 27.7616C15.7331 27.7616 14.0063 28.8437 10.7686 27.8698L3.75342 25.7055C3.75342 25.7055 1.16321 24.0823 5.58815 22.459C16.3807 17.3729 29.6555 12.1786 41.4193 7.30899Z"
                                 fill="#FFFFFF"/>
                         </svg>
-                        {isPolling ? "Ожидание подтверждения..." : "Зайти через тг"}
+                        {isPolling ? "Ожидание подтверждения…" : "Войти через Telegram"}
                     </Button>
+                    {#if isPolling}
+                        <p class="text-center text-sm text-muted-foreground">
+                            Откройте бота и нажмите «Да, это я», чтобы подтвердить вход.
+                        </p>
+                    {/if}
                 </Field>
             </FieldGroup>
         </Card.Content>
