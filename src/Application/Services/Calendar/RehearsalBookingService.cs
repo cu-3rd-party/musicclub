@@ -1,4 +1,4 @@
-using CuMusicClub.Application.Services.Telegram;
+using CuMusicClub.Application.Common.Exceptions;
 using CuMusicClub.Domain.Abstractions;
 using CuMusicClub.Domain.Entities;
 using CuMusicClub.Domain.Enums;
@@ -15,6 +15,9 @@ public interface IRehearsalBookingService
     /// <summary>
     /// Создаёт бронирование репетиции (confirmed, без запроса к Илье).
     /// </summary>
+    /// <exception cref="BookingRuleException">
+    /// Пользователь не участник песни, время прошло, слишком далеко или зал уже забронирован.
+    /// </exception>
     Task<RehearsalBooking> CreateBookingAsync(
         long requesterTgUserId,
         DateTime scheduledAt,
@@ -33,25 +36,32 @@ public interface IRehearsalBookingService
         CancellationToken ct = default);
 
     /// <summary>
-    /// Подтверждает pending-бронирование (Илья).
+    /// Подтверждает pending-бронирование. Нужно право <see cref="Domain.Constants.Permission.EventsEdit"/>.
     /// </summary>
+    /// <exception cref="ForbiddenAccessException">У подтверждающего нет права.</exception>
     Task<RehearsalBooking> ApproveBookingAsync(
         Guid bookingId,
         long approverTgUserId,
         CancellationToken ct = default);
 
     /// <summary>
-    /// Отклоняет pending-бронирование (Илья).
+    /// Отклоняет pending-бронирование. Нужно право <see cref="Domain.Constants.Permission.EventsEdit"/>.
     /// </summary>
+    /// <exception cref="ForbiddenAccessException">У отклоняющего нет права.</exception>
     Task<RehearsalBooking> RejectBookingAsync(
         Guid bookingId,
         long approverTgUserId,
         CancellationToken ct = default);
 
     /// <summary>
-    /// Отменяет бронирование инициатором.
+    /// Может ли пользователь Telegram подтверждать и отклонять бронирования.
     /// </summary>
-    Task CancelBookingAsync(
+    Task<bool> CanApproveAsync(long tgUserId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Отменяет подтверждённое или ожидающее бронирование инициатором.
+    /// </summary>
+    Task<RehearsalBooking> CancelBookingAsync(
         long requesterTgUserId,
         DateTime scheduledAt,
         CancellationToken ct = default);
@@ -90,6 +100,9 @@ public class RehearsalBookingService(
     ILogger<RehearsalBookingService> logger) : IRehearsalBookingService
 {
     private const int DefaultDurationMinutes = 80;
+    private const int MaxDaysAhead = 60;
+    private const int MaxDurationMinutes = 240;
+    private static readonly TimeSpan Msk = TimeSpan.FromHours(3);
 
     public async Task<RehearsalBooking> CreateBookingAsync(
         long requesterTgUserId,
@@ -98,20 +111,12 @@ public class RehearsalBookingService(
         int durationMinutes = DefaultDurationMinutes,
         CancellationToken ct = default)
     {
-        var booking = new RehearsalBooking
-        {
-            Id = Guid.NewGuid(),
-            ScheduledAt = new DateTimeOffset(scheduledAt, TimeSpan.FromHours(3)).ToUniversalTime(), // MSK
-            DurationMinutes = durationMinutes,
-            Status = BookingStatus.Confirmed,
-            RequesterTgUserId = requesterTgUserId,
-            SongId = songId,
-            CreatedAt = DateTimeOffset.UtcNow,
-            UpdatedAt = DateTimeOffset.UtcNow
-        };
+        await EnsureCanBookAsync(requesterTgUserId, songId, ct);
+        var booking = NewBooking(requesterTgUserId, scheduledAt, songId, durationMinutes, BookingStatus.Confirmed);
 
         await using var transaction = await unitOfWork.BeginTransactionAsync(ct);
 
+        await EnsureRoomIsFreeAsync(booking, ct);
         await bookingRepository.AddAsync(booking, ct);
         await unitOfWork.SaveChangesAsync(ct);
 
@@ -137,25 +142,13 @@ public class RehearsalBookingService(
         int durationMinutes = DefaultDurationMinutes,
         CancellationToken ct = default)
     {
-        // TODO: найти ID Ильи (тренера) — можно вынести в опции
-        // Пока заглушка: Илья — первый администратор
-        var coachUserId = await FindCoachUserIdAsync(ct);
-
-        var booking = new RehearsalBooking
-        {
-            Id = Guid.NewGuid(),
-            ScheduledAt = new DateTimeOffset(scheduledAt, TimeSpan.FromHours(3)).ToUniversalTime(),
-            DurationMinutes = durationMinutes,
-            Status = BookingStatus.Pending,
-            RequesterTgUserId = requesterTgUserId,
-            CoachUserId = coachUserId,
-            SongId = songId,
-            CreatedAt = DateTimeOffset.UtcNow,
-            UpdatedAt = DateTimeOffset.UtcNow
-        };
+        // Тренер пока не задан отдельно: заявку подтверждает любой с правом events.edit
+        await EnsureCanBookAsync(requesterTgUserId, songId, ct);
+        var booking = NewBooking(requesterTgUserId, scheduledAt, songId, durationMinutes, BookingStatus.Pending);
 
         await using var transaction = await unitOfWork.BeginTransactionAsync(ct);
 
+        await EnsureRoomIsFreeAsync(booking, ct);
         await bookingRepository.AddAsync(booking, ct);
         await unitOfWork.SaveChangesAsync(ct);
 
@@ -169,12 +162,14 @@ public class RehearsalBookingService(
         CancellationToken ct = default)
     {
         var booking = await bookingRepository.FindByIdAsync(bookingId, ct)
-            ?? throw new ArgumentException($"Бронирование {bookingId} не найдено", nameof(bookingId));
+            ?? throw new BookingRuleException("Заявка не найдена.");
+
+        await EnsureCanApproveAsync(approverTgUserId, ct);
 
         if (booking.Status != BookingStatus.Pending)
-            throw new InvalidOperationException($"Бронирование в статусе {booking.Status}, нельзя подтвердить.");
+            throw new BookingRuleException($"Заявка уже {DescribeStatus(booking.Status)}.");
 
-        // TODO: проверить, что approver — Илья
+        await EnsureRoomIsFreeAsync(booking, ct);
 
         booking.Status = BookingStatus.Confirmed;
         booking.UpdatedAt = DateTimeOffset.UtcNow;
@@ -201,10 +196,12 @@ public class RehearsalBookingService(
         CancellationToken ct = default)
     {
         var booking = await bookingRepository.FindByIdAsync(bookingId, ct)
-            ?? throw new ArgumentException($"Бронирование {bookingId} не найдено", nameof(bookingId));
+            ?? throw new BookingRuleException("Заявка не найдена.");
+
+        await EnsureCanApproveAsync(approverTgUserId, ct);
 
         if (booking.Status != BookingStatus.Pending)
-            throw new InvalidOperationException($"Бронирование в статусе {booking.Status}, нельзя отклонить.");
+            throw new BookingRuleException($"Заявка уже {DescribeStatus(booking.Status)}.");
 
         booking.Status = BookingStatus.Rejected;
         booking.UpdatedAt = DateTimeOffset.UtcNow;
@@ -214,7 +211,16 @@ public class RehearsalBookingService(
         return booking;
     }
 
-    public async Task CancelBookingAsync(
+    public async Task<bool> CanApproveAsync(long tgUserId, CancellationToken ct = default)
+    {
+        var user = await userRepository.FindByTgUserIdAsync(tgUserId, ct);
+        if (user == null) return false;
+
+        var permissions = await userRepository.GetPermissionsAsync(user.Id, ct);
+        return permissions.Contains(Domain.Constants.Permission.EventsEdit);
+    }
+
+    public async Task<RehearsalBooking> CancelBookingAsync(
         long requesterTgUserId,
         DateTime scheduledAt,
         CancellationToken ct = default)
@@ -227,12 +233,12 @@ public class RehearsalBookingService(
 
         // В БД время в UTC, пользователь вводит МСК
         var matching = bookings.FirstOrDefault(b =>
-            b.ScheduledAt.ToOffset(TimeSpan.FromHours(3)).Hour == scheduledAt.Hour
-            && b.ScheduledAt.ToOffset(TimeSpan.FromHours(3)).Minute == scheduledAt.Minute
-            && b.Status == BookingStatus.Confirmed);
+            b.ScheduledAt.ToOffset(Msk).Hour == scheduledAt.Hour
+            && b.ScheduledAt.ToOffset(Msk).Minute == scheduledAt.Minute
+            && b.Status is BookingStatus.Confirmed or BookingStatus.Pending);
 
         if (matching == null)
-            throw new InvalidOperationException("Бронирование не найдено.");
+            throw new BookingRuleException("У вас нет брони на это время.");
 
         matching.Status = BookingStatus.Cancelled;
         matching.UpdatedAt = DateTimeOffset.UtcNow;
@@ -249,6 +255,7 @@ public class RehearsalBookingService(
         }
 
         await unitOfWork.SaveChangesAsync(ct);
+        return matching;
     }
 
     public async Task<IReadOnlyList<UserWithYandex>> GetMembersWithYandexAsync(
@@ -284,15 +291,96 @@ public class RehearsalBookingService(
         return await bookingRepository.GetUpcomingAsync(from, to, ct);
     }
 
-    private async Task<Guid> FindCoachUserIdAsync(CancellationToken ct)
+    private static RehearsalBooking NewBooking(
+        long requesterTgUserId,
+        DateTime scheduledAt,
+        Guid? songId,
+        int durationMinutes,
+        BookingStatus status)
     {
-        // TODO: вынести ID Ильи в опции или найти по роли
-        // Пока ищем первого пользователя с ролью Administrator
-        var users = userRepository.Query().ToList();
+        var start = new DateTimeOffset(DateTime.SpecifyKind(scheduledAt, DateTimeKind.Unspecified), Msk)
+            .ToUniversalTime();
+        var now = DateTimeOffset.UtcNow;
 
-        // Заглушка: возвращаем первый попавшийся GUID
-        // В реальности нужно искать по имени/роли
-        throw new InvalidOperationException("Coach (Илья) не найден. Укажите ID в настройках.");
+        if (durationMinutes is <= 0 or > MaxDurationMinutes)
+            throw new BookingRuleException($"Длительность должна быть от 1 до {MaxDurationMinutes} минут.");
+        if (start < now)
+            throw new BookingRuleException("Это время уже прошло.");
+        if (start > now.AddDays(MaxDaysAhead))
+            throw new BookingRuleException($"Бронировать можно не дальше чем на {MaxDaysAhead} дней вперёд.");
+
+        return new RehearsalBooking
+        {
+            Id = Guid.NewGuid(),
+            ScheduledAt = start,
+            DurationMinutes = durationMinutes,
+            Status = status,
+            RequesterTgUserId = requesterTgUserId,
+            SongId = songId,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+    }
+
+    /// <summary>
+    /// Зал один: активные брони (подтверждённые и ожидающие) не должны пересекаться.
+    /// </summary>
+    private async Task EnsureRoomIsFreeAsync(RehearsalBooking booking, CancellationToken ct)
+    {
+        var start = booking.ScheduledAt;
+        var end = start.AddMinutes(booking.DurationMinutes);
+
+        var overlapping = (await bookingRepository.GetActiveInRangeAsync(
+                start.AddMinutes(-MaxDurationMinutes), end, ct))
+            .FirstOrDefault(b => b.Id != booking.Id
+                                 && b.ScheduledAt < end
+                                 && b.ScheduledAt.AddMinutes(b.DurationMinutes) > start);
+
+        if (overlapping != null)
+        {
+            var from = overlapping.ScheduledAt.ToOffset(Msk);
+            var to = from.AddMinutes(overlapping.DurationMinutes);
+            var kind = overlapping.Status == BookingStatus.Pending ? "заявка" : "бронь";
+            throw new BookingRuleException($"Зал уже занят: {kind} {from:dd.MM HH:mm}–{to:HH:mm}.");
+        }
+    }
+
+    /// <summary>
+    /// Бронировать зал под песню могут её участники и организаторы.
+    /// </summary>
+    private async Task EnsureCanBookAsync(long tgUserId, Guid? songId, CancellationToken ct)
+    {
+        var user = await userRepository.FindByTgUserIdAsync(tgUserId, ct)
+                   ?? throw new BookingRuleException(
+                       "Сначала откройте приложение Music Club через /start — я вас пока не знаю.");
+
+        var permissions = await userRepository.GetPermissionsAsync(user.Id, ct);
+        if (permissions.Contains(Domain.Constants.Permission.EventsEdit))
+            return;
+
+        if (songId is not { } id)
+            throw new ForbiddenAccessException();
+
+        var members = await songRoleAssignmentRepository.GetMemberUserIdsBySongIdAsync(id, ct);
+        if (!members.Contains(user.Id))
+            throw new BookingRuleException("Бронировать зал под песню могут только её участники.");
+    }
+
+    private async Task EnsureCanApproveAsync(long tgUserId, CancellationToken ct)
+    {
+        if (!await CanApproveAsync(tgUserId, ct))
+            throw new ForbiddenAccessException();
+    }
+
+    private static string DescribeStatus(BookingStatus status)
+    {
+        return status switch
+        {
+            BookingStatus.Confirmed => "подтверждена",
+            BookingStatus.Rejected => "отклонена",
+            BookingStatus.Cancelled => "отменена",
+            _ => "обработана"
+        };
     }
 
     private static string BuildYandexEmail(string yandexLogin)

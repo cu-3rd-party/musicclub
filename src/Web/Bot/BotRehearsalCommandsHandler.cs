@@ -1,15 +1,16 @@
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using CuMusicClub.Application.Common.Exceptions;
 using CuMusicClub.Application.Common.Extensions;
 using CuMusicClub.Application.Services.Calendar;
-using CuMusicClub.Application.Services.Telegram;
 using CuMusicClub.Domain.Abstractions;
+using CuMusicClub.Domain.Constants;
 using CuMusicClub.Domain.Entities;
-using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
+using Telegram.Bot.Types.ReplyMarkups;
 
 namespace CuMusicClub.Web.Bot;
 
@@ -25,8 +26,11 @@ public class BotRehearsalCommandsHandler(
     IDayScheduleService dayScheduleService,
     ITelegramBotClient botClient,
     IRehearsalBookingRepository bookingRepository,
+    IApplicationUserRepository userRepository,
     ILogger<BotRehearsalCommandsHandler> logger)
 {
+    public const string CallbackPrefix = "booking:";
+
     private const int DefaultDurationMinutes = 80;
     private const int MinSlotMinutes = 60;
     private const int SlotsDays = 7;
@@ -60,10 +64,10 @@ public class BotRehearsalCommandsHandler(
                     await HandleTakeWithAsync(args, message, user, ct);
                     break;
                 case "approve":
-                    await HandleApproveAsync(args, message, user, ct);
+                    await HandleApproveOrRejectAsync(args, message, user, approve: true, ct);
                     break;
                 case "reject":
-                    await HandleRejectAsync(args, message, user, ct);
+                    await HandleApproveOrRejectAsync(args, message, user, approve: false, ct);
                     break;
                 case "cancel":
                     await HandleCancelAsync(args, message, user, ct);
@@ -261,21 +265,28 @@ public class BotRehearsalCommandsHandler(
             return;
         }
 
+        RehearsalBooking booking;
         try
         {
-            var booking = await bookingService.CreateBookingAsync(
-                user.Id, scheduledAt, song.Id, ct: ct);
-
-            await SendTextAsync(message,
-                $"✅ Репетиция забронирована!\n" +
-                $"📅 {booking.ScheduledAt.ToOffset(TimeSpan.FromHours(3)):dd.MM HH:mm}\n" +
-                $"🎵 {song.Title} — {song.Artist}");
+            booking = await bookingService.CreateBookingAsync(user.Id, scheduledAt, song.Id, ct: ct);
         }
-        catch (Exception ex)
+        catch (BookingRuleException ex)
         {
-            logger.LogWarning(ex, "Failed to create booking");
-            await SendTextAsync(message, $"❌ Не удалось забронировать: {ex.Message}");
+            await SendTextAsync(message, $"❌ Не получилось забронировать: {Html(ex.Message)}");
+            return;
         }
+        catch (ForbiddenAccessException)
+        {
+            await SendTextAsync(message, "⛔ У вас нет прав бронировать зал.");
+            return;
+        }
+
+        await SendTextAsync(message,
+            $"✅ <b>Зал забронирован</b>\n" +
+            $"📅 {FormatBookingRange(booking)}\n" +
+            $"🎵 {Html(song.Title)} — {Html(song.Artist)}\n" +
+            $"👤 {Mention(user)}\n\n" +
+            $"Отменить: <code>/cancel {FormatMsk(booking.ScheduledAt)}</code>");
     }
 
     private async Task HandleTakeWithAsync(string? args, Message message, User user, CancellationToken ct)
@@ -289,59 +300,160 @@ public class BotRehearsalCommandsHandler(
             return;
         }
 
+        RehearsalBooking booking;
         try
         {
-            var booking = await bookingService.CreateBookingWithCoachAsync(
-                user.Id, scheduledAt, song.Id, ct: ct);
-
-            // TODO: отправить уведомление Илье с кнопками approve/reject
-            await SendTextAsync(message,
-                $"📝 Запрос на репетицию отправлен!\n" +
-                $"📅 {booking.ScheduledAt.ToOffset(TimeSpan.FromHours(3)):dd.MM HH:mm}\n" +
-                $"⏳ Ожидает подтверждения Ильёй.");
+            booking = await bookingService.CreateBookingWithCoachAsync(user.Id, scheduledAt, song.Id, ct: ct);
         }
-        catch (Exception ex)
+        catch (BookingRuleException ex)
         {
-            logger.LogWarning(ex, "Failed to create booking with coach");
-            await SendTextAsync(message, $"❌ Не удалось создать запрос: {ex.Message}");
+            await SendTextAsync(message, $"❌ Не получилось отправить заявку: {Html(ex.Message)}");
+            return;
+        }
+        catch (ForbiddenAccessException)
+        {
+            await SendTextAsync(message, "⛔ У вас нет прав бронировать зал.");
+            return;
+        }
+
+        // Скрытые упоминания — чтобы организаторам пришло уведомление
+        var approvers = await userRepository.GetUsersByPermissionAsync(Permission.EventsEdit, ct);
+        var pings = string.Concat(approvers
+            .Where(a => a.TgUserId is not null && a.TgUserId != user.Id)
+            .Select(a => $"<a href=\"tg://user?id={a.TgUserId}\">\u2060</a>"));
+
+        var keyboard = new InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton.WithCallbackData("✅ Подтвердить", $"{CallbackPrefix}approve:{booking.Id:N}"),
+                InlineKeyboardButton.WithCallbackData("❌ Отклонить", $"{CallbackPrefix}reject:{booking.Id:N}"),
+            ],
+        ]);
+
+        await botClient.SendMessage(
+            message.Chat.Id,
+            $"📝 <b>Заявка на репетицию с Ильёй</b>\n" +
+            $"📅 {FormatBookingRange(booking)}\n" +
+            $"🎵 {Html(song.Title)} — {Html(song.Artist)}\n" +
+            $"👤 {Mention(user)}\n\n" +
+            $"⏳ Ждёт подтверждения организатора.{pings}",
+            messageThreadId: message.MessageThreadId,
+            parseMode: ParseMode.Html,
+            replyMarkup: keyboard,
+            cancellationToken: CancellationToken.None);
+    }
+
+    private async Task HandleApproveOrRejectAsync(string? args, Message message, User user, bool approve,
+        CancellationToken ct)
+    {
+        var command = approve ? "/approve" : "/reject";
+
+        if (!await bookingService.CanApproveAsync(user.Id, ct))
+        {
+            await SendTextAsync(message, "⛔ Подтверждать и отклонять заявки могут только организаторы.");
+            return;
+        }
+
+        var pending = (await bookingRepository.GetPendingForCoachAsync(ct))
+            .Where(b => b.ScheduledAt > DateTimeOffset.UtcNow)
+            .OrderBy(b => b.ScheduledAt)
+            .ToList();
+
+        RehearsalBooking? booking;
+        if (!string.IsNullOrWhiteSpace(args))
+        {
+            if (!BotDateParser.TryParseDateTime(args, BotDateParser.NowMsk(), out var at))
+            {
+                await SendUsageAsync(message, command);
+                return;
+            }
+
+            var atUtc = ToUtcOffset(at);
+            booking = pending.FirstOrDefault(b => b.ScheduledAt == atUtc);
+            if (booking == null)
+            {
+                await SendTextAsync(message, $"🤷 Нет заявки на {at:dd.MM HH:mm}.");
+                return;
+            }
+        }
+        else if (pending.Count == 1)
+        {
+            booking = pending[0];
+        }
+        else
+        {
+            if (pending.Count == 0)
+            {
+                await SendTextAsync(message, "✨ Нет заявок, ждущих подтверждения.");
+                return;
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine($"Заявок несколько — укажите время: <code>{command} ДД.ММ ЧЧ:ММ</code>");
+            sb.AppendLine();
+            foreach (var b in pending)
+                sb.AppendLine($"⏳ <code>{FormatMsk(b.ScheduledAt)}</code>");
+            await SendTextAsync(message, sb.ToString());
+            return;
+        }
+
+        var result = await DecideAsync(booking.Id, user.Id, approve, ct);
+        await SendTextAsync(message, result);
+    }
+
+    /// <summary>
+    /// Кнопки «Подтвердить/Отклонить» под заявкой /take_with.
+    /// </summary>
+    public async Task HandleCallbackAsync(CallbackQuery callback, CancellationToken ct)
+    {
+        var parts = callback.Data![CallbackPrefix.Length..].Split(':', 2);
+        if (parts.Length != 2 || !Guid.TryParse(parts[1], out var bookingId) || parts[0] is not ("approve" or "reject"))
+        {
+            await botClient.AnswerCallbackQuery(callback.Id, cancellationToken: ct);
+            return;
+        }
+
+        var approve = parts[0] == "approve";
+        if (!await bookingService.CanApproveAsync(callback.From.Id, ct))
+        {
+            await botClient.AnswerCallbackQuery(callback.Id,
+                "Подтверждать заявки могут только организаторы.", showAlert: true, cancellationToken: ct);
+            return;
+        }
+
+        var result = await DecideAsync(bookingId, callback.From.Id, approve, ct);
+        await botClient.AnswerCallbackQuery(callback.Id, StripTags(result), cancellationToken: ct);
+
+        if (callback.Message is { } original)
+        {
+            var verdict = approve ? "✅ Подтвердил(а)" : "❌ Отклонил(а)";
+            await botClient.EditMessageText(
+                original.Chat.Id,
+                original.MessageId,
+                $"{Html(original.Text)}\n\n{verdict} {Mention(callback.From)}",
+                parseMode: ParseMode.Html,
+                cancellationToken: ct);
         }
     }
 
-    private async Task HandleApproveAsync(string? args, Message message, User user, CancellationToken ct)
+    private async Task<string> DecideAsync(Guid bookingId, long tgUserId, bool approve, CancellationToken ct)
     {
-        // TODO: проверить, что пользователь — Илья
-        var booking = await ResolvePendingBooking(message, user.Id, ct);
-        if (booking == null) return;
-
         try
         {
-            var approved = await bookingService.ApproveBookingAsync(booking.Id, user.Id, ct);
-            await SendTextAsync(message,
-                $"✅ Бронирование подтверждено!\n" +
-                $"📅 {approved.ScheduledAt.ToOffset(TimeSpan.FromHours(3)):dd.MM HH:mm}\n" +
-                $"🎸 Репетиция добавлена в календарь.");
-        }
-        catch (Exception ex)
-        {
-            await SendTextAsync(message, $"❌ Ошибка: {ex.Message}");
-        }
-    }
+            var booking = approve
+                ? await bookingService.ApproveBookingAsync(bookingId, tgUserId, ct)
+                : await bookingService.RejectBookingAsync(bookingId, tgUserId, ct);
 
-    private async Task HandleRejectAsync(string? args, Message message, User user, CancellationToken ct)
-    {
-        var booking = await ResolvePendingBooking(message, user.Id, ct);
-        if (booking == null) return;
-
-        try
-        {
-            var rejected = await bookingService.RejectBookingAsync(booking.Id, user.Id, ct);
-            await SendTextAsync(message,
-                $"❌ Бронирование отклонено.\n" +
-                $"📅 {rejected.ScheduledAt.ToOffset(TimeSpan.FromHours(3)):dd.MM HH:mm}");
+            return approve
+                ? $"✅ Заявка подтверждена: {FormatBookingRange(booking)}"
+                : $"❌ Заявка отклонена: {FormatBookingRange(booking)}";
         }
-        catch (Exception ex)
+        catch (BookingRuleException ex)
         {
-            await SendTextAsync(message, $"❌ Ошибка: {ex.Message}");
+            return $"⚠️ {Html(ex.Message)}";
+        }
+        catch (ForbiddenAccessException)
+        {
+            return "⛔ Подтверждать и отклонять заявки могут только организаторы.";
         }
     }
 
@@ -355,12 +467,12 @@ public class BotRehearsalCommandsHandler(
 
         try
         {
-            await bookingService.CancelBookingAsync(user.Id, scheduledAt, ct);
-            await SendTextAsync(message, $"🗑️ Бронирование отменено: {scheduledAt:dd.MM HH:mm}");
+            var booking = await bookingService.CancelBookingAsync(user.Id, scheduledAt, ct);
+            await SendTextAsync(message, $"🗑 Бронь отменена: {FormatBookingRange(booking)}");
         }
-        catch (Exception ex)
+        catch (BookingRuleException ex)
         {
-            await SendTextAsync(message, $"❌ {ex.Message}");
+            await SendTextAsync(message, $"❌ {Html(ex.Message)}");
         }
     }
 
@@ -381,15 +493,6 @@ public class BotRehearsalCommandsHandler(
             await SendTextAsync(message, "❌ Песня для этого топика не найдена.");
 
         return song;
-    }
-
-    private async Task<RehearsalBooking?> ResolvePendingBooking(
-        Message message, long userId, CancellationToken ct)
-    {
-        // Ищем первое pending-бронирование пользователя
-        // TODO: в будущем — поиск по ID из аргумента команды
-        var pending = await bookingRepository.GetPendingByRequesterAsync(userId, ct);
-        return pending.FirstOrDefault();
     }
 
     private Task SendUsageAsync(Message message, string command)
@@ -435,6 +538,24 @@ public class BotRehearsalCommandsHandler(
     private static string Range(DateTimeOffset start, DateTimeOffset end)
     {
         return $"{start.UtcDateTime.FromUtcToMsk():HH:mm}–{end.UtcDateTime.FromUtcToMsk():HH:mm}";
+    }
+
+    private static string FormatBookingRange(RehearsalBooking booking)
+    {
+        var start = booking.ScheduledAt.UtcDateTime.FromUtcToMsk();
+        return $"{BotDateParser.FormatDate(start)}, " +
+               Range(booking.ScheduledAt, booking.ScheduledAt.AddMinutes(booking.DurationMinutes));
+    }
+
+    private static string Mention(User user)
+    {
+        var name = string.IsNullOrWhiteSpace(user.FirstName) ? user.Username ?? "участник" : user.FirstName;
+        return $"<a href=\"tg://user?id={user.Id}\">{Html(name)}</a>";
+    }
+
+    private static string StripTags(string html)
+    {
+        return WebUtility.HtmlDecode(Regex.Replace(html, "<[^>]+>", ""));
     }
 
     private static string Html(string? text)
