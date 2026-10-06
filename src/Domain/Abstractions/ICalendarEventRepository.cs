@@ -23,4 +23,9 @@ public interface ICalendarEventRepository : IRepository<CalendarEvent>
     /// Найти события пользователя по источнику
     /// </summary>
     Task<IEnumerable<CalendarEvent>> FindBySourceAndUserAsync(string sourceType, Guid sourceId, Guid userId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Активные события клуба (репетиции/выступления всех пользователей), пересекающиеся с интервалом.
+    /// </summary>
+    Task<IEnumerable<CalendarEvent>> GetActiveClubEventsAsync(DateTime from, DateTime to, CancellationToken ct = default);
 }

@@ -26,6 +26,10 @@ public static class DependencyInjection
         builder.Services.AddScoped<IDataEntryService, DataEntryService>();
         builder.Services.AddScoped<IRoadieService, RoadieService>();
         builder.Services.AddScoped<ICalendarService, CalendarService>();
+        builder.Services.AddScoped<ICalendarSyncService, CalendarSyncService>();
+        builder.Services.AddScoped<ITimetableService, TimetableService>();
+        builder.Services.AddScoped<IRehearsalBookingService, RehearsalBookingService>();
+        builder.Services.AddScoped<IWeeklyDigestService, WeeklyDigestService>();
         builder.Services.AddScoped<IIcsFeedGenerator, IcsFeedGenerator>();
         builder.Services.AddScoped<IYandexLoginService, YandexLoginService>();
     }

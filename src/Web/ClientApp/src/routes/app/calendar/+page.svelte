@@ -1,350 +1,384 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import { Button } from "$lib/components/ui/button";
+    import Timetable from "$lib/components/timetable/timetable.svelte";
+    import type { TimetableEvent } from "$lib/timetable/types";
+    import { addDays, startOfDay, startOfWeek } from "$lib/timetable/utils";
     import {
-        Card,
-        CardContent,
-        CardDescription,
-        CardHeader,
-        CardTitle,
-    } from "$lib/components/ui/card";
+        createCalendarEvent,
+        deleteCalendarEvent,
+        getTimetable,
+        type TimetableEventDto,
+        type TimetableScope,
+    } from "$lib/api/calendar";
+    import { Button } from "$lib/components/ui/button";
     import * as Dialog from "$lib/components/ui/dialog";
+    import * as Tabs from "$lib/components/ui/tabs";
     import { Input } from "$lib/components/ui/input";
     import { Label } from "$lib/components/ui/label";
     import { Textarea } from "$lib/components/ui/textarea";
-    import { CalendarFeedCard, CalendarEventList } from "$lib/components/calendar";
-    import {
-        getCalendarFeed,
-        regenerateCalendarFeed,
-        revokeCalendarFeed,
-        getCalendarEvents,
-        createCalendarEvent,
-        deleteCalendarEvent,
-        type CalendarFeed,
-        type CalendarEvent,
-        type CreateCalendarEventRequest,
-        type CalendarEventType,
-    } from "$lib/api/calendar";
-    import { Plus, Trash2, ExternalLink } from "@lucide/svelte";
+    import { Plus } from "@lucide/svelte";
+    import { goto } from "$app/navigation";
+    import { resolve } from "$app/paths";
 
-    let feed = $state<CalendarFeed | null>(null);
-    let events = $state<CalendarEvent[]>([]);
-    let loading = $state(true);
+    type View = "day" | "week";
+
+    const DEFAULT_START_HOUR = 8;
+    const DEFAULT_END_HOUR = 23;
+
+    let scope = $state<TimetableScope>("mine");
+    let view = $state<View>("day");
+    let date = $state(new Date());
+
+    let events = $state<TimetableEvent[]>([]);
+    let loading = $state(false);
     let error = $state<string | null>(null);
 
-    // Create event dialog
-    let isCreateDialogOpen = $state(false);
-    let newEventTitle = $state("");
-    let newEventDescription = $state("");
-    let newEventStartAt = $state("");
-    let newEventEndAt = $state("");
-    let newEventLocation = $state("");
-    let newEventType = $state<CalendarEventType>("Personal");
+    const range = $derived.by(() => {
+        const from = view === "day" ? startOfDay(date) : startOfWeek(date);
+        return { from, to: addDays(from, view === "day" ? 1 : 7) };
+    });
 
-    // Event deletion
-    let eventToDelete = $state<string | null>(null);
+    // Расширяем сетку, если есть события раньше 8:00 или позже 23:00
+    const startHour = $derived(
+        Math.min(
+            DEFAULT_START_HOUR,
+            ...events
+                .filter((e) => e.startAt >= range.from)
+                .map((e) => e.startAt.getHours()),
+        ),
+    );
+    const endHour = $derived(
+        Math.max(
+            DEFAULT_END_HOUR,
+            ...events
+                .filter((e) => e.endAt < range.to)
+                .map((e) =>
+                    Math.min(
+                        24,
+                        e.endAt.getHours() + (e.endAt.getMinutes() > 0 ? 1 : 0),
+                    ),
+                ),
+        ),
+    );
 
-    async function loadFeed() {
-        try {
-            feed = await getCalendarFeed();
-        } catch (err) {
-            console.error("Не удалось загрузить фид", err);
-            feed = null;
-        }
+    function toTimetableEvent(dto: TimetableEventDto): TimetableEvent {
+        return {
+            id: dto.id,
+            title: dto.title,
+            kind: dto.kind,
+            startAt: new Date(dto.startAt),
+            endAt: new Date(dto.endAt),
+            start: 0,
+            end: 0,
+            songId: dto.songId ?? null,
+            status: dto.status ?? null,
+            location: dto.location ?? null,
+            canDelete: dto.canDelete,
+            syncedToCalendar: dto.syncedToCalendar ?? null,
+        };
     }
 
-    async function loadEvents() {
-        try {
-            const now = new Date();
-            const from = now.toISOString();
-            const to = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(); // +30 дней
+    let requestId = 0;
 
-            events = await getCalendarEvents(from, to);
+    async function load() {
+        const current = ++requestId;
+        const { from, to } = range;
+        loading = true;
+        error = null;
+
+        try {
+            const dtos = await getTimetable(
+                scope,
+                from.toISOString(),
+                to.toISOString(),
+            );
+            if (current !== requestId) return;
+            events = dtos.map(toTimetableEvent);
         } catch (err) {
-            console.error("Не удалось загрузить события", err);
+            if (current !== requestId) return;
+            console.error("Не удалось загрузить расписание", err);
+            error = "Не удалось загрузить расписание";
             events = [];
+        } finally {
+            if (current === requestId) loading = false;
         }
     }
 
-    async function handleRegenerate() {
-        try {
-            feed = await regenerateCalendarFeed();
-            await loadEvents();
-        } catch (err) {
-            console.error("Не удалось перевыпустить фид", err);
-            error = "Не удалось перевыпустить фид";
-        }
+    $effect(() => {
+        // перезагружаем при смене вкладки или интервала
+        void scope;
+        void range;
+        load();
+    });
+
+    function onScopeChange(value: string) {
+        scope = value as TimetableScope;
+        // Музклуб удобнее смотреть неделей
+        if (scope === "club") view = "week";
     }
 
-    async function handleRevoke() {
-        try {
-            await revokeCalendarFeed();
-            feed = null;
-            await loadEvents();
-        } catch (err) {
-            console.error("Не удалось отозвать фид", err);
-            error = "Не удалось отозвать фид";
-        }
-    }
+    // ---------- Детали события ----------
 
-    async function handleCreateEvent() {
-        if (!newEventTitle || !newEventStartAt || !newEventEndAt) {
-            error = "Заполните обязательные поля";
-            return;
-        }
+    let selected = $state<TimetableEvent | null>(null);
 
-        try {
-            const payload: CreateCalendarEventRequest = {
-                title: newEventTitle,
-                description: newEventDescription || undefined,
-                startAt: newEventStartAt,
-                endAt: newEventEndAt,
-                location: newEventLocation || undefined,
-                eventType: newEventType,
-            };
+    const kindLabel: Record<TimetableEvent["kind"], string> = {
+        Rehearsal: "Репетиция",
+        Performance: "Выступление",
+        Personal: "Личное событие",
+        External: "Яндекс.Календарь",
+    };
 
-            await createCalendarEvent(payload);
-            isCreateDialogOpen = false;
-            resetForm();
-            await loadEvents();
-        } catch (err) {
-            console.error("Не удалось создать событие", err);
-            error = "Не удалось создать событие";
-        }
-    }
+    const statusLabel: Record<string, string> = {
+        Pending: "ожидает подтверждения",
+        Approved: "подтверждена",
+        Confirmed: "подтверждена",
+    };
 
-    async function handleDeleteEvent() {
-        if (!eventToDelete) return;
+    const timeFormatter = new Intl.DateTimeFormat("ru-RU", {
+        weekday: "short",
+        day: "numeric",
+        month: "long",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+    const shortTimeFormatter = new Intl.DateTimeFormat("ru-RU", {
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+
+    async function deleteSelected() {
+        if (!selected?.canDelete) return;
 
         try {
-            await deleteCalendarEvent(eventToDelete);
-            eventToDelete = null;
-            await loadEvents();
+            await deleteCalendarEvent(selected.id);
+            selected = null;
+            await load();
         } catch (err) {
             console.error("Не удалось удалить событие", err);
             error = "Не удалось удалить событие";
         }
     }
 
-    function resetForm() {
-        newEventTitle = "";
-        newEventDescription = "";
-        newEventStartAt = "";
-        newEventEndAt = "";
-        newEventLocation = "";
-        newEventType = "Personal";
-        error = null;
+    function openSong(songId: string) {
+        selected = null;
+        goto(resolve("/app/songs/[id]", { id: songId }));
     }
 
-    onMount(() => {
-        async function init() {
-            loading = true;
-            await Promise.all([loadFeed(), loadEvents()]);
-            loading = false;
+    // ---------- Создание личного события ----------
+
+    let isCreateOpen = $state(false);
+    let newTitle = $state("");
+    let newDate = $state("");
+    let newStart = $state("18:00");
+    let newEnd = $state("19:00");
+    let newLocation = $state("");
+    let newDescription = $state("");
+    let createError = $state<string | null>(null);
+
+    function toDateInput(value: Date): string {
+        const y = value.getFullYear();
+        const m = String(value.getMonth() + 1).padStart(2, "0");
+        const d = String(value.getDate()).padStart(2, "0");
+        return `${y}-${m}-${d}`;
+    }
+
+    function openCreate() {
+        newTitle = "";
+        newDate = toDateInput(date);
+        newStart = "18:00";
+        newEnd = "19:00";
+        newLocation = "";
+        newDescription = "";
+        createError = null;
+        isCreateOpen = true;
+    }
+
+    async function handleCreate() {
+        if (!newTitle || !newDate || !newStart || !newEnd) {
+            createError = "Заполните название, дату и время";
+            return;
         }
 
-        init();
-    });
+        const startAt = new Date(`${newDate}T${newStart}`);
+        const endAt = new Date(`${newDate}T${newEnd}`);
+        if (endAt <= startAt) {
+            createError = "Окончание должно быть позже начала";
+            return;
+        }
+
+        try {
+            await createCalendarEvent({
+                title: newTitle,
+                description: newDescription || undefined,
+                startAt: startAt.toISOString(),
+                endAt: endAt.toISOString(),
+                location: newLocation || undefined,
+                eventType: "Personal",
+            });
+            isCreateOpen = false;
+            scope = "mine";
+            date = startAt;
+            await load();
+        } catch (err) {
+            console.error("Не удалось создать событие", err);
+            createError = "Не удалось создать событие";
+        }
+    }
 </script>
 
-<main class="w-full h-full flex flex-col px-4 py-4 overflow-auto">
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold">📅 Мой календарь</h1>
-        <p class="text-sm text-muted-foreground">
-            Управление персональным календарём и предстоящие события
-        </p>
+<div class="flex h-full flex-col">
+    <div class="flex flex-wrap items-center justify-between gap-2 p-3">
+        <Tabs.Root value={scope} onValueChange={onScopeChange}>
+            <Tabs.List>
+                <Tabs.Trigger value="mine">Мои</Tabs.Trigger>
+                <Tabs.Trigger value="club">Музклуб</Tabs.Trigger>
+            </Tabs.List>
+        </Tabs.Root>
+
+        <Tabs.Root
+            value={view}
+            onValueChange={(value) => (view = value as View)}
+        >
+            <Tabs.List>
+                <Tabs.Trigger value="day">День</Tabs.Trigger>
+                <Tabs.Trigger value="week">Неделя</Tabs.Trigger>
+            </Tabs.List>
+        </Tabs.Root>
     </div>
 
-    {#if loading}
-        <div class="flex-1 flex items-center justify-center">
-            <p class="text-muted-foreground">Загрузка...</p>
-        </div>
-    {:else}
-        <div class="grid gap-6 md:grid-cols-2">
-            <!-- Левая колонка: Календарный фид -->
-            <div class="space-y-6">
-                <CalendarFeedCard
-                    feed={feed}
-                    on:copy
-                    on:regenerate={handleRegenerate}
-                    on:revoke={handleRevoke}
-                />
-
-                <!-- Создание личного события -->
-                <Card>
-                    <CardHeader>
-                        <CardTitle class="flex items-center gap-2">
-                            <Plus class="h-5 w-5" />
-                            Личные события
-                        </CardTitle>
-                        <CardDescription>
-                            Создавайте личные события, которые будут отображаться в вашем календаре
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Dialog.Root open={isCreateDialogOpen} onOpenChange={(open) => { isCreateDialogOpen = open; }}>
-                            <Dialog.Trigger>
-                                <Button class="w-full">
-                                    <Plus class="mr-2 h-4 w-4" />
-                                    Добавить событие
-                                </Button>
-                            </Dialog.Trigger>
-                            <Dialog.Content>
-                                <Dialog.Header>
-                                    <Dialog.Title>Новое событие</Dialog.Title>
-                                    <Dialog.Description>
-                                        Заполните информацию о событии
-                                    </Dialog.Description>
-                                </Dialog.Header>
-
-                                <div class="grid gap-4 py-4">
-                                    <div class="grid gap-2">
-                                        <Label for="title">Название *</Label>
-                                        <Input
-                                            id="title"
-                                            bind:value={newEventTitle}
-                                            placeholder="Например: Визит к стоматологу"
-                                        />
-                                    </div>
-
-                                    <div class="grid grid-cols-2 gap-4">
-                                        <div class="grid gap-2">
-                                            <Label for="startAt">Начало *</Label>
-                                            <Input
-                                                id="startAt"
-                                                type="datetime-local"
-                                                bind:value={newEventStartAt}
-                                            />
-                                        </div>
-                                        <div class="grid gap-2">
-                                            <Label for="endAt">Окончание *</Label>
-                                            <Input
-                                                id="endAt"
-                                                type="datetime-local"
-                                                bind:value={newEventEndAt}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div class="grid gap-2">
-                                        <Label for="location">Место</Label>
-                                        <Input
-                                            id="location"
-                                            bind:value={newEventLocation}
-                                            placeholder="Например: ул. Ленина, 1"
-                                        />
-                                    </div>
-
-                                    <div class="grid gap-2">
-                                        <Label for="description">Описание</Label>
-                                        <Textarea
-                                            id="description"
-                                            bind:value={newEventDescription}
-                                            placeholder="Дополнительная информация"
-                                            rows={3}
-                                        />
-                                    </div>
-
-                                    <div class="grid gap-2">
-                                        <Label>Тип события</Label>
-                                        <div class="flex gap-2">
-                                            <Button
-                                                variant={newEventType === "Personal" ? "default" : "outline"}
-                                                size="sm"
-                                                onclick={() => (newEventType = "Personal")}
-                                            >
-                                                Личное
-                                            </Button>
-                                        </div>
-                                    </div>
-
-                                    {#if error}
-                                        <p class="text-sm text-destructive">{error}</p>
-                                    {/if}
-                                </div>
-
-                                <Dialog.Footer>
-                                    <Button variant="outline" onclick={() => { resetForm(); isCreateDialogOpen = false; }}>
-                                        Отмена
-                                    </Button>
-                                    <Button onclick={handleCreateEvent}>
-                                        Создать
-                                    </Button>
-                                </Dialog.Footer>
-                            </Dialog.Content>
-                        </Dialog.Root>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <!-- Правая колонка: Список событий -->
-            <div class="space-y-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle class="flex items-center gap-2">
-                            <ExternalLink class="h-5 w-5" />
-                            Предстоящие события
-                        </CardTitle>
-                        <CardDescription>
-                            Ближайшие события из вашего календаря
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {#if events.length === 0}
-                            <div class="flex flex-col items-center justify-center rounded-lg border border-dashed bg-muted/30 p-8 text-center">
-                                <p class="text-sm text-muted-foreground">Нет предстоящих событий</p>
-                            </div>
-                        {:else}
-                            <div class="space-y-3">
-                                {#each events.slice(0, 10) as event (event.id)}
-                                    <div class="relative group">
-                                        <CalendarEventList events={[event]} />
-                                        {#if event.sourceType === "Personal"}
-                                            <button
-                                                class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-destructive/10 rounded"
-                                                title="Удалить событие"
-                                                onclick={() => (eventToDelete = event.id)}
-                                            >
-                                                <Trash2 class="h-4 w-4 text-destructive" />
-                                            </button>
-                                        {/if}
-                                    </div>
-                                {/each}
-
-                                {#if events.length > 10}
-                                    <div class="flex justify-center pt-2">
-                                        <Button variant="outline" size="sm">
-                                            Показать все ({events.length})
-                                        </Button>
-                                    </div>
-                                {/if}
-                            </div>
-                        {/if}
-                    </CardContent>
-                </Card>
-            </div>
-        </div>
+    {#if error}
+        <p class="px-3 pb-2 text-sm text-destructive">{error}</p>
     {/if}
 
-    <!-- Диалог удаления события -->
-    <Dialog.Root open={!!eventToDelete} onOpenChange={(open) => {
-        if (!open) eventToDelete = null;
-    }}>
-        <Dialog.Content>
+    <div class="min-h-0 flex-1">
+        <Timetable
+            bind:date
+            days={view === "day" ? 1 : 7}
+            {events}
+            {startHour}
+            {endHour}
+            hourHeight={view === "day" ? 80 : 56}
+            {loading}
+            onSelect={(event) => (selected = event)}
+            onDaySelect={() => (view = "day")}
+        />
+    </div>
+</div>
+
+<Button
+    class="fixed right-4 bottom-18 z-50 rounded-full shadow-lg"
+    size="icon"
+    aria-label="Создать новое событие"
+    onclick={openCreate}
+>
+    <Plus />
+</Button>
+
+<Dialog.Root
+    open={selected !== null}
+    onOpenChange={(open) => {
+        if (!open) selected = null;
+    }}
+>
+    <Dialog.Content>
+        {#if selected}
             <Dialog.Header>
-                <Dialog.Title>Удалить событие?</Dialog.Title>
+                <Dialog.Title>{selected.title}</Dialog.Title>
                 <Dialog.Description>
-                    Это действие нельзя отменить. Событие будет удалено из вашего календаря.
+                    {kindLabel[selected.kind]}
+                    {#if selected.status && statusLabel[selected.status]}
+                        · {statusLabel[selected.status]}
+                    {/if}
                 </Dialog.Description>
             </Dialog.Header>
+
+            <div class="grid gap-1 text-sm">
+                <p>
+                    {timeFormatter.format(selected.startAt)} – {shortTimeFormatter.format(
+                        selected.endAt,
+                    )}
+                </p>
+                {#if selected.location}
+                    <p class="text-muted-foreground">{selected.location}</p>
+                {/if}
+                {#if selected.syncedToCalendar === false && selected.status === "Confirmed"}
+                    <p class="text-muted-foreground">
+                        Пока только в боте — появится в Яндекс.Календаре после
+                        синхронизации
+                    </p>
+                {/if}
+            </div>
+
             <Dialog.Footer>
-                <Button variant="outline" onclick={() => (eventToDelete = null)}>
-                    Отмена
-                </Button>
-                <Button variant="destructive" onclick={handleDeleteEvent}>
-                    Удалить
-                </Button>
+                {#if selected.canDelete}
+                    <Button variant="destructive" onclick={deleteSelected}>
+                        Удалить
+                    </Button>
+                {/if}
+                {#if selected.songId}
+                    {@const songId = selected.songId}
+                    <Button onclick={() => openSong(songId)}>
+                        Открыть песню
+                    </Button>
+                {/if}
             </Dialog.Footer>
-        </Dialog.Content>
-    </Dialog.Root>
-</main>
+        {/if}
+    </Dialog.Content>
+</Dialog.Root>
+
+<Dialog.Root bind:open={isCreateOpen}>
+    <Dialog.Content>
+        <Dialog.Header>
+            <Dialog.Title>Новое событие</Dialog.Title>
+            <Dialog.Description>
+                Личное событие видно только вам
+            </Dialog.Description>
+        </Dialog.Header>
+
+        <div class="grid gap-4 py-2">
+            <div class="grid gap-2">
+                <Label for="title">Название *</Label>
+                <Input
+                    id="title"
+                    bind:value={newTitle}
+                    placeholder="Например: Пара по матанализу"
+                />
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+                <div class="grid gap-2">
+                    <Label for="date">Дата *</Label>
+                    <Input id="date" type="date" bind:value={newDate} />
+                </div>
+                <div class="grid gap-2">
+                    <Label for="start">Начало *</Label>
+                    <Input id="start" type="time" bind:value={newStart} />
+                </div>
+                <div class="grid gap-2">
+                    <Label for="end">Конец *</Label>
+                    <Input id="end" type="time" bind:value={newEnd} />
+                </div>
+            </div>
+
+            <div class="grid gap-2">
+                <Label for="location">Место</Label>
+                <Input id="location" bind:value={newLocation} />
+            </div>
+
+            <div class="grid gap-2">
+                <Label for="description">Описание</Label>
+                <Textarea id="description" bind:value={newDescription} rows={3} />
+            </div>
+
+            {#if createError}
+                <p class="text-sm text-destructive">{createError}</p>
+            {/if}
+        </div>
+
+        <Dialog.Footer>
+            <Button variant="outline" onclick={() => (isCreateOpen = false)}>
+                Отмена
+            </Button>
+            <Button onclick={handleCreate}>Создать</Button>
+        </Dialog.Footer>
+    </Dialog.Content>
+</Dialog.Root>

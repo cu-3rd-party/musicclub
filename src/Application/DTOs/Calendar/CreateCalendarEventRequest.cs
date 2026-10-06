@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using CuMusicClub.Domain.Enums;
 
 namespace CuMusicClub.Application.DTOs.Calendar;
@@ -40,6 +41,7 @@ public class CreateCalendarEventRequest
     /// <summary>
     /// Тип события.
     /// </summary>
+    [JsonConverter(typeof(JsonStringEnumConverter<CalendarEventType>))]
     public CalendarEventType EventType { get; set; }
 
     /// <summary>

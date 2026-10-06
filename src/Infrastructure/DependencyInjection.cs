@@ -1,20 +1,22 @@
 ﻿using System.Text;
 using CuMusicClub.Application.Common.Options;
+using CuMusicClub.Application.Services.Calendar;
 using CuMusicClub.Domain.Abstractions;
-using CuMusicClub.Domain.Entities;
 using CuMusicClub.Infrastructure.Data;
 using CuMusicClub.Infrastructure.Data.Interceptors;
 using CuMusicClub.Infrastructure.Data.Repositories;
 using CuMusicClub.Infrastructure.Yandex;
+using CuMusicClub.Infrastructure.YandexCalDav;
+using CuMusicClub.Infrastructure.YandexCalDav.Config;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Telegram.Bot;
+using YandexCalDavDi = CuMusicClub.Infrastructure.YandexCalDav.Config.DependencyInjection;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -98,6 +100,7 @@ public static class DependencyInjection
         builder.Services.AddScoped<ISongRoadieRepository, SongRoadieRepository>();
         builder.Services.AddScoped<ICalendarEventRepository, CalendarEventRepository>();
         builder.Services.AddScoped<ICalendarFeedRepository, CalendarFeedRepository>();
+        builder.Services.AddScoped<IRehearsalBookingRepository, RehearsalBookingRepository>();
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         builder.Services.AddScoped<ApplicationDbContextInitialiser>();
@@ -108,7 +111,54 @@ public static class DependencyInjection
             return new TelegramBotClient(options.BotToken);
         });
 
+        AddYandexCalendar(builder);
+    }
+
+    private static void AddYandexCalendar(IHostApplicationBuilder builder)
+    {
+        var section = builder.Configuration.GetSection(YandexWebCalendarOptions.SectionName);
+        builder.Services.Configure<YandexWebCalendarOptions>(section);
+        var yandexOptions = section.Get<YandexWebCalendarOptions>() ?? new YandexWebCalendarOptions();
+
         // Playwright для обновления cookies Яндекс.Календаря
-        builder.Services.AddScoped<IYandexCookieRefresher, YandexCookieRefresher>();
+        builder.Services.AddSingleton<IYandexCookieRefresher, YandexCookieRefresher>();
+
+        if (yandexOptions.Provider == YandexCalendarProvider.CalDav)
+        {
+            // Честный CalDAV под сервисным аккаунтом
+            builder.Services.Configure<YandexCaldavConfig>(builder.Configuration.GetSection("YandexCalDav"));
+            YandexCalDavDi.AddYandexCalDav(builder.Services);
+            builder.Services.AddScoped<ICalDavOperations, CalDavOperationsAdapter>();
+            builder.Services.AddScoped<IExternalScheduleProvider, NullExternalScheduleProvider>();
+            builder.Services.AddSingleton<ICalendarIntegration, YandexCalDavIntegration>();
+            return;
+        }
+
+        // Веб-API calendar.yandex.ru от имени пользователя (cookies), cookies обновляет Playwright
+        builder.Services
+            .AddHttpClient(YandexWebSession.HttpClientName, client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(30);
+                client.DefaultRequestHeaders.UserAgent.ParseAdd(
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+                client.DefaultRequestHeaders.Accept.ParseAdd("application/json, text/javascript, */*; q=0.01");
+                client.DefaultRequestHeaders.Add("X-Requested-With", "XMLHttpRequest");
+                client.DefaultRequestHeaders.Add("Origin", "https://calendar.yandex.ru");
+                client.DefaultRequestHeaders.Referrer = new Uri("https://calendar.yandex.ru/");
+            })
+            // Cookie шлём руками из файла, редирект на passport ловим как «сессия протухла»
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                UseCookies = false,
+                AllowAutoRedirect = false
+            });
+        builder.Services.AddSingleton<IYandexWebSession, YandexWebSession>();
+        builder.Services.AddSingleton<IYandexMayaClient, YandexMayaClient>();
+        builder.Services.AddScoped<ICalDavOperations, YandexWebCalendarOperations>();
+        builder.Services.AddScoped<IExternalScheduleProvider, YandexWebScheduleProvider>();
+        builder.Services.AddSingleton<ICalendarIntegration, YandexWebCalendarIntegration>();
+
+        // Cookies нужны и без LayerId (занятость, личное расписание); без них сервис сам ничего не делает
+        builder.Services.AddHostedService<YandexCookieRefreshHostedService>();
     }
 }

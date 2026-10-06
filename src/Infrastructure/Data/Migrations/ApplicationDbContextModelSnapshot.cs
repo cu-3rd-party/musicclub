@@ -524,6 +524,81 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                     b.ToTable("refresh_tokens", (string)null);
                 });
 
+            modelBuilder.Entity("CuMusicClub.Domain.Entities.RehearsalBooking", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CalDavEventETag")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)")
+                        .HasColumnName("cal_dav_event_etag");
+
+                    b.Property<string>("CalDavEventUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("cal_dav_event_url");
+
+                    b.Property<string>("CalendarUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)")
+                        .HasColumnName("calendar_url");
+
+                    b.Property<Guid?>("CoachUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.Property<int>("DurationMinutes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(80);
+
+                    b.Property<bool>("IsBotManaged")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_bot_managed");
+
+                    b.Property<long>("RequesterTgUserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("ScheduledAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<Guid?>("SongId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("NOW()");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CalDavEventUrl")
+                        .IsUnique()
+                        .HasDatabaseName("idx_rehearsal_booking_cal_dav_url")
+                        .HasFilter("cal_dav_event_url IS NOT NULL");
+
+                    b.HasIndex("RequesterTgUserId", "ScheduledAt")
+                        .HasDatabaseName("idx_rehearsal_booking_requester_scheduled");
+
+                    b.HasIndex("Status", "ScheduledAt")
+                        .HasDatabaseName("idx_rehearsal_booking_status_scheduled");
+
+                    b.ToTable("rehearsal_booking", (string)null);
+                });
+
             modelBuilder.Entity("CuMusicClub.Domain.Entities.RoadieTicket", b =>
                 {
                     b.Property<Guid>("Id")

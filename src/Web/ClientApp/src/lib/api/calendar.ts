@@ -92,3 +92,36 @@ export async function createCalendarEvent(
 export async function deleteCalendarEvent(eventId: string): Promise<void> {
     await api.delete(`/api/v1/calendar/events/${eventId}`);
 }
+
+export type TimetableScope = "mine" | "club";
+
+export interface TimetableEventDto {
+    id: string;
+    title: string;
+    startAt: string;
+    endAt: string;
+    kind: "Rehearsal" | "Performance" | "Personal" | "External";
+    location?: string | null;
+    songId?: string | null;
+    status?: string | null;
+    canDelete: boolean;
+    syncedToCalendar?: boolean | null;
+}
+
+/**
+ * Получить события для сетки расписания.
+ * @param scope mine — мои события и мой Яндекс.Календарь; club — все события музклуба
+ * @param from Начало интервала (ISO 8601, включительно)
+ * @param to Конец интервала (ISO 8601, не включительно)
+ */
+export async function getTimetable(
+    scope: TimetableScope,
+    from: string,
+    to: string,
+): Promise<TimetableEventDto[]> {
+    const response = await api.get<TimetableEventDto[]>(
+        "/api/v1/calendar/timetable",
+        { params: { scope, from, to } },
+    );
+    return response.data;
+}

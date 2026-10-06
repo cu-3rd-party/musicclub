@@ -54,6 +54,9 @@
     environment:
       # оч прикольный оверрайд, позволяет не задавать ConnectionStrings__CuMusicClubDb и задавать только POSTGRES_* переменные
       - ConnectionStrings__CuMusicClubDb=Server=db;Port=5432;Database=${POSTGRES_DB:-db};Username=${POSTGRES_USER:-admin};Password=${POSTGRES_PASSWORD:-password}
+    volumes:
+      # cookies + persistent-профиль Chromium для Яндекс.Календаря: переживают пересборку
+      - yandex_data:/app/data/yandex
     depends_on:
       db:
         condition: service_healthy
@@ -89,6 +92,8 @@
 
 volumes:
   db_data:
+    driver: local
+  yandex_data:
     driver: local
 
 networks:

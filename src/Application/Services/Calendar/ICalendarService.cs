@@ -40,7 +40,7 @@ public interface ICalendarService
     /// <summary>
     /// Удалить событие.
     /// </summary>
-    Task DeleteEventAsync(Guid eventId, CancellationToken ct);
+    Task DeleteEventAsync(Guid userId, Guid eventId, CancellationToken ct);
 
     /// <summary>
     /// Синхронизировать событие из треклиста.

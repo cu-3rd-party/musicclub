@@ -52,6 +52,15 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends wget \
     && rm -rf /var/lib/apt/lists/*
 
+# Chromium для Playwright (обновление cookies Яндекс.Календаря).
+# Ставим через node-драйвер, который Microsoft.Playwright кладёт в publish (.playwright/)
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN ./.playwright/node/linux-x64/node ./.playwright/package/cli.js install --with-deps chromium \
+    && rm -rf /var/lib/apt/lists/*
+
+# cookies и профиль браузера Яндекса (монтируется volume)
+RUN mkdir -p /app/data/yandex
+
 # Expose the port the app runs on
 EXPOSE 8080
 
