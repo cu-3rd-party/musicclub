@@ -12,10 +12,72 @@ concurrency:
 
 permissions:
   contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BACKEND: ghcr.io/${{ github.repository_owner }}/musicclub-backend
+  IMAGE_FRONTEND: ghcr.io/${{ github.repository_owner }}/musicclub-frontend
 
 jobs:
+  build:
+    name: Build and push images
+    runs-on: ubuntu-latest
+    outputs:
+      backend-tag: ${{ env.IMAGE_BACKEND }}:${{ env.COMMIT_SHA }}
+      frontend-tag: ${{ env.IMAGE_FRONTEND }}:${{ env.COMMIT_SHA }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set commit SHA
+        run: echo "COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} -u "${{ github.actor }}" --password-stdin
+
+      - name: Check if backend image exists
+        id: backend-exists
+        run: |
+          if docker manifest inspect ${{ env.IMAGE_BACKEND }}:${{ env.COMMIT_SHA }} > /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+
+      - name: Build and push backend
+        if: steps.backend-exists.outputs.exists == 'false'
+        run: |
+          docker build \
+            -f docker/backend/Dockerfile \
+            -t ${{ env.IMAGE_BACKEND }}:${{ env.COMMIT_SHA }} \
+            .
+          docker push ${{ env.IMAGE_BACKEND }}:${{ env.COMMIT_SHA }}
+
+      - name: Check if frontend image exists
+        id: frontend-exists
+        run: |
+          if docker manifest inspect ${{ env.IMAGE_FRONTEND }}:${{ env.COMMIT_SHA }} > /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+        continue-on-error: true
+
+      - name: Build and push frontend
+        if: steps.frontend-exists.outputs.exists == 'false'
+        run: |
+          docker build \
+            -f docker/frontend/Dockerfile \
+            -t ${{ env.IMAGE_FRONTEND }}:${{ env.COMMIT_SHA }} \
+            .
+          docker push ${{ env.IMAGE_FRONTEND }}:${{ env.COMMIT_SHA }}
+
   deploy:
     name: Deploy to dev
+    needs: build
     runs-on: ubuntu-latest
     environment: dev
     timeout-minutes: 15
@@ -45,12 +107,8 @@ jobs:
           rsync -az --delete \
             -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=yes" \
             docker-compose.yml \
-            src \
+            docker-compose.prod.yml \
             traefik \
-            docker \
-            CuMusicClub.slnx \
-            Directory.Build.props \
-            Directory.Packages.props \
             "${USERNAME}@${HOST}:${DEPLOY_PATH}/"
 
       - name: Write environment
@@ -71,18 +129,26 @@ jobs:
           HOST: ${{ secrets.HOST }}
           USERNAME: ${{ secrets.USERNAME }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          COMMIT_SHA: ${{ github.sha }}
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
         run: |
           ssh -i ~/.ssh/id_ed25519 \
             -o StrictHostKeyChecking=yes \
+            -o SendEnv=COMMIT_SHA,GITHUB_REPOSITORY_OWNER,GITHUB_TOKEN,GITHUB_ACTOR \
             "${USERNAME}@${HOST}" << EOF
               set -euo pipefail
 
               cd "${DEPLOY_PATH}"
 
+              docker login ghcr.io -u "${GITHUB_ACTOR}" -p "${GITHUB_TOKEN}"
+
               docker compose \
                 -f docker-compose.yml \
+                -f docker-compose.prod.yml \
                 up -d \
-                --build \
+                --pull always \
                 --remove-orphans
 
               docker image prune -f

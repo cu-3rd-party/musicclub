@@ -1,0 +1,6 @@
+services:
+  backend:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/musicclub-backend:${COMMIT_SHA}
+
+  frontend:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/musicclub-frontend:${COMMIT_SHA}
