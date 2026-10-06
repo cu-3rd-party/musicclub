@@ -183,7 +183,7 @@ public class RoadieService(
             }
             else
             {
-                await telegram.SendRoadieMessage($"Группе «{songTitle}» назначен роуди (у пользователя нет TgUserId).",
+                await telegram.SendRoadieMessage($"Группе «{songTitle}» назначен роуди, но у него не привязан Telegram — сообщите ему сами.",
                     cancellationToken);
             }
 

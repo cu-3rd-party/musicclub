@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Net;
 using System.Text;
 using CuMusicClub.Application.Services.Calendar;
 using CuMusicClub.Domain.Abstractions;
@@ -18,7 +20,11 @@ public interface IWeeklyDigestService
     /// <summary>
     /// Генерирует текстовое расписание на неделю.
     /// </summary>
-    string GenerateDigestText(IReadOnlyList<RehearsalBooking> bookings, DateTime from, DateTime to);
+    string GenerateDigestText(
+        IReadOnlyList<RehearsalBooking> bookings,
+        DateTime from,
+        DateTime to,
+        IReadOnlyDictionary<Guid, string>? songTitles = null);
 
     /// <summary>
     /// Публикует сводку в Telegram-чат.
@@ -55,12 +61,17 @@ public class WeeklyDigestService(
     ILogger<WeeklyDigestService> logger) : IWeeklyDigestService
 {
     private const int MaxMessageLength = 4096;
+    private static readonly CultureInfo Ru = CultureInfo.GetCultureInfo("ru-RU");
 
-    public string GenerateDigestText(IReadOnlyList<RehearsalBooking> bookings, DateTime from, DateTime to)
+    public string GenerateDigestText(
+        IReadOnlyList<RehearsalBooking> bookings,
+        DateTime from,
+        DateTime to,
+        IReadOnlyDictionary<Guid, string>? songTitles = null)
     {
         var sb = new StringBuilder();
         sb.AppendLine("📅 <b>Расписание репетиций</b>");
-        sb.AppendLine($"<i>{from:dd.MM} — {to:dd.MM yyyy}</i>");
+        sb.AppendLine($"<i>{from.ToString("dd.MM", Ru)} — {to.ToString("dd.MM.yyyy", Ru)}</i>");
         sb.AppendLine();
 
         if (bookings.Count == 0)
@@ -76,7 +87,7 @@ public class WeeklyDigestService(
 
         foreach (var dayGroup in grouped)
         {
-            sb.AppendLine($"<b>{dayGroup.Key:dd.MM yyyy, ddd}</b>");
+            sb.AppendLine($"<b>{dayGroup.Key.ToString("dddd, dd.MM", Ru)}</b>");
 
             foreach (var booking in dayGroup)
             {
@@ -86,11 +97,8 @@ public class WeeklyDigestService(
 
                 sb.Append($"  ⏰ <code>{time}–{end:HH:mm}</code>");
 
-                if (booking.SongId.HasValue)
-                {
-                    // Название песни загружается лениво
-                    sb.Append(" 🎵");
-                }
+                if (booking.SongId is { } songId && songTitles?.TryGetValue(songId, out var title) == true)
+                    sb.Append($" 🎵 {WebUtility.HtmlEncode(title)}");
 
                 sb.AppendLine();
             }
@@ -111,7 +119,7 @@ public class WeeklyDigestService(
 
         var bookings = await bookingRepository.GetUpcomingAsync(weekFrom.Date, to, ct);
 
-        var text = GenerateDigestText(bookings, weekFrom.Date, to);
+        var text = GenerateDigestText(bookings, weekFrom.Date, to, await LoadSongTitlesAsync(bookings, ct));
 
         try
         {
@@ -154,5 +162,20 @@ public class WeeklyDigestService(
             logger.LogError(ex, "Не удалось обновить сводку");
             return new UpdateDigestResult(false, "Ошибка обновления сводки.");
         }
+    }
+
+    private async Task<Dictionary<Guid, string>> LoadSongTitlesAsync(
+        IEnumerable<RehearsalBooking> bookings,
+        CancellationToken ct)
+    {
+        var titles = new Dictionary<Guid, string>();
+        foreach (var songId in bookings.Select(b => b.SongId).OfType<Guid>().Distinct())
+        {
+            var song = await songRepository.FindByIdAsync(songId, ct);
+            if (song != null)
+                titles[songId] = $"{song.Title} — {song.Artist}";
+        }
+
+        return titles;
     }
 }
