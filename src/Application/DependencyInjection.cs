@@ -28,6 +28,7 @@ public static class DependencyInjection
         builder.Services.AddScoped<ICalendarService, CalendarService>();
         builder.Services.AddScoped<ICalendarSyncService, CalendarSyncService>();
         builder.Services.AddScoped<ITimetableService, TimetableService>();
+        builder.Services.AddScoped<IDayScheduleService, DayScheduleService>();
         builder.Services.AddScoped<IRehearsalBookingService, RehearsalBookingService>();
         builder.Services.AddScoped<IWeeklyDigestService, WeeklyDigestService>();
         builder.Services.AddScoped<IIcsFeedGenerator, IcsFeedGenerator>();

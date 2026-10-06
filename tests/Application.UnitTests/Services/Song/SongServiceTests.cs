@@ -232,9 +232,18 @@ public class SongServiceTests
         }
 
         [Test]
-        public async Task WithParticipationPermission_CreatesSong()
+        public async Task WithOnlyParticipationPermission_ThrowsForbidden()
         {
             CurrentUser(CuMusicClub.Domain.Constants.Permission.ParticipationEditOwn);
+
+            await Should.ThrowAsync<ForbiddenAccessException>(() =>
+                _service.CreateAsync(Request(), Principal(), CancellationToken.None));
+        }
+
+        [Test]
+        public async Task WithSongsEditOwnPermission_CreatesSong()
+        {
+            CurrentUser(CuMusicClub.Domain.Constants.Permission.SongsEditOwn);
             var transaction = new Mock<ITransaction>();
             _unitOfWork
                 .Setup(u => u.BeginTransactionAsync(It.IsAny<CancellationToken>()))
@@ -271,7 +280,7 @@ public class SongServiceTests
         [Test]
         public async Task FeaturedWithoutPermission_ThrowsForbidden()
         {
-            CurrentUser(CuMusicClub.Domain.Constants.Permission.ParticipationEditOwn);
+            CurrentUser(CuMusicClub.Domain.Constants.Permission.SongsEditOwn);
             _unitOfWork
                 .Setup(u => u.BeginTransactionAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Mock.Of<ITransaction>());
@@ -284,7 +293,7 @@ public class SongServiceTests
         [Test]
         public async Task ReferencedDataEntryMissing_ThrowsValidationException()
         {
-            CurrentUser(CuMusicClub.Domain.Constants.Permission.ParticipationEditOwn);
+            CurrentUser(CuMusicClub.Domain.Constants.Permission.SongsEditOwn);
             _unitOfWork
                 .Setup(u => u.BeginTransactionAsync(It.IsAny<CancellationToken>()))
                 .ReturnsAsync(Mock.Of<ITransaction>());

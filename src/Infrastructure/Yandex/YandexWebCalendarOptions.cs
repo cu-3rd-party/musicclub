@@ -43,6 +43,13 @@ public class YandexWebCalendarOptions
     public long? LayerId { get; set; }
 
     /// <summary>
+    ///     private_token ICS-экспорта календаря зала (расписание базы, которое ведут вне бота).
+    ///     Берётся из ссылки «Экспорт» в настройках календаря: .../export/ics.xml?private_token=...
+    ///     Пусто — /day не показывает занятость зала.
+    /// </summary>
+    public string? RoomIcsToken { get; set; }
+
+    /// <summary>
     ///     Отображаемое имя календаря (должно содержать «MusicClub» или «Репетиции» — по нему ищет CalendarSyncService).
     /// </summary>
     public string LayerName { get; set; } = "MusicClub — Репетиции";

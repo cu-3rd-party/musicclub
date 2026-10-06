@@ -1,6 +1,8 @@
+using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using CuMusicClub.Application.Common.Extensions;
 using CuMusicClub.Application.Services.Calendar;
 using CuMusicClub.Domain.Abstractions;
 using CuMusicClub.Domain.Entities;
@@ -25,9 +27,12 @@ public class BotScheduleCommandsHandler(
     ITelegramChatService telegramChatService,
     ITelegramBotClient botClient,
     IRehearsalBookingRepository bookingRepository,
+    IDayScheduleService dayScheduleService,
     ILogger<BotScheduleCommandsHandler> logger)
 {
     private static readonly Regex DateRegex = new(@"^(\d{1,2})[./-](\d{1,2})$", RegexOptions.Compiled);
+    private static readonly Regex MentionRegex = new(@"@([A-Za-z0-9_]+)", RegexOptions.Compiled);
+    private static readonly CultureInfo Ru = CultureInfo.GetCultureInfo("ru-RU");
     private static readonly Dictionary<string, int> DayAliases = new(StringComparer.OrdinalIgnoreCase)
     {
         ["пн"] = 1, ["mon"] = 1,
@@ -89,12 +94,12 @@ public class BotScheduleCommandsHandler(
 
         if (bookings.Count == 0)
         {
-            await SendTextAsync(message, $"📅 Расписание на {date:dd.MM ddd}:\n\nНичего нет. 🎸");
+            await SendTextAsync(message, $"📅 Расписание на {FormatDate(date)}:\n\nНичего нет. 🎸");
             return;
         }
 
         var sb = new StringBuilder();
-        sb.AppendLine($"📅 Расписание на {date:dd.MM ddd, ddd}");
+        sb.AppendLine($"📅 Расписание на {FormatDate(date)}");
         sb.AppendLine();
 
         foreach (var booking in bookings.OrderBy(b => b.ScheduledAt))
@@ -142,33 +147,153 @@ public class BotScheduleCommandsHandler(
 
     private async Task HandleDayAsync(string? args, Message message, CancellationToken ct)
     {
-        var date = ParseDate(args);
+        // «/day 08.10 без @user1 @user2» — как в musicscheduler
+        var dateArgs = args;
+        var excluded = new List<string>();
+        var withoutIndex = args?.IndexOf("без", StringComparison.OrdinalIgnoreCase) ?? -1;
+        if (withoutIndex >= 0)
+        {
+            dateArgs = args![..withoutIndex];
+            excluded.AddRange(MentionRegex.Matches(args[withoutIndex..]).Select(m => m.Groups[1].Value));
+        }
 
-        var bookings = await bookingRepository.GetUpcomingAsync(
-            date.Date,
-            date.Date.AddDays(1),
-            ct);
+        var date = ParseDate(dateArgs);
+        var topic = await ResolveTopicAsync(message, ct);
 
+        var status = await botClient.SendMessage(
+            message.Chat.Id,
+            $"⏳ Собираю расписание на {FormatDate(date)}...",
+            messageThreadId: message.MessageThreadId,
+            cancellationToken: ct);
+
+        var schedule = await dayScheduleService.GetDayAsync(
+            DateOnly.FromDateTime(date), topic?.SongId, excluded, ct);
+
+        byte[] png;
+        try
+        {
+            png = DayScheduleImageRenderer.Render(schedule);
+        }
+        catch (Exception ex)
+        {
+            // Без картинки — хотя бы текстом
+            logger.LogError(ex, "Не удалось отрисовать расписание на {Date}", date);
+            await botClient.EditMessageText(
+                message.Chat.Id,
+                status.MessageId,
+                FormatDaySchedule(schedule, topic, excluded),
+                parseMode: ParseMode.Html,
+                cancellationToken: CancellationToken.None);
+            return;
+        }
+
+        var caption = new StringBuilder($"🗓 <b>Расписание на {FormatDate(date)}</b>");
+        if (excluded.Count > 0)
+            caption.Append($"\n<i>Без учёта: {Html(string.Join(", ", excluded.Select(u => "@" + u)))}</i>");
+        if (!schedule.RoomKnown)
+            caption.Append("\n⚠️ Расписание зала недоступно");
+        if (topic == null)
+            caption.Append("\n<i>Вызовите /day в топике песни, чтобы добавить участников.</i>");
+
+        using var stream = new MemoryStream(png);
+        await botClient.SendPhoto(
+            message.Chat.Id,
+            InputFile.FromStream(stream, $"schedule_{date:dd_MM}.png"),
+            caption: caption.ToString(),
+            parseMode: ParseMode.Html,
+            messageThreadId: message.MessageThreadId,
+            replyParameters: new ReplyParameters { MessageId = message.MessageId },
+            cancellationToken: CancellationToken.None);
+        await botClient.DeleteMessage(message.Chat.Id, status.MessageId, CancellationToken.None);
+    }
+
+    private static string FormatDaySchedule(DaySchedule schedule, SongTopic? topic, IReadOnlyCollection<string> excluded)
+    {
         var sb = new StringBuilder();
-        sb.AppendLine($"📊 Расписание на {date:dd.MM ddd, ddd}");
+        sb.AppendLine($"📊 <b>Расписание на {FormatDate(schedule.Date.ToDateTime())}</b>");
+        if (topic != null)
+            sb.AppendLine($"🎵 {Html(topic.Title)}");
+        if (excluded.Count > 0)
+            sb.AppendLine($"<i>Без учёта: {Html(string.Join(", ", excluded.Select(u => "@" + u)))}</i>");
         sb.AppendLine();
 
-        if (bookings.Count == 0)
+        sb.AppendLine("🏠 <b>Зал:</b>");
+        if (!schedule.RoomKnown)
+            sb.AppendLine("⚠️ Расписание зала недоступно (не задан YandexCalendar__RoomIcsToken или ошибка загрузки).");
+        foreach (var item in schedule.Room)
         {
-            sb.AppendLine("Ничего не запланировано.");
-        }
-        else
-        {
-            foreach (var booking in bookings.OrderBy(b => b.ScheduledAt))
+            var icon = item.Status switch
             {
-                var time = booking.ScheduledAt.ToOffset(TimeSpan.FromHours(3)).ToString("HH:mm");
-                var end = booking.ScheduledAt.ToOffset(TimeSpan.FromHours(3)).AddMinutes(booking.DurationMinutes).ToString("HH:mm");
-                sb.AppendLine($"⏰ {time}–{end}");
-            }
+                RoomSlotStatus.Busy => "⛔",
+                RoomSlotStatus.Coach => "🟡",
+                _ => "✅"
+            };
+            sb.AppendLine($"{icon} <code>{Range(item.Start, item.End)}</code> {Html(item.Title)}");
         }
 
-        // TODO: сгенерировать PNG-картинку с визуальным расписанием
-        await SendTextAsync(message, sb.ToString());
+        var pending = schedule.Bookings.Where(b => b.Status == BookingStatus.Pending).ToList();
+        foreach (var b in pending)
+            sb.AppendLine($"⏳ <code>{Range(b.ScheduledAt, b.ScheduledAt.AddMinutes(b.DurationMinutes))}</code> ждёт подтверждения Ильи");
+
+        if (topic == null)
+        {
+            sb.AppendLine();
+            sb.AppendLine("<i>Вызовите /day в топике песни, чтобы сопоставить с расписанием участников.</i>");
+            return sb.ToString();
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("👥 <b>Участники:</b>");
+        if (schedule.Members.Count == 0)
+            sb.AppendLine("Нет участников с назначенными ролями.");
+        foreach (var member in schedule.Members)
+        {
+            var name = Html(member.Name);
+            var line = member.Status switch
+            {
+                MemberScheduleStatus.NoYandexLogin => $"❓ {name} — нет Яндекс-логина",
+                MemberScheduleStatus.Error => $"⚠️ {name} — не удалось получить календарь",
+                _ when member.Events.Count == 0 => $"🟢 {name} — свободен весь день",
+                _ => $"🔴 {name}: " + string.Join(", ", member.Events.Select(e => $"<code>{Range(e.Start, e.End)}</code>"))
+            };
+            sb.AppendLine(line);
+        }
+
+        sb.AppendLine();
+        sb.AppendLine($"✨ <b>Общие окна ({DayScheduleService.WorkStartHour}:00–{DayScheduleService.WorkEndHour}:00, от часа):</b>");
+        if (schedule.FreeWindows.Count == 0)
+            sb.AppendLine("Нет подходящих окон.");
+        foreach (var window in schedule.FreeWindows)
+            sb.AppendLine($"{(window.WithCoach ? "🟡" : "✅")} <code>{Range(window.Start, window.End)}</code>"
+                          + (window.WithCoach ? " с Ильёй" : ""));
+
+        if (schedule.Members.Any(m => m.Status != MemberScheduleStatus.Ok))
+            sb.AppendLine("<i>Участники без календаря в окнах не учтены.</i>");
+
+        return sb.ToString();
+    }
+
+    private async Task<SongTopic?> ResolveTopicAsync(Message message, CancellationToken ct)
+    {
+        if (!message.IsTopicMessage || message.MessageThreadId == null)
+            return null;
+
+        return await songTopicRepository.FindByTopicIdAsync((long) message.MessageThreadId, ct);
+    }
+
+    private static string Range(DateTimeOffset start, DateTimeOffset end)
+    {
+        return $"{start.UtcDateTime.FromUtcToMsk():HH:mm}–{end.UtcDateTime.FromUtcToMsk():HH:mm}";
+    }
+
+    private static string FormatDate(DateTime date)
+    {
+        return date.ToString("dd.MM, ddd", Ru);
+    }
+
+    private static string Html(string? text)
+    {
+        return WebUtility.HtmlEncode(text ?? "");
     }
 
     private async Task HandleInfoAsync(Message message, User user, CancellationToken ct)
@@ -227,26 +352,29 @@ public class BotScheduleCommandsHandler(
 
     private DateTime ParseDate(string? args)
     {
-        if (string.IsNullOrWhiteSpace(args))
-            return DateTime.Today;
+        // Kind=Unspecified, время МСК: репозиторий переводит его в UTC как МСК
+        var today = DateTime.UtcNow.FromUtcToMsk().Date;
 
-        if (DateRegex.Match(args) is { Success: true } dateMatch)
+        if (string.IsNullOrWhiteSpace(args))
+            return today;
+
+        if (DateRegex.Match(args.Trim()) is { Success: true } dateMatch)
         {
             var day = int.Parse(dateMatch.Groups[1].Value);
             var month = int.Parse(dateMatch.Groups[2].Value);
-            return new DateTime(DateTime.Today.Year, month, day);
+            return new DateTime(today.Year, month, day);
         }
 
         if (DayAliases.TryGetValue(args.Trim(), out var dow))
         {
-            var today = (int) DateTime.Today.DayOfWeek;
-            today = today == 0 ? 7 : today;
-            var diff = dow - today;
+            var todayDow = (int) today.DayOfWeek;
+            todayDow = todayDow == 0 ? 7 : todayDow;
+            var diff = dow - todayDow;
             if (diff <= 0) diff += 7;
-            return DateTime.Today.AddDays(diff);
+            return today.AddDays(diff);
         }
 
-        return DateTime.Today;
+        return today;
     }
 
     private Task SendTextAsync(Message message, string text)

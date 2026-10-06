@@ -29,6 +29,8 @@
         </PackageReference>
         <PackageReference Include="Scalar.AspNetCore"/>
         <PackageReference Include="Telegram.Bot"/>
+        <PackageReference Include="SkiaSharp"/>
+        <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies"/>
     </ItemGroup>
 
     <ItemGroup>
@@ -37,6 +39,7 @@
 
     <ItemGroup>
         <None Include="wwwroot\favicon.ico"/>
+        <EmbeddedResource Include="Bot\Assets\DejaVuSans.ttf" LogicalName="DejaVuSans.ttf"/>
     </ItemGroup>
 
     <Target Name="PublishRunWebpack" AfterTargets="ComputeFilesToPublish" Condition="'$(PublishRunWebpack)' != 'false'">
