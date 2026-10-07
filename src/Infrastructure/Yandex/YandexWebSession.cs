@@ -23,6 +23,11 @@ public interface IYandexWebSession
     Task<YandexWebAuthState> GetStateAsync(CancellationToken ct = default);
 
     /// <summary>
+    ///     ckey веб-интерфейса Яндекс.Почты (для моделей liza1, например abook-contacts). Кешируется вместе с сессией.
+    /// </summary>
+    Task<string> GetMailCKeyAsync(CancellationToken ct = default);
+
+    /// <summary>
     ///     Сбрасывает кеш и прогоняет Playwright. Без <paramref name="force" /> не чаще, чем раз в MinRefreshInterval.
     /// </summary>
     Task<bool> RefreshAsync(bool force = false, CancellationToken ct = default);
@@ -45,6 +50,7 @@ public sealed partial class YandexWebSession(
     private readonly SemaphoreSlim _lock = new(1, 1);
 
     private YandexWebAuthState? _state;
+    private string? _mailCKey;
     private DateTime _lastRefreshUtc = DateTime.MinValue;
 
     public bool IsConfigured
@@ -76,6 +82,25 @@ public sealed partial class YandexWebSession(
         }
     }
 
+    public async Task<string> GetMailCKeyAsync(CancellationToken ct = default)
+    {
+        var ckey = _mailCKey;
+        if (ckey != null)
+            return ckey;
+
+        var state = await GetStateAsync(ct);
+        await _lock.WaitAsync(ct);
+        try
+        {
+            _mailCKey ??= await FetchCKeyAsync($"https://mail.yandex.ru/?uid={state.Uid}", state.CookieHeader, "почты", ct);
+            return _mailCKey;
+        }
+        finally
+        {
+            _lock.Release();
+        }
+    }
+
     public async Task<bool> RefreshAsync(bool force = false, CancellationToken ct = default)
     {
         await _lock.WaitAsync(ct);
@@ -85,11 +110,13 @@ public sealed partial class YandexWebSession(
             {
                 // Недавно уже обновляли — просто перечитаем файл и ckey
                 _state = null;
+                _mailCKey = null;
                 return false;
             }
 
             _lastRefreshUtc = DateTime.UtcNow;
             _state = null;
+            _mailCKey = null;
 
             SeedCookieFileIfMissing();
             return await cookieRefresher.RefreshCookiesAsync(ct: ct);
@@ -103,6 +130,7 @@ public sealed partial class YandexWebSession(
     public void Invalidate()
     {
         _state = null;
+        _mailCKey = null;
     }
 
     public void Dispose()
@@ -125,29 +153,29 @@ public sealed partial class YandexWebSession(
         if (!cookies.TryGetValue("yandexuid", out var uid) || string.IsNullOrEmpty(uid))
             throw new YandexWebAuthException("В cookies нет yandexuid");
 
-        var ckey = await FetchCalendarCKeyAsync(cookieHeader, uid, ct);
+        var ckey = await FetchCKeyAsync($"https://calendar.yandex.ru/?uid={uid}", cookieHeader, "календаря", ct);
         logger.LogInformation("🔑 Получен ckey Яндекс.Календаря (логин: {Login})",
             cookies.GetValueOrDefault("yandex_login", "н/д"));
 
         return new YandexWebAuthState(cookieHeader, uid, ckey);
     }
 
-    private async Task<string> FetchCalendarCKeyAsync(string cookieHeader, string uid, CancellationToken ct)
+    private async Task<string> FetchCKeyAsync(string url, string cookieHeader, string service, CancellationToken ct)
     {
         var client = httpClientFactory.CreateClient(HttpClientName);
-        using var request = new HttpRequestMessage(HttpMethod.Get, $"https://calendar.yandex.ru/?uid={uid}");
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.TryAddWithoutValidation("Cookie", cookieHeader);
         request.Headers.Accept.ParseAdd("text/html");
 
         using var response = await client.SendAsync(request, ct);
         var location = response.Headers.Location?.ToString() ?? string.Empty;
         if (location.Contains("passport.yandex", StringComparison.OrdinalIgnoreCase))
-            throw new YandexWebAuthException("Cookies протухли: календарь редиректит на passport");
+            throw new YandexWebAuthException($"Cookies протухли: страница {service} редиректит на passport");
 
         var html = await response.Content.ReadAsStringAsync(ct);
         var match = CKeyRegex().Match(html);
         if (!match.Success)
-            throw new YandexWebAuthException($"Не удалось найти ckey на странице календаря (HTTP {(int)response.StatusCode})");
+            throw new YandexWebAuthException($"Не удалось найти ckey на странице {service} (HTTP {(int)response.StatusCode})");
 
         return match.Groups[1].Value;
     }

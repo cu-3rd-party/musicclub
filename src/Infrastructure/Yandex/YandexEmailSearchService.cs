@@ -5,14 +5,17 @@ using Microsoft.Extensions.Logging;
 namespace CuMusicClub.Infrastructure.Yandex;
 
 /// <summary>
-/// Searches Yandex Calendar contacts for emails by surname/name.
-/// Implements same logic as musicscheduler/yandex_api.py::search_email_by_name
+/// Searches Yandex Mail address book (model abook-contacts) for emails by surname/name.
+/// Uses the same model as musicscheduler/yandex_api.py::search_email_by_name
 /// </summary>
 public class YandexEmailSearchService(
-    IYandexMayaClient mayaClient,
+    IYandexMailClient mailClient,
     IYandexWebSession session,
     ILogger<YandexEmailSearchService> logger) : IYandexEmailSearchService
 {
+    private const int FullNamePageSize = 5;
+    private const int SurnamePageSize = 20;
+
     public bool IsAvailable
     {
         get { return session.IsConfigured; }
@@ -36,19 +39,18 @@ public class YandexEmailSearchService(
         var given = parts.Count > 1 ? parts[1] : null;
 
         // Attempt 1: Search by full name
-        var contacts = await SuggestContactsAsync(query, ct);
-        if (contacts is { Length: 1 })
-            return contacts[0].GetProperty("email").GetString();
+        var contacts = await SearchContactsAsync(query, FullNamePageSize, ct);
+        if (contacts.Length == 1)
+            return contacts[0].Email;
 
-        if (contacts is { Length: > 1 })
+        if (contacts.Length > 1)
         {
-            var norm = (string s) => Normalize(s);
             var exact = contacts
-                .Where(c => norm(c.GetProperty("name").GetString() ?? "") == norm(query))
+                .Where(c => Normalize(c.Name) == Normalize(query) || Normalize(c.Name) == Normalize(Swap(query)))
                 .ToArray();
 
             if (exact.Length == 1)
-                return exact[0].GetProperty("email").GetString();
+                return exact[0].Email;
 
             if (exact.Length > 1)
                 logger.LogWarning("Поиск '{Query}': {Count} точных совпадений, выбрать нельзя", query, exact.Length);
@@ -58,23 +60,21 @@ public class YandexEmailSearchService(
         if (string.IsNullOrEmpty(given))
             return null;
 
-        var bySurname = await SuggestContactsAsync(surname, ct) ?? [];
+        var bySurname = await SearchContactsAsync(surname, SurnamePageSize, ct);
+        var s = Normalize(surname);
         var g = Normalize(given);
         var near = bySurname
             .Where(c =>
             {
-                var nameParts = Normalize(c.GetProperty("name").GetString() ?? "").Split();
-                return nameParts.Skip(1).Any(w => w.StartsWith(g) || g.StartsWith(w));
+                var nameParts = Normalize(c.Name).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                return nameParts.Contains(s) && nameParts.Any(w => w != s && (w.StartsWith(g) || g.StartsWith(w)));
             })
             .ToArray();
 
         if (near.Length == 1)
         {
-            logger.LogInformation(
-                "Поиск '{Query}': нашёл по неточному имени '{Name}'",
-                query,
-                near[0].GetProperty("name").GetString());
-            return near[0].GetProperty("email").GetString();
+            logger.LogInformation("Поиск '{Query}': нашёл по неточному имени '{Name}'", query, near[0].Name);
+            return near[0].Email;
         }
 
         if (bySurname.Length > 0)
@@ -86,22 +86,82 @@ public class YandexEmailSearchService(
         return null;
     }
 
-    private async Task<JsonElement[]?> SuggestContactsAsync(string query, CancellationToken ct)
+    private async Task<Contact[]> SearchContactsAsync(string query, int pageSize, CancellationToken ct)
     {
-        var parameters = new { query };
-        var result = await mayaClient.CallAsync("suggest-contacts", parameters, ct);
+        var parameters = new { pagesize = pageSize.ToString(), q = query, type = "normal" };
+        var data = await mailClient.CallAsync("abook-contacts", parameters, ct);
 
-        if (!result.TryGetProperty("contacts", out var contactsElement))
-            return null;
+        if (data.ValueKind != JsonValueKind.Object
+            || !data.TryGetProperty("contact", out var contactsElement)
+            || contactsElement.ValueKind != JsonValueKind.Array)
+            return [];
 
-        var contacts = new List<JsonElement>();
+        var contacts = new List<Contact>();
         foreach (var contact in contactsElement.EnumerateArray())
         {
-            if (contact.TryGetProperty("email", out _))
-                contacts.Add(contact);
+            var email = GetEmail(contact);
+            if (!string.IsNullOrEmpty(email))
+                contacts.Add(new Contact(GetName(contact), email));
         }
 
         return contacts.ToArray();
+    }
+
+    /// <summary>Первый адрес из <c>email: [{ value }]</c>, как в yandex_api.py.</summary>
+    private static string? GetEmail(JsonElement contact)
+    {
+        if (!contact.TryGetProperty("email", out var emails))
+            return null;
+
+        if (emails.ValueKind == JsonValueKind.String)
+            return emails.GetString();
+
+        if (emails.ValueKind != JsonValueKind.Array)
+            return null;
+
+        foreach (var email in emails.EnumerateArray())
+        {
+            if (email.ValueKind == JsonValueKind.String)
+                return email.GetString();
+            if (email.ValueKind == JsonValueKind.Object
+                && email.TryGetProperty("value", out var value)
+                && value.ValueKind == JsonValueKind.String)
+                return value.GetString();
+        }
+
+        return null;
+    }
+
+    /// <summary>Имя контакта: строка или объект <c>{ first, last, ... }</c> → «Фамилия Имя».</summary>
+    private static string GetName(JsonElement contact)
+    {
+        if (!contact.TryGetProperty("name", out var name))
+            return string.Empty;
+
+        if (name.ValueKind == JsonValueKind.String)
+            return name.GetString() ?? string.Empty;
+
+        if (name.ValueKind != JsonValueKind.Object)
+            return string.Empty;
+
+        var parts = new[] { "last", "first" }
+            .Select(key => name.TryGetProperty(key, out var part) && part.ValueKind == JsonValueKind.String
+                ? part.GetString()
+                : null)
+            .Where(part => !string.IsNullOrWhiteSpace(part));
+        var joined = string.Join(" ", parts);
+        if (joined.Length > 0)
+            return joined;
+
+        return name.TryGetProperty("full", out var full) && full.ValueKind == JsonValueKind.String
+            ? full.GetString() ?? string.Empty
+            : string.Empty;
+    }
+
+    private static string Swap(string query)
+    {
+        var parts = query.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length == 2 ? $"{parts[1]} {parts[0]}" : query;
     }
 
     private static string Normalize(string s)
@@ -112,4 +172,6 @@ public class YandexEmailSearchService(
                 .Replace("ё", "е")
                 .Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries));
     }
+
+    private sealed record Contact(string Name, string Email);
 }

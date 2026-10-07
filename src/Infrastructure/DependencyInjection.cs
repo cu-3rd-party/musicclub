@@ -162,6 +162,7 @@ public static class DependencyInjection
             });
         builder.Services.AddSingleton<IYandexWebSession, YandexWebSession>();
         builder.Services.AddSingleton<IYandexMayaClient, YandexMayaClient>();
+        builder.Services.AddSingleton<IYandexMailClient, YandexMailClient>();
         builder.Services.AddScoped<ICalDavOperations, YandexWebCalendarOperations>();
         builder.Services.AddScoped<IExternalScheduleProvider, YandexWebScheduleProvider>();
         builder.Services.AddSingleton<ICalendarIntegration, YandexWebCalendarIntegration>();
