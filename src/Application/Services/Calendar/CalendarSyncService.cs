@@ -17,6 +17,8 @@ public class CalendarSyncService(
     IApplicationUserRepository userRepository,
     IRehearsalBookingRepository bookingRepository,
     ISongRepository songRepository,
+    ISongRoleAssignmentRepository songRoleAssignmentRepository,
+    ISongRoadieRepository songRoadieRepository,
     IYandexEmailSearchService emailSearchService,
     ILogger<CalendarSyncService> logger) : ICalendarSyncService
 {
@@ -300,37 +302,48 @@ public class CalendarSyncService(
         // Организатор
         participants.Add(new CalDavParticipant(OrganizerEmail, "MusicClub Bot", CalDavParticipantRole.Required, CalDavParticipantStatus.NeedsAction));
 
-        // Инициатор
+        // Инициатор, роуди (брони и песни) и все участники песни
+        var users = new List<ApplicationUser>();
+
         var requester = await userRepository.FindByTgUserIdAsync(booking.RequesterTgUserId, ct);
         if (requester != null)
+            users.Add(requester);
+
+        var userIds = new List<Guid>();
+        if (booking.RoadieUserId.HasValue)
+            userIds.Add(booking.RoadieUserId.Value);
+
+        if (booking.SongId is { } songId)
         {
-            var email = await GetUserEmailAsync(requester, ct);
-            if (!string.IsNullOrEmpty(email))
-            {
-                participants.Add(new CalDavParticipant(
-                    email,
-                    requester.DisplayName,
-                    CalDavParticipantRole.Required,
-                    CalDavParticipantStatus.NeedsAction));
-            }
+            var songRoadie = await songRoadieRepository.FindBySongIdAsync(songId, ct);
+            if (songRoadie != null)
+                userIds.Add(songRoadie.RoadieId);
+
+            userIds.AddRange(await songRoleAssignmentRepository.GetMemberUserIdsBySongIdAsync(songId, ct));
         }
 
-        // Роуди
-        if (booking.RoadieUserId.HasValue)
+        foreach (var memberId in userIds)
         {
-            var roadie = await userRepository.FindByIdAsync(booking.RoadieUserId.Value, ct);
-            if (roadie != null)
-            {
-                var email = await GetUserEmailAsync(roadie, ct);
-                if (!string.IsNullOrEmpty(email))
-                {
-                    participants.Add(new CalDavParticipant(
-                        email,
-                        roadie.DisplayName,
-                        CalDavParticipantRole.Required,
-                        CalDavParticipantStatus.NeedsAction));
-                }
-            }
+            if (users.Any(u => u.Id == memberId))
+                continue;
+
+            var member = await userRepository.FindByIdAsync(memberId, ct);
+            if (member != null)
+                users.Add(member);
+        }
+
+        foreach (var user in users.DistinctBy(u => u.Id))
+        {
+            var email = await GetUserEmailAsync(user, ct);
+            if (string.IsNullOrEmpty(email)
+                || participants.Any(p => string.Equals(p.Email, email, StringComparison.OrdinalIgnoreCase)))
+                continue;
+
+            participants.Add(new CalDavParticipant(
+                email,
+                user.DisplayName,
+                CalDavParticipantRole.Required,
+                CalDavParticipantStatus.NeedsAction));
         }
 
         return participants;
@@ -341,12 +354,13 @@ public class CalendarSyncService(
         if (!string.IsNullOrEmpty(user.YandexLogin))
             return BuildYandexEmail(user.YandexLogin);
 
-        // Try to search for email by display name
-        if (!string.IsNullOrEmpty(user.DisplayName))
+        // Логина нет — ищем по фамилии и имени (или отображаемому имени)
+        var fullName = user.GetFullName();
+        if (!string.IsNullOrEmpty(fullName))
         {
             try
             {
-                var email = await emailSearchService.SearchEmailByNameAsync(user.DisplayName, ct);
+                var email = await emailSearchService.SearchEmailByNameAsync(fullName, ct);
                 if (!string.IsNullOrEmpty(email))
                     return email;
             }

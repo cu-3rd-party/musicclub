@@ -24,6 +24,9 @@ public class CalendarSyncServiceTests
     private readonly List<CalDavEventInfo> _created = [];
 
     private Mock<ISongRepository> _songs = null!;
+    private Mock<ISongRoleAssignmentRepository> _assignments = null!;
+    private Mock<ISongRoadieRepository> _roadies = null!;
+    private Mock<IApplicationUserRepository> _users = null!;
 
     [Test]
     public async Task CreateBookingEvent_UsesSongTitleInEventTitle()
@@ -36,6 +39,34 @@ public class CalendarSyncServiceTests
         await _service.CreateBookingEventAsync(booking);
 
         _created.ShouldHaveSingleItem().Title.ShouldBe("🎸 Репетиция: Кино — Группа крови");
+    }
+
+    [Test]
+    public async Task CreateBookingEvent_InvitesSongRoadieAndAllSongMembers()
+    {
+        var songId = Guid.NewGuid();
+        var withLogin = new ApplicationUser { Id = Guid.NewGuid(), DisplayName = "Пётр", YandexLogin = "petr" };
+        var withoutLogin = new ApplicationUser { Id = Guid.NewGuid(), DisplayName = "Аноним" };
+        var requesterAgain = new ApplicationUser { Id = Guid.NewGuid(), DisplayName = "Иван (дубль)", YandexLogin = "ivan" };
+        var roadie = new ApplicationUser { Id = Guid.NewGuid(), DisplayName = "Илья", YandexLogin = "i.balenkov" };
+        foreach (var user in new[] { withLogin, withoutLogin, requesterAgain, roadie })
+            _users.Setup(r => r.FindByIdAsync(user.Id, It.IsAny<CancellationToken>())).ReturnsAsync(user);
+        _assignments.Setup(r => r.GetMemberUserIdsBySongIdAsync(songId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([withLogin.Id, withoutLogin.Id, requesterAgain.Id]);
+        _roadies.Setup(r => r.FindBySongIdAsync(songId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SongRoadie { SongId = songId, RoadieId = roadie.Id });
+        var booking = Booking(DateTimeOffset.UtcNow.AddDays(1));
+        booking.SongId = songId;
+
+        await _service.CreateBookingEventAsync(booking);
+
+        _created.ShouldHaveSingleItem().Participants.Select(p => p.Email).ShouldBe(
+        [
+            "musicclub",
+            "ivan@edu.centraluniversity.ru",
+            "i.balenkov@edu.centraluniversity.ru",
+            "petr@edu.centraluniversity.ru"
+        ]);
     }
 
     [SetUp]
@@ -60,14 +91,18 @@ public class CalendarSyncServiceTests
         foreach (var status in Enum.GetValues<BookingStatus>())
             _bookings.Setup(r => r.GetAllByStatusAsync(status, It.IsAny<CancellationToken>())).ReturnsAsync([]);
 
-        var users = new Mock<IApplicationUserRepository>();
+        var users = _users = new Mock<IApplicationUserRepository>();
         users.Setup(r => r.FindByTgUserIdAsync(42, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ApplicationUser { Id = Guid.NewGuid(), DisplayName = "Иван", YandexLogin = "ivan" });
 
         _songs = new Mock<ISongRepository>();
+        _assignments = new Mock<ISongRoleAssignmentRepository>();
+        _assignments.Setup(r => r.GetMemberUserIdsBySongIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+        _roadies = new Mock<ISongRoadieRepository>();
 
         _service = new CalendarSyncService(_calDav.Object, _integration.Object, users.Object, _bookings.Object,
-            _songs.Object, Mock.Of<IYandexEmailSearchService>(), NullLogger<CalendarSyncService>.Instance);
+            _songs.Object, _assignments.Object, _roadies.Object, Mock.Of<IYandexEmailSearchService>(), NullLogger<CalendarSyncService>.Instance);
     }
 
     private static RehearsalBooking Booking(DateTimeOffset scheduledAt,
