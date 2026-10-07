@@ -35,12 +35,11 @@ WORKDIR /src/src/Web
 RUN --mount=type=cache,id=nuget-build,target=/root/.nuget/packages \
     dotnet publish Web.csproj -c Release -o /app/publish /p:UseAppHost=false /p:PublishRunWebpack=false /p:OpenApiGenerateDocuments=false
 
-# Layer 5: Install Chromium for Playwright (in build stage)
-# Moves installation to build stage so Chromium isn't re-downloaded in runtime
-# when the build output is copied - Chromium is part of the build layer cache
+# Layer 5: Download Chromium for Playwright (in build stage)
+# Only the browser binaries are copied to runtime; its system libraries are installed there
 WORKDIR /app/publish
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
-RUN ./.playwright/node/linux-x64/node ./.playwright/package/cli.js install --with-deps chromium
+RUN ./.playwright/node/linux-x64/node ./.playwright/package/cli.js install chromium
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
@@ -58,6 +57,12 @@ RUN apt-get update \
 ENV ASPNETCORE_URLS=http://+:8080
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+# Install Chromium's shared libraries (libglib, libnss, ...) via the bundled Playwright CLI;
+# copied separately so this layer stays cached across app code changes
+COPY --from=build /app/publish/.playwright ./.playwright
+RUN ./.playwright/node/linux-x64/node ./.playwright/package/cli.js install-deps chromium \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy published application and Chromium (both from build stage cache)
 COPY --from=build /app/publish .
