@@ -17,14 +17,14 @@ public class YandexEmailBackfillService(
 
     public async Task<YandexLoginGuessStatus> GuessLoginAsync(ApplicationUser user, CancellationToken ct = default)
     {
-        var query = user.DisplayName.Trim();
+        var query = user.GetFullName();
         string? email = null;
         string? error = null;
         YandexLoginGuessStatus status;
 
         try
         {
-            foreach (var candidate in BuildQueries(query))
+            foreach (var candidate in BuildQueries(user))
             {
                 email = await emailSearchService.SearchEmailByNameAsync(candidate, ct);
                 if (!string.IsNullOrEmpty(email))
@@ -130,21 +130,29 @@ public class YandexEmailBackfillService(
         user.UpdatedAt = DateTimeOffset.UtcNow;
         userRepository.Update(user);
 
-        logger.LogInformation("Guessed YandexLogin for user {UserId} ('{DisplayName}'): {Login}",
+        logger.LogInformation("Guessed YandexLogin for user {UserId} ('{Name}'): {Login}",
             user.Id,
-            user.DisplayName,
+            user.GetFullName(),
             login);
         return YandexLoginGuessStatus.Found;
     }
 
     /// <summary>
-    /// Поиск ждёт «Фамилия Имя», а в Telegram обычно «Имя Фамилия» — для двух слов пробуем оба порядка.
+    /// Поиск ждёт «Фамилия Имя». Если фамилия и имя заполнены вручную — ищем по ним, иначе по
+    /// отображаемому имени: в Telegram обычно «Имя Фамилия», поэтому для двух слов пробуем оба порядка.
     /// </summary>
-    private static IEnumerable<string> BuildQueries(string displayName)
+    private static IEnumerable<string> BuildQueries(ApplicationUser user)
     {
-        yield return displayName;
+        var fullName = user.GetFullName();
+        yield return fullName;
 
-        var parts = displayName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (!string.IsNullOrWhiteSpace(user.FirstName) && !string.IsNullOrWhiteSpace(user.LastName))
+        {
+            yield return $"{user.FirstName.Trim()} {user.LastName.Trim()}";
+            yield break;
+        }
+
+        var parts = fullName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length == 2)
             yield return $"{parts[1]} {parts[0]}";
     }

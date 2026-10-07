@@ -81,6 +81,40 @@ public class YandexEmailBackfillServiceTests
     }
 
     [Test]
+    public async Task GuessLoginAsync_FirstAndLastNameSet_SearchesByThemInsteadOfDisplayName()
+    {
+        var user = User("vanya_rock");
+        user.FirstName = " Иван ";
+        user.LastName = "Иванов";
+        _search
+            .Setup(s => s.SearchEmailByNameAsync("Иванов Иван", It.IsAny<CancellationToken>()))
+            .ReturnsAsync("ivanov@edu.centraluniversity.ru");
+
+        var status = await _service.GuessLoginAsync(user);
+
+        status.ShouldBe(YandexLoginGuessStatus.Found);
+        user.YandexLogin.ShouldBe("ivanov");
+        _added!.Query.ShouldBe("Иванов Иван");
+        _search.Verify(s => s.SearchEmailByNameAsync("vanya_rock", It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Test]
+    public async Task GuessLoginAsync_FirstAndLastNameSet_TriesNameSurnameOrder()
+    {
+        var user = User("vanya_rock");
+        user.FirstName = "Анна";
+        user.LastName = "Мария Петрова";
+        _search
+            .Setup(s => s.SearchEmailByNameAsync("Анна Мария Петрова", It.IsAny<CancellationToken>()))
+            .ReturnsAsync("petrova@edu.centraluniversity.ru");
+
+        var status = await _service.GuessLoginAsync(user);
+
+        status.ShouldBe(YandexLoginGuessStatus.Found);
+        user.YandexLogin.ShouldBe("petrova");
+    }
+
+    [Test]
     public async Task GuessLoginAsync_NothingFound_RecordsNotFound()
     {
         var user = User("Иван Иванов");

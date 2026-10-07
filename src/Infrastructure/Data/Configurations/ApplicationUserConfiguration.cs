@@ -34,6 +34,14 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
             .Property(u => u.DisplayName)
             .HasColumnName("DisplayName");
         builder
+            .Property(u => u.FirstName)
+            .HasColumnName("FirstName")
+            .HasMaxLength(100);
+        builder
+            .Property(u => u.LastName)
+            .HasColumnName("LastName")
+            .HasMaxLength(100);
+        builder
             .Property(u => u.AvatarUrl)
             .HasColumnName("AvatarUrl");
         builder

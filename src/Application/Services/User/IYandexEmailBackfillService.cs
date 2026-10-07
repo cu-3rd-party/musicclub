@@ -6,7 +6,7 @@ namespace CuMusicClub.Application.Services.User;
 public sealed record YandexLoginBackfillResult(int Found, int NotFound, int Conflicts, int Errors);
 
 /// <summary>
-/// Угадывает YandexLogin пользователей по отображаемому имени через suggest-contacts Яндекс.Календаря
+/// Угадывает YandexLogin пользователей по фамилии и имени (или отображаемому имени) через suggest-contacts Яндекс.Календаря
 /// и отмечает каждую попытку в <c>yandex_login_guess</c>.
 /// </summary>
 public interface IYandexEmailBackfillService

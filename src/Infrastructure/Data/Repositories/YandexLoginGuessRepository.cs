@@ -16,11 +16,20 @@ public sealed class YandexLoginGuessRepository(DbContext dbContext)
     public async Task<IReadOnlyList<ApplicationUser>> GetUsersToGuessAsync(CancellationToken ct = default)
     {
         var guesses = DbSet;
-        return await DbContext.Set<ApplicationUser>()
+        var candidates = await DbContext.Set<ApplicationUser>()
             .Where(u => u.YandexLogin == null || u.YandexLogin == "")
-            .Where(u => u.DisplayName != "")
-            .Where(u => !guesses.Any(g => g.UserId == u.Id && g.Status != YandexLoginGuessStatus.Error))
             .OrderBy(u => u.CreatedAt)
+            .Select(u => new { User = u, Guess = guesses.FirstOrDefault(g => g.UserId == u.Id) })
             .ToListAsync(ct);
+
+        // Имя для поиска вычисляется в памяти: попытка повторяется, если имя изменилось
+        // (например, вручную заполнили фамилию и имя)
+        return candidates
+            .Where(c => c.User.GetFullName() != "")
+            .Where(c => c.Guess == null
+                        || c.Guess.Status == YandexLoginGuessStatus.Error
+                        || c.Guess.Query != c.User.GetFullName())
+            .Select(c => c.User)
+            .ToList();
     }
 }

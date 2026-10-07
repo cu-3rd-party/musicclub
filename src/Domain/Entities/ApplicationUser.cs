@@ -14,6 +14,8 @@ public class ApplicationUser
     public long? TgUserId { get; set; }
     public bool IsChatMember { get; set; }
     public string DisplayName { get; set; } = string.Empty;
+    public string? FirstName { get; set; }        // Заполняется вручную в БД
+    public string? LastName { get; set; }         // Заполняется вручную в БД
     public string? AvatarUrl { get; set; }
     public string? YandexLogin { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
@@ -21,4 +23,14 @@ public class ApplicationUser
 
     public ICollection<RoleTitle> PreferredRoles = [];
     public UserPreferences? Preferences;
+
+    /// <summary>
+    /// «Фамилия Имя», если оба поля заполнены вручную; иначе отображаемое имя.
+    /// </summary>
+    public string GetFullName()
+    {
+        if (!string.IsNullOrWhiteSpace(FirstName) && !string.IsNullOrWhiteSpace(LastName))
+            return $"{LastName.Trim()} {FirstName.Trim()}";
+        return DisplayName.Trim();
+    }
 }
