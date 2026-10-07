@@ -172,7 +172,7 @@ public class BotUpdateHandler(
             .Where(x => x.TgUserId != user.Id)
             .ToList();
 
-        var text = $"<b>🎤 {Html(song.Title)}</b>\n{Mention(user)} зовёт участников";
+        var text = $"🎤 {Mention(user)} зовёт участников";
 
         if (!string.IsNullOrEmpty(userMessage))
             text += $"\n\n💬 <i>{Html(userMessage)}</i>";
