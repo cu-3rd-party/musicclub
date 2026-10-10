@@ -1,5 +1,10 @@
 name: Deploy
 
+# Деплой через GitOps: образы уже в GHCR, здесь только меняется тег в репозитории
+# pxc1984/homelab (apps/musicclub-<env>-{backend,frontend}/values.yaml) — Argo CD сам
+# выкатывает его в k3s. Конфигурация и секреты окружения живут там же (Sealed Secrets).
+# Секрет окружения HOMELAB_DEPLOY_KEY — deploy key с правом записи в pxc1984/homelab.
+
 on:
   workflow_call:
     inputs:
@@ -14,56 +19,37 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     timeout-minutes: 15
+    permissions:
+      contents: read
 
     steps:
-      - name: Checkout
+      - name: Checkout homelab
         uses: actions/checkout@v4
+        with:
+          repository: pxc1984/homelab
+          ssh-key: ${{ secrets.HOMELAB_DEPLOY_KEY }}
 
-      - name: Deploy via SSH
+      - name: Update image tags
         env:
-          SSH_KEY: ${{ secrets.SSH_KEY }}
-          HOST: ${{ secrets.HOST }}
-          USERNAME: ${{ secrets.USERNAME }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-          ENV_FILE: ${{ secrets.ENV }}
-          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
-          COMMIT_SHA: ${{ github.sha }}
-          GITHUB_ACTOR: ${{ github.actor }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ENVIRONMENT: ${{ inputs.environment }}
+          TAG: ${{ github.sha }}
         run: |
-          install -d -m 700 ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
-          chmod 644 ~/.ssh/known_hosts
-
-          # Sync files
-          rsync -az --delete \
-            -e "ssh -i ~/.ssh/id_ed25519 -o StrictHostKeyChecking=accept-new" \
-            docker-compose.yml \
-            docker-compose.prod.yml \
-            traefik \
-            "${USERNAME}@${HOST}:${DEPLOY_PATH}/"
-
-          # Write .env
-          printf '%s\n' "$ENV_FILE" | \
-            ssh -i ~/.ssh/id_ed25519 \
-              -o StrictHostKeyChecking=accept-new \
-              "${USERNAME}@${HOST}" \
-              "cat > '${DEPLOY_PATH}/.env' && chmod 600 '${DEPLOY_PATH}/.env'"
-
-          # Deploy
-          ssh -i ~/.ssh/id_ed25519 \
-            -o StrictHostKeyChecking=accept-new \
-            "${USERNAME}@${HOST}" << EOF
-              set -euo pipefail
-              export GITHUB_REPOSITORY_OWNER='${GITHUB_REPOSITORY_OWNER}'
-              export COMMIT_SHA='${COMMIT_SHA}'
-              export DEPLOY_PATH='${DEPLOY_PATH}'
-              export GITHUB_ACTOR='${GITHUB_ACTOR}'
-              export GITHUB_TOKEN='${GITHUB_TOKEN}'
-              cd "\${DEPLOY_PATH}"
-              docker login ghcr.io -u "\${GITHUB_ACTOR}" -p "\${GITHUB_TOKEN}" 2>/dev/null
-              docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --pull always --remove-orphans
-              docker image prune -f
-          EOF
+          stack="musicclub-${ENVIRONMENT}"
+          for service in backend frontend; do
+            values="apps/${stack}-${service}/values.yaml"
+            if [ ! -f "$values" ]; then
+              echo "::error::$values не найден в homelab"
+              exit 1
+            fi
+            sed -i -E "s/^(  tag: )[^ ]+/\1${TAG}/" "$values"
+          done
+          git diff --exit-code && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "${stack}: deploy ${TAG::7}"
+          # параллельный деплой другого приложения мог успеть запушить раньше
+          for attempt in 1 2 3; do
+            git push && exit 0
+            git pull --rebase
+          done
+          exit 1
