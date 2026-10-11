@@ -52,7 +52,8 @@ public partial class SongServiceTests : TestBase
         bool editAnyParticipation = false,
         bool editOwnSongs = false,
         bool editAnySongs = false,
-        bool editFeaturedSongs = false)
+        bool editFeaturedSongs = false,
+        bool deleteSongs = false)
     {
         using var scope = FunctionalTestSetup.ScopeFactory.CreateScope();
         var users = scope.ServiceProvider.GetRequiredService<IApplicationUserRepository>();
@@ -72,6 +73,7 @@ public partial class SongServiceTests : TestBase
         if (editOwnSongs) permissions.Add(Permission.SongsEditOwn);
         if (editAnySongs) permissions.Add(Permission.SongsEditAny);
         if (editFeaturedSongs) permissions.Add(Permission.SongsEditFeatured);
+        if (deleteSongs) permissions.Add(Permission.SongsDelete);
 
         await users.GrantPermissionsAsync(user.Id, permissions);
         await users.SaveChangesAsync();

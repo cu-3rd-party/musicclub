@@ -359,31 +359,75 @@ public class SongServiceTests
     public class DeleteAsyncTests : SongServiceTests
     {
         [Test]
-        public async Task NotOwnerWithoutPermission_ThrowsForbidden()
+        public async Task WithoutSongsDeletePermission_ThrowsForbidden()
         {
-            CurrentUser();
+            CurrentUser(CuMusicClub.Domain.Constants.Permission.SongsEditAny);
             var song = BuildSong(createdById: Guid.NewGuid());
             _songs
-                .Setup(r => r.FindByIdWithCreatedByAsync(song.Id, It.IsAny<CancellationToken>()))
+                .Setup(r => r.FindByIdWithCreatedByAndTopicAsync(song.Id, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(song);
 
             await Should.ThrowAsync<ForbiddenAccessException>(() =>
                 _service.DeleteAsync(song.Id, Principal(), CancellationToken.None));
+
+            _songs.Verify(r => r.Remove(It.IsAny<SongEntity>()), Times.Never);
         }
 
         [Test]
-        public async Task Owner_RemovesSong()
+        public async Task WithSongsDeletePermission_RemovesSong()
         {
-            CurrentUser(CuMusicClub.Domain.Constants.Permission.SongsEditAny);
-            var song = BuildSong(createdById: _userId);
+            CurrentUser(CuMusicClub.Domain.Constants.Permission.SongsDelete);
+            var song = BuildSong(createdById: Guid.NewGuid());
             _songs
-                .Setup(r => r.FindByIdWithCreatedByAsync(song.Id, It.IsAny<CancellationToken>()))
+                .Setup(r => r.FindByIdWithCreatedByAndTopicAsync(song.Id, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(song);
 
             await _service.DeleteAsync(song.Id, Principal(), CancellationToken.None);
 
             _songs.Verify(r => r.Remove(song), Times.Once);
             _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+            _telegram.Verify(t => t.DeleteTopic(It.IsAny<long>(), It.IsAny<CancellationToken>()), Times.Never);
+            _telegram.Verify(t => t.SendRoadieMessage(
+                It.Is<string>(m => m.Contains("Топик: не было")), It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Test]
+        public async Task SongWithTopic_DeletesTelegramTopicBeforeSong()
+        {
+            CurrentUser(CuMusicClub.Domain.Constants.Permission.SongsDelete);
+            var song = BuildSong(createdById: Guid.NewGuid());
+            song.SongTopic = BuildTopic(song, 42);
+            _songs
+                .Setup(r => r.FindByIdWithCreatedByAndTopicAsync(song.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(song);
+
+            await _service.DeleteAsync(song.Id, Principal(), CancellationToken.None);
+
+            _telegram.Verify(t => t.DeleteTopic(42, It.IsAny<CancellationToken>()), Times.Once);
+            _songs.Verify(r => r.Remove(song), Times.Once);
+            _telegram.Verify(t => t.SendRoadieMessage(
+                It.Is<string>(m => m.Contains("Song") && m.Contains("Топик: удалён")), It.IsAny<CancellationToken>()), Times.Once);
+        }
+
+        [Test]
+        public async Task TelegramFails_KeepsSong()
+        {
+            CurrentUser(CuMusicClub.Domain.Constants.Permission.SongsDelete);
+            var song = BuildSong(createdById: Guid.NewGuid());
+            song.SongTopic = BuildTopic(song, 42);
+            _songs
+                .Setup(r => r.FindByIdWithCreatedByAndTopicAsync(song.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(song);
+            _telegram
+                .Setup(t => t.DeleteTopic(42, It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new InvalidOperationException("telegram down"));
+
+            await Should.ThrowAsync<InvalidOperationException>(() =>
+                _service.DeleteAsync(song.Id, Principal(), CancellationToken.None));
+
+            _songs.Verify(r => r.Remove(It.IsAny<SongEntity>()), Times.Never);
+            _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+            _telegram.Verify(t => t.SendRoadieMessage(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Test]
@@ -392,11 +436,21 @@ public class SongServiceTests
             CurrentUser();
             var id = Guid.NewGuid();
             _songs
-                .Setup(r => r.FindByIdWithCreatedByAsync(id, It.IsAny<CancellationToken>()))
+                .Setup(r => r.FindByIdWithCreatedByAndTopicAsync(id, It.IsAny<CancellationToken>()))
                 .ReturnsAsync((SongEntity?)null);
 
             await Should.ThrowAsync<NotFoundException>(() => _service.DeleteAsync(id, Principal(), CancellationToken.None));
         }
+
+        private static SongTopic BuildTopic(SongEntity song, long topicId) => new()
+        {
+            Song = song,
+            SongId = song.Id,
+            TopicId = topicId,
+            Title = "Song - Artist",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
+        };
     }
 
     [TestFixture]

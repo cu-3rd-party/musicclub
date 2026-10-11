@@ -34,20 +34,22 @@ public class PermissionTests
         Permission.Roadie.ShouldContain(Permission.ParticipationEditOwn);
         Permission.Roadie.ShouldContain(Permission.ParticipationEditAny);
         Permission.Roadie.ShouldContain(Permission.SongsEditOwn);
+        Permission.Roadie.ShouldContain(Permission.SongsDelete);
         Permission.Roadie.ShouldContain(Permission.RoadieManage);
-        Permission.Roadie.Count.ShouldBe(4);
+        Permission.Roadie.Count.ShouldBe(5);
     }
 
     [Test]
     public void AllContainsAllNinePermissions()
     {
-        Permission.All.Count.ShouldBe(9);
+        Permission.All.Count.ShouldBe(10);
         Permission.All.ShouldContain(Permission.ParticipationEditOwn);
         Permission.All.ShouldContain(Permission.ParticipationEditAny);
         Permission.All.ShouldContain(Permission.ParticipationEditOverride);
         Permission.All.ShouldContain(Permission.SongsEditOwn);
         Permission.All.ShouldContain(Permission.SongsEditAny);
         Permission.All.ShouldContain(Permission.SongsEditFeatured);
+        Permission.All.ShouldContain(Permission.SongsDelete);
         Permission.All.ShouldContain(Permission.EventsEdit);
         Permission.All.ShouldContain(Permission.TracklistsEdit);
         Permission.All.ShouldContain(Permission.RoadieManage);

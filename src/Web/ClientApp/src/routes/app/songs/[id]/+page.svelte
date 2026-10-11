@@ -13,6 +13,7 @@
     import EditSong from "$lib/components/songs/edit-song.svelte";
     import RoleItem from "$lib/components/songs/role-item.svelte";
     import RoadieItem from "$lib/components/songs/roadie-item.svelte";
+    import DeleteSong from "$lib/components/songs/delete-song.svelte";
 
     let song = $state<Song | null>(null);
     let loading = $state(true);
@@ -106,11 +107,12 @@
             </Button>
 
             {#if song}
-                <div class="ml-auto">
+                <div class="ml-auto flex items-center gap-1">
                     <EditSong
                         {song}
                         onupdated={(updated) => (song = updated)}
                     />
+                    <DeleteSong {song} {currentUser}/>
                 </div>
             {/if}
         </div>

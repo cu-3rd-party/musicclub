@@ -1,3 +1,4 @@
+using System.Net;
 using System.Security.Claims;
 using CuMusicClub.Application.Common.Auth;
 using CuMusicClub.Application.Common.Exceptions;
@@ -175,17 +176,34 @@ public partial class SongService(
 
     public async Task DeleteAsync(Guid songId, ClaimsPrincipal currentUser, CancellationToken cancellationToken)
     {
-        var song = await songs.FindByIdWithCreatedByAsync(songId, cancellationToken) ??
+        var song = await songs.FindByIdWithCreatedByAndTopicAsync(songId, cancellationToken) ??
                    throw new NotFoundException(songId.ToString(), nameof(Domain.Entities.Song));
 
         var user = await users.FindByIdAsync(currentUser.GetUserId()) ?? throw new ForbiddenAccessException();
         var permissions = await permissionService.GetPermissionValuesAsync(user, cancellationToken);
-        if (song.CreatedBy != null &&
-            user.Id != song.CreatedBy.Id &&
-            !permissions.Contains(Domain.Constants.Permission.SongsEditAny))
+        if (!permissions.Contains(Domain.Constants.Permission.SongsDelete))
             throw new ForbiddenAccessException();
+
+        var hadTopic = song.SongTopic != null;
+
+        // Топик удаляем в Telegram до песни: если Telegram не отвечает, песня остаётся целой
+        if (song.SongTopic != null)
+            await telegramChatService.DeleteTopic(song.SongTopic.TopicId, cancellationToken);
 
         songs.Remove(song);
         await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var creator = song.CreatedBy != null
+            ? telegramChatService.BuildUserMention(song.CreatedBy)
+            : "неизвестно";
+        var deleter = telegramChatService.BuildUserMention(user);
+        var topicStatus = hadTopic ? "удалён" : "не было";
+
+        await telegramChatService.SendRoadieMessage(
+            $"🗑 Песня «{WebUtility.HtmlEncode(song.Title)} — {WebUtility.HtmlEncode(song.Artist)}» удалена\n" +
+            $"Создал(а): {creator}\n" +
+            $"Удалил(а): {deleter}\n" +
+            $"Топик: {topicStatus}",
+            cancellationToken);
     }
 }

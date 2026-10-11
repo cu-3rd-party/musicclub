@@ -18,9 +18,9 @@ public partial class SongServiceTests
     }
 
     [Test]
-    public async Task Delete_ByOwner_RemovesSongAndCascades()
+    public async Task Delete_WithSongsDelete_RemovesSongAndCascades()
     {
-        var (owner, principal) = await CreateUserAsync("owner", editOwnSongs: true);
+        var (owner, principal) = await CreateUserAsync("owner", editOwnSongs: true, deleteSongs: true);
         var (member, _) = await CreateUserAsync("member", true);
         var songId = await SeedSongAsync(roles: new[]
             {
@@ -38,10 +38,10 @@ public partial class SongServiceTests
     }
 
     [Test]
-    public async Task Delete_ByOtherUser_WithoutEditAny_ThrowsForbidden()
+    public async Task Delete_WithoutSongsDelete_ThrowsForbidden()
     {
         var (owner, _) = await CreateUserAsync("owner", editOwnSongs: true);
-        var (_, otherPrincipal) = await CreateUserAsync("other", editOwnSongs: true);
+        var (_, otherPrincipal) = await CreateUserAsync("other", editOwnSongs: true, editAnySongs: true);
         var songId = await SeedSongAsync(createdById: owner.Id);
 
         using var scope = new SongScope();
@@ -53,10 +53,21 @@ public partial class SongServiceTests
     }
 
     [Test]
-    public async Task Delete_ByOtherUser_WithEditAny_Succeeds()
+    public async Task Delete_OwnerWithoutSongsDelete_ThrowsForbidden()
+    {
+        var (owner, ownerPrincipal) = await CreateUserAsync("owner", editOwnSongs: true);
+        var songId = await SeedSongAsync(createdById: owner.Id);
+
+        using var scope = new SongScope();
+        await Should.ThrowAsync<ForbiddenAccessException>(() =>
+            scope.Songs.DeleteAsync(songId, ownerPrincipal, CancellationToken.None));
+    }
+
+    [Test]
+    public async Task Delete_WithSongsDeleteOnOthersSong_Succeeds()
     {
         var (owner, _) = await CreateUserAsync("owner", editOwnSongs: true);
-        var (_, editorPrincipal) = await CreateUserAsync("editor", editAnySongs: true);
+        var (_, editorPrincipal) = await CreateUserAsync("editor", deleteSongs: true);
         var songId = await SeedSongAsync(createdById: owner.Id);
 
         using (var scope = new SongScope())

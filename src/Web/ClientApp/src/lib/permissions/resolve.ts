@@ -5,6 +5,7 @@ export const Permission = {
     SongsEditOwn: "songs.edit_own",
     SongsEditAny: "songs.edit_any",
     SongsEditFeatured: "songs.edit_featured",
+    SongsDelete: "songs.delete",
     EventsEdit: "events.edit",
     TracklistsEdit: "tracklists.edit",
     RoadieManage: "roadie.manage",
@@ -26,6 +27,7 @@ export const PermissionBundles = {
         Permission.ParticipationEditOwn,
         Permission.ParticipationEditAny,
         Permission.SongsEditOwn,
+        Permission.SongsDelete,
         Permission.RoadieManage,
     ],
     All: [
@@ -35,6 +37,7 @@ export const PermissionBundles = {
         Permission.SongsEditOwn,
         Permission.SongsEditAny,
         Permission.SongsEditFeatured,
+        Permission.SongsDelete,
         Permission.EventsEdit,
         Permission.TracklistsEdit,
         Permission.RoadieManage,
