@@ -22,9 +22,9 @@ export type AuthSession = TokenPair & {
     user: UserProfile;
 };
 
-export type Deeplink = {
-    url: string;
-    uid: UUID;
+export type ExternalProvider = {
+    name: string;
+    displayName: string;
 };
 
 export type LoginPayload = {

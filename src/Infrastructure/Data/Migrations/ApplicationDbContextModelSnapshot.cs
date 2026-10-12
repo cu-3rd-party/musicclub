@@ -914,7 +914,7 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                     b.ToTable("song_topic_member", (string)null);
                 });
 
-            modelBuilder.Entity("CuMusicClub.Domain.Entities.TgAuthLink", b =>
+            modelBuilder.Entity("CuMusicClub.Domain.Entities.UserLogin", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -922,29 +922,45 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                         .HasColumnName("id")
                         .HasDefaultValueSql("gen_random_uuid()");
 
-                    b.Property<DateTimeOffset>("Created")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW()");
 
-                    b.Property<Guid?>("CreatedBy")
-                        .HasColumnType("uuid");
+                    b.Property<DateTimeOffset?>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_used_at");
 
-                    b.Property<DateTimeOffset>("LastModified")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("provider");
 
-                    b.Property<Guid?>("LastModifiedBy")
-                        .HasColumnType("uuid");
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("subject")
+                        .HasComment("Claim sub провайдера");
 
-                    b.Property<long?>("TgUserId")
-                        .HasColumnType("bigint")
-                        .HasComment("Айди кто использовал ссылку");
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TgUserId");
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("idx_user_login_user_id");
 
-                    b.ToTable("tg_auth_link", null, t =>
+                    b.HasIndex("Provider", "Subject")
+                        .IsUnique()
+                        .HasDatabaseName("ux_user_login_provider_subject");
+
+                    b.ToTable("user_login", null, t =>
                         {
-                            t.HasComment("Диплинки для захода в систему");
+                            t.HasComment("Привязки пользователей к внешним провайдерам входа (OIDC)");
                         });
                 });
 
@@ -1317,6 +1333,17 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Topic");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("CuMusicClub.Domain.Entities.UserLogin", b =>
+                {
+                    b.HasOne("CuMusicClub.Domain.Entities.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });

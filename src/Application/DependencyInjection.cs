@@ -18,13 +18,13 @@ public static class DependencyInjection
     {
         builder.Services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
 
-        builder.Services.AddSingleton(_ => new SimpleRateLimiter(maxRequests: 5, window: TimeSpan.FromMinutes(1)));
-
         builder.Services.AddScoped<ISongService, SongService>();
         builder.Services.AddScoped<ITelegramAuthService, TelegramAuthService>();
         builder.Services.AddScoped<ITelegramChatService, TelegramChatService>();
         builder.Services.AddScoped<IPermissionService, PermissionService>();
         builder.Services.AddScoped<IAuthService, AuthService>();
+        builder.Services.AddMemoryCache();
+        builder.Services.AddScoped<IExternalLoginService, ExternalLoginService>();
         builder.Services.AddScoped<IDataEntryService, DataEntryService>();
         builder.Services.AddScoped<IRoadieService, RoadieService>();
         builder.Services.AddScoped<ICalendarService, CalendarService>();

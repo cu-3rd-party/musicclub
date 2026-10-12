@@ -6,8 +6,8 @@ import type {
     TokenPair,
     UserProfile,
     TelegramInitDataPayload,
-    Deeplink,
 } from "$lib/auth/types";
+import { API_URL } from "$lib/config";
 
 type ApiErrorPayload = {
     message?: string;
@@ -25,12 +25,21 @@ export async function telegramAuth(
     return response.data;
 }
 
-export async function getDeeplink(link: Deeplink): Promise<AuthSession | null> {
-    const response = await api.get<AuthSession>(
-        `/api/v1/auth/telegram/link/${link.uid}`,
-    );
+/** Адрес, с которого бэкенд уводит на страницу входа провайдера (полная навигация, не XHR). */
+export function externalLoginUrl(provider: string, returnUrl: string): string {
+    const query = new URLSearchParams({ returnUrl });
+    return `${API_URL}/api/v1/auth/external/${encodeURIComponent(provider)}?${query}`;
+}
 
-    return response.status === 204 ? null : response.data;
+/** Одноразовый код с /auth/callback → сессия. */
+export async function exchangeExternalLoginCode(
+    code: string,
+): Promise<AuthSession> {
+    const response = await api.post<AuthSession>(
+        "/api/v1/auth/external/exchange",
+        { code },
+    );
+    return response.data;
 }
 
 export async function refreshAuthTokens(

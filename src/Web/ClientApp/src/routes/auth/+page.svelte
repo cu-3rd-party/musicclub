@@ -5,4 +5,4 @@
     let {data}: { data: PageData } = $props();
 </script>
 
-<LoginForm deeplink={data.deeplink}/>
+<LoginForm providers={data.providers} error={data.error}/>

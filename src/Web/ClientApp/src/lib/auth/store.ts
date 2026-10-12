@@ -1,6 +1,7 @@
 import { writable } from "svelte/store";
 
 import {
+    exchangeExternalLoginCode,
     getCurrentUser,
     logoutCurrentSession,
     refreshAuthTokens,
@@ -58,6 +59,16 @@ export async function telegramLogin(
     } catch {
         return null;
     }
+}
+
+/** Завершает вход через внешний провайдер: код из редиректа бэкенда → сессия. */
+export async function completeExternalLogin(code: string): Promise<UserProfile> {
+    const session = await exchangeExternalLoginCode(code);
+    persistSession({
+        ...session,
+        accessTokenAcquiredAt: new Date().toISOString(),
+    });
+    return session.user;
 }
 
 export async function ensureAuthenticated(): Promise<boolean> {

@@ -148,20 +148,6 @@ public class BotUpdateHandlerTests : TestBase
     }
 
     [Test]
-    public async Task Start_WithMalformedToken_RepliesInvalidToken()
-    {
-        var bot = new FakeTelegramBotClient();
-        var update = MessageUpdate(TextMessage(ChatId, BotUser(1), "/start auth_not-a-guid"));
-
-        using var handler = new HandlerScope();
-        await handler.Handler.HandleUpdateAsync(bot, update, WebAppUrl, CancellationToken.None);
-
-        bot
-            .SentMessages.Single()
-            .Text.ShouldBe(BotTexts.AuthInvalidToken);
-    }
-
-    [Test]
     public async Task Start_WithUnexpectedArgs_RepliesInvalidParam()
     {
         var bot = new FakeTelegramBotClient();
@@ -189,74 +175,16 @@ public class BotUpdateHandlerTests : TestBase
             .Text.ShouldBe(BotTexts.Help);
     }
 
-    private static async Task<TgAuthLink> CreateAuthLinkAsync(DateTimeOffset? created = null)
-    {
-        await using var db = Db();
-        var link = new TgAuthLink { Id = Guid.NewGuid() };
-        db.Add(link);
-        await db.SaveChangesAsync();
-
-        if (created is { } value)
-        {
-            // Created проставляет интерсептор при сохранении — перезаписываем отдельным запросом
-            await db.Set<TgAuthLink>()
-                .Where(l => l.Id == link.Id)
-                .ExecuteUpdateAsync(u => u.SetProperty(l => l.Created, value));
-        }
-
-        return link;
-    }
-
-    private static async Task<TgAuthLink> ReloadAuthLinkAsync(Guid id)
-    {
-        await using var db = Db();
-        return await db.Set<TgAuthLink>().AsNoTracking().SingleAsync(l => l.Id == id);
-    }
-
     [Test]
-    public async Task Start_WithValidToken_AsksForConfirmation_WithoutLinkingYet()
+    public async Task Start_WithLegacyAuthToken_RepliesInvalidParam()
     {
-        var link = await CreateAuthLinkAsync();
         var bot = new FakeTelegramBotClient();
-        var update = MessageUpdate(TextMessage(ChatId, BotUser(42), $"/start auth_{link.Id}"));
+        var update = MessageUpdate(TextMessage(ChatId, BotUser(42), $"/start auth_{Guid.NewGuid()}"));
 
         using var handler = new HandlerScope();
         await handler.Handler.HandleUpdateAsync(bot, update, WebAppUrl, CancellationToken.None);
 
-        var message = bot.SentMessages.ShouldHaveSingleItem();
-        message.Text.ShouldBe(BotTexts.AuthConfirm);
-        var buttons = message.ReplyMarkup.ShouldBeOfType<InlineKeyboardMarkup>().InlineKeyboard.Single().ToList();
-        buttons.Count.ShouldBe(2);
-
-        (await ReloadAuthLinkAsync(link.Id)).TgUserId.ShouldBeNull();
-    }
-
-    [Test]
-    public async Task AuthConfirmCallback_LinksTelegramUser()
-    {
-        var link = await CreateAuthLinkAsync();
-        var bot = new FakeTelegramBotClient();
-        var update = CallbackUpdate(Callback("cb1", BotUser(42), $"auth:ok:{link.Id:N}"));
-
-        using var handler = new HandlerScope();
-        await handler.Handler.HandleUpdateAsync(bot, update, WebAppUrl, CancellationToken.None);
-
-        (await ReloadAuthLinkAsync(link.Id)).TgUserId.ShouldBe(42);
-        bot.Requests.OfType<EditMessageTextRequest>().ShouldHaveSingleItem().Text.ShouldBe(BotTexts.AuthOk);
-    }
-
-    [Test]
-    public async Task AuthConfirmCallback_ForExpiredLink_DoesNotLink()
-    {
-        var link = await CreateAuthLinkAsync(DateTimeOffset.UtcNow - BotUpdateHandler.AuthLinkLifetime - TimeSpan.FromMinutes(1));
-        var bot = new FakeTelegramBotClient();
-        var update = CallbackUpdate(Callback("cb1", BotUser(42), $"auth:ok:{link.Id:N}"));
-
-        using var handler = new HandlerScope();
-        await handler.Handler.HandleUpdateAsync(bot, update, WebAppUrl, CancellationToken.None);
-
-        (await ReloadAuthLinkAsync(link.Id)).TgUserId.ShouldBeNull();
-        bot.Requests.OfType<EditMessageTextRequest>().ShouldHaveSingleItem().Text.ShouldBe(BotTexts.AuthInvalidToken);
+        bot.SentMessages.ShouldHaveSingleItem().Text.ShouldBe(BotTexts.StartInvalidParam);
     }
 
     [Test]

@@ -17,32 +17,4 @@ public static partial class Auth
 
         return TypedResults.Ok(session);
     }
-
-    [EndpointSummary("Request telegram /start deeplink for usage in bot")]
-    private static async Task<Results<Ok<TelegramDto>, StatusCodeHttpResult, BadRequest>> TelegramDeeplink(
-        ITelegramAuthService service,
-        SimpleRateLimiter rateLimiter,
-        HttpContext httpContext,
-        CancellationToken cancellationToken)
-    {
-        var clientIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        if (!rateLimiter.IsAllowed(clientIp))
-        {
-            return TypedResults.StatusCode(StatusCodes.Status429TooManyRequests);
-        }
-
-        return TypedResults.Ok(await service.CreateDeeplink(cancellationToken));
-    }
-
-    [EndpointSummary("Get auth session from deeplink. One time use")]
-    private static async Task<Results<Ok<AuthSessionDto>, NoContent>> LoginDeeplink(ITelegramAuthService service,
-        Guid deeplinkUid,
-        CancellationToken cancellationToken)
-    {
-        var authSession = await service.GetDeeplink(deeplinkUid, cancellationToken);
-
-        if (authSession == null) return TypedResults.NoContent();
-
-        return TypedResults.Ok(authSession);
-    }
 }

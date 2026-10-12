@@ -92,7 +92,7 @@ public static class DependencyInjection
         builder.Services.AddScoped<ISongRoleRepository, SongRoleRepository>();
         builder.Services.AddScoped<ISongRoleAssignmentRepository, SongRoleAssignmentRepository>();
         builder.Services.AddScoped<ISongTopicRepository, SongTopicRepository>();
-        builder.Services.AddScoped<ITgAuthLinkRepository, TgAuthLinkRepository>();
+        builder.Services.AddScoped<IUserLoginRepository, UserLoginRepository>();
         builder.Services.AddScoped<IDataEntryRepository, DataEntryRepository>();
         builder.Services.AddScoped<IUserSessionRepository, UserSessionRepository>();
         builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();

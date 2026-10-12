@@ -205,13 +205,13 @@ public class RoleTitleTests
 }
 
 [TestFixture]
-[TestOf(typeof(TgAuthLink))]
-public class TgAuthLinkTests
+[TestOf(typeof(UserLogin))]
+public class UserLoginTests
 {
     [Test]
-    public void DefaultTgUserId_IsNull()
+    public void NormalizeProvider_TrimsAndLowercases()
     {
-        new TgAuthLink().TgUserId.ShouldBeNull();
+        UserLogin.NormalizeProvider(" Telegram ").ShouldBe("telegram");
     }
 }
 

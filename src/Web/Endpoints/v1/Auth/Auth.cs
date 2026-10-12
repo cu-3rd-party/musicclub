@@ -9,8 +9,10 @@ public static partial class Auth
     public static void Map(RouteGroupBuilder group)
     {
         group.MapPost("/telegram", TelegramInitData);
-        group.MapGet("/telegram/link", TelegramDeeplink);
-        group.MapGet("/telegram/link/{deeplinkUid:guid}", LoginDeeplink);
+        group.MapGet("/providers", Providers);
+        group.MapGet("/external/{provider}", ExternalChallenge);
+        group.MapGet("/external/{provider}/complete", ExternalComplete);
+        group.MapPost("/external/exchange", ExternalExchange);
         group.MapPost("/refresh", Refresh);
 
         var authed = group

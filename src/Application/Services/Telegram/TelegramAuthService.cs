@@ -19,16 +19,10 @@ namespace CuMusicClub.Application.Services.Telegram;
 
 public class TelegramAuthService(
     IOptions<TelegramOptions> telegramOptions,
-    ITgAuthLinkRepository tgAuthLinks,
     IApplicationUserRepository users,
     IPermissionService permissionService,
     IAuthService authService) : ITelegramAuthService
 {
-    /// <summary>
-    /// Сколько живёт ссылка входа через бота: после этого её нельзя ни подтвердить, ни обменять на сессию.
-    /// </summary>
-    public static readonly TimeSpan AuthLinkLifetime = TimeSpan.FromMinutes(15);
-
     private static readonly TimeSpan TokenTtl = TimeSpan.FromHours(1);
 
     public void Validate(string initData)
@@ -95,37 +89,6 @@ public class TelegramAuthService(
         if (tgUser == null) throw new BadHttpRequestException("no user extracted");
 
         var user = await UpsertUserAsync(tgUser, cancellationToken);
-        return await authService.CreateAuthSession(user, cancellationToken);
-    }
-
-    public async Task<TelegramDto> CreateDeeplink(CancellationToken cancellationToken)
-    {
-        var link = new TgAuthLink();
-        await tgAuthLinks.AddAsync(link, cancellationToken);
-        await tgAuthLinks.SaveChangesAsync(cancellationToken);
-        return new TelegramDto($"https://t.me/{telegramOptions.Value.BotUsername}?start=auth_{link.Id}", link.Id);
-    }
-
-    public async Task<AuthSessionDto?> GetDeeplink(Guid linkUid, CancellationToken cancellationToken)
-    {
-        var link = await tgAuthLinks.FindByIdAsync(linkUid, cancellationToken);
-        if (link == null) return null;
-
-        if (DateTimeOffset.UtcNow - link.Created > AuthLinkLifetime)
-        {
-            tgAuthLinks.Remove(link);
-            await tgAuthLinks.SaveChangesAsync(cancellationToken);
-            return null;
-        }
-
-        if (link.TgUserId == null) return null;
-
-        var user = await users.FindByTgUserIdAsync(link.TgUserId.Value, cancellationToken);
-        if (user == null) return null;
-
-        tgAuthLinks.Remove(link);
-        await tgAuthLinks.SaveChangesAsync(cancellationToken);
-
         return await authService.CreateAuthSession(user, cancellationToken);
     }
 

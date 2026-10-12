@@ -55,9 +55,9 @@ public class ApplicationDbContext : DbContext
         get { return Set<RefreshToken>(); }
     }
 
-    public DbSet<TgAuthLink> TgAuthLinks
+    public DbSet<UserLogin> UserLogins
     {
-        get { return Set<TgAuthLink>(); }
+        get { return Set<UserLogin>(); }
     }
 
     public DbSet<DataEntry> DataEntries

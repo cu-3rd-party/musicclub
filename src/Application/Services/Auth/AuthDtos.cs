@@ -4,6 +4,8 @@ public sealed record TelegramAuthRequest(string InitData);
 
 public sealed record RefreshTokenRequest(string RefreshToken);
 
+public sealed record ExternalLoginExchangeRequest(string Code);
+
 public sealed record UserProfileDto(
     Guid Id,
     string DisplayName,

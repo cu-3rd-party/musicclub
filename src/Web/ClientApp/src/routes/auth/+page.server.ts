@@ -1,9 +1,10 @@
 import type { PageServerLoad } from "./$types";
-import { createDeeplink } from "$lib/server/auth";
+import { listExternalProviders } from "$lib/server/auth";
 
-export const load: PageServerLoad = async () => {
-    const deeplink = await createDeeplink();
+export const load: PageServerLoad = async ({ url }) => {
+    const providers = await listExternalProviders();
     return {
-        deeplink,
+        providers,
+        error: url.searchParams.get("error"),
     };
 };

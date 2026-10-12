@@ -14,21 +14,6 @@ public static class BotTexts
 
     public const string StartInvalidParam = "Не понял ссылку. Чтобы открыть приложение, отправьте /start.";
 
-    public const string AuthInvalidToken =
-        "Ссылка для входа устарела или уже использована. Начните вход на сайте заново.";
-
-    public const string AuthPrivateOnly = "Подтвердить вход можно только в личных сообщениях с ботом.";
-
-    public const string AuthConfirm =
-        "🔐 <b>Вход в Music Club</b>\n\n" +
-        "Кто-то хочет войти на сайт под вашим Telegram-аккаунтом. Если это вы — подтвердите.\n\n" +
-        "⚠️ Если вы не начинали вход сами, нажмите «Отмена»: иначе другой человек получит доступ к вашему аккаунту.";
-
-    public const string AuthConfirmButton = "✅ Да, это я";
-    public const string AuthCancelButton = "✖️ Отмена";
-    public const string AuthOk = "✅ Вход подтверждён. Можно вернуться в браузер.";
-    public const string AuthCancelled = "Вход отменён.";
-
     public const string UnknownCommand = "Не знаю такой команды 🤔 Список команд — /help";
 
     public const string NotRegistered =

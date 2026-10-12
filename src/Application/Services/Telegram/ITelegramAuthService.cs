@@ -26,20 +26,5 @@ public interface ITelegramAuthService
     /// </summary>
     Task<AuthSessionDto> AuthenticateAsync(string initData, CancellationToken cancellationToken);
 
-    /// <summary>
-    /// Create a deeplink to auth the user
-    /// </summary>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
-    Task<TelegramDto> CreateDeeplink(CancellationToken cancellationToken);
-
-    /// <summary>
-    /// Получить статус по диплинку
-    /// </summary>
-    /// <param name="linkUid"></param>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
-    Task<AuthSessionDto?> GetDeeplink(Guid linkUid, CancellationToken cancellationToken);
-
     Task<ApplicationUser> UpsertUserAsync(TelegramUser tgUser, CancellationToken cancellationToken);
 }

@@ -16,9 +16,7 @@ using Telegram.Bot.Types.ReplyMarkups;
 namespace CuMusicClub.Web.Bot;
 
 public class BotUpdateHandler(
-    ITgAuthLinkRepository tgAuthLinks,
     IApplicationUserRepository userRepository,
-    ITelegramAuthService tgAuthService,
     ITelegramChatService telegramChatService,
     IRoadieService roadieService,
     ISongTopicRepository songTopicRepository,
@@ -28,12 +26,6 @@ public class BotUpdateHandler(
     BotRehearsalCommandsHandler rehearsalCommandsHandler,
     BotScheduleCommandsHandler scheduleCommandsHandler)
 {
-    /// <summary>
-    /// Сколько живёт ссылка входа t.me/bot?start=auth_… (браузер ждёт подтверждения).
-    /// </summary>
-    public static readonly TimeSpan AuthLinkLifetime = TelegramAuthService.AuthLinkLifetime;
-
-    private const string AuthCallbackPrefix = "auth:";
     private const string RoadieAcceptPrefix = "roadie_accept:";
 
     private static readonly Regex CommandRegex = new(
@@ -100,8 +92,9 @@ public class BotUpdateHandler(
         switch (command)
         {
             case "start":
+                // Вход на сайт теперь через OIDC; старые ссылки t.me/bot?start=auth_… больше не работают.
                 if (args.Length > 0)
-                    await HandleStartWithArgsAsync(bot, message, args, cancellationToken);
+                    await ReplyAsync(bot, message, BotTexts.StartInvalidParam, cancellationToken);
                 else
                     await HandleStartAsync(bot, message, webAppUrl, cancellationToken);
                 return;
@@ -283,102 +276,11 @@ public class BotUpdateHandler(
             cancellationToken: cancellationToken);
     }
 
-    private async Task HandleStartWithArgsAsync(ITelegramBotClient bot,
-        Message message,
-        string args,
-        CancellationToken cancellationToken)
-    {
-        if (!args.StartsWith("auth_", StringComparison.Ordinal))
-        {
-            await ReplyAsync(bot, message, BotTexts.StartInvalidParam, cancellationToken);
-            return;
-        }
-
-        if (message.Chat.Type != ChatType.Private)
-        {
-            await ReplyAsync(bot, message, BotTexts.AuthPrivateOnly, cancellationToken);
-            return;
-        }
-
-        if (!Guid.TryParse(args["auth_".Length..], out var token) ||
-            await FindUsableAuthLinkAsync(token, cancellationToken) == null)
-        {
-            await ReplyAsync(bot, message, BotTexts.AuthInvalidToken, cancellationToken);
-            return;
-        }
-
-        // Не привязываем сразу: ссылку мог прислать злоумышленник, чтобы войти под чужим аккаунтом
-        var keyboard = new InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton.WithCallbackData(BotTexts.AuthConfirmButton, $"{AuthCallbackPrefix}ok:{token:N}"),
-                InlineKeyboardButton.WithCallbackData(BotTexts.AuthCancelButton, $"{AuthCallbackPrefix}no:{token:N}"),
-            ],
-        ]);
-
-        await bot.SendMessage(message.Chat,
-            BotTexts.AuthConfirm,
-            parseMode: ParseMode.Html,
-            replyMarkup: keyboard,
-            cancellationToken: cancellationToken);
-    }
-
-    private async Task HandleAuthCallbackAsync(ITelegramBotClient bot,
-        CallbackQuery callback,
-        CancellationToken cancellationToken)
-    {
-        var parts = callback.Data![AuthCallbackPrefix.Length..].Split(':', 2);
-        if (parts.Length != 2 || !Guid.TryParse(parts[1], out var token) ||
-            callback.Message?.Chat.Type != ChatType.Private)
-        {
-            await bot.AnswerCallbackQuery(callback.Id, cancellationToken: cancellationToken);
-            return;
-        }
-
-        var link = await FindUsableAuthLinkAsync(token, cancellationToken);
-        string result;
-
-        if (link == null)
-            result = BotTexts.AuthInvalidToken;
-        else if (parts[0] == "ok")
-        {
-            link.TgUserId = callback.From.Id;
-            await tgAuthLinks.SaveChangesAsync(cancellationToken);
-            await tgAuthService.UpsertUserAsync(callback.From, cancellationToken);
-            result = BotTexts.AuthOk;
-        }
-        else
-        {
-            tgAuthLinks.Remove(link);
-            await tgAuthLinks.SaveChangesAsync(cancellationToken);
-            result = BotTexts.AuthCancelled;
-        }
-
-        await bot.AnswerCallbackQuery(callback.Id, cancellationToken: cancellationToken);
-        await bot.EditMessageText(callback.Message.Chat.Id,
-            callback.Message.MessageId,
-            result,
-            cancellationToken: cancellationToken);
-    }
-
-    private async Task<TgAuthLink?> FindUsableAuthLinkAsync(Guid token, CancellationToken cancellationToken)
-    {
-        var link = await tgAuthLinks.FindByIdAsync(token, cancellationToken);
-        if (link is not { TgUserId: null }) return null;
-
-        return DateTimeOffset.UtcNow - link.Created > AuthLinkLifetime ? null : link;
-    }
-
     private async Task HandleCallbackQueryAsync(ITelegramBotClient bot,
         CallbackQuery callback,
         CancellationToken cancellationToken)
     {
         var data = callback.Data ?? string.Empty;
-
-        if (data.StartsWith(AuthCallbackPrefix, StringComparison.Ordinal))
-        {
-            await HandleAuthCallbackAsync(bot, callback, cancellationToken);
-            return;
-        }
 
         if (data.StartsWith(BotRehearsalCommandsHandler.CallbackPrefix, StringComparison.Ordinal))
         {

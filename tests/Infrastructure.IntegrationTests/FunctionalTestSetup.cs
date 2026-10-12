@@ -9,6 +9,10 @@ public class FunctionalTestSetup
 {
     internal static IServiceScopeFactory ScopeFactory { get; private set; } = null!;
     internal static DatabaseResetter? DbResetter { get; private set; }
+    internal static WebApiFactory Factory
+    {
+        get { return _factory!; }
+    }
 
     private static WebApiFactory? _factory;
     private static PostgreSqlContainer? _container;

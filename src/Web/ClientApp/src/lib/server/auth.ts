@@ -1,8 +1,10 @@
-import type { Deeplink } from "$lib/auth/types";
+import type { ExternalProvider } from "$lib/auth/types";
 
 import { ssr_api } from "$lib/server/api";
 
-export async function createDeeplink(): Promise<Deeplink> {
-    const response = await ssr_api.get<Deeplink>("/api/v1/auth/telegram/link");
+export async function listExternalProviders(): Promise<ExternalProvider[]> {
+    const response = await ssr_api.get<ExternalProvider[]>(
+        "/api/v1/auth/providers",
+    );
     return response.data;
 }

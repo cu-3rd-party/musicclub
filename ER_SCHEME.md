@@ -87,11 +87,13 @@ erDiagram
         timestamptz joined_at
     }
 
-    tg_auth_user {
+    user_login {
         uuid id PK
         uuid user_id FK
-        bigint tg_user_id UK
-        boolean success
+        varchar provider
+        varchar subject
+        timestamptz created_at
+        timestamptz last_used_at
     }
 
     refresh_tokens {
@@ -132,7 +134,7 @@ erDiagram
     app_user ||--o{ event_participant : "участие (CASCADE)"
     app_user ||--o| calendar : "1:1 (CASCADE)"
     app_user ||--o{ refresh_tokens : "токены (CASCADE)"
-    app_user ||--o{ tg_auth_user : "tg-сессии (CASCADE)"
+    app_user ||--o{ user_login : "внешние входы (CASCADE)"
 
     song ||--o{ song_role : "роли (CASCADE)"
     song ||--o{ song_role_assignment : "назначения (CASCADE)"
@@ -183,8 +185,8 @@ erDiagram
 ### event_participant
 Участие пользователя в событии на роли (возможно, на конкретном треке). FK `(event_id, track_item_id)` → `event_track_item(event_id, id)` (`fk_event_participant_track_item`, CASCADE). Уникальность `(event_id, role, user_id, track_item_id)` (`uniq_event_participation`).
 
-### tg_auth_user
-Сессия подтверждения Telegram-авторизации (для потока `/start auth_<uuid>`). FK `user_id` → `app_user.Id` с CASCADE. `tg_user_id` уникален.
+### user_login
+Привязка пользователя к аккаунту у внешнего провайдера входа (OIDC / OAuth 2.0, провайдеры — секция `Auth:Oidc`). FK `user_id` → `app_user.Id` с CASCADE. Уникальность `(provider, subject)` (`ux_user_login_provider_subject`), `subject` — claim `sub` провайдера.
 
 ### refresh_tokens
 Ротируемые refresh-токены. FK `user_id` → `app_user.Id` с CASCADE. `token` уникален.
@@ -216,7 +218,7 @@ erDiagram
 | event_participant | app_user | `user_id` | CASCADE |
 | song_topic | song | `song_id` | CASCADE |
 | calendar | app_user | `user_id` | CASCADE |
-| tg_auth_user | app_user | `user_id` | CASCADE |
+| user_login | app_user | `user_id` | CASCADE |
 | refresh_tokens | app_user | `user_id` | CASCADE |
 
 ## Примечания

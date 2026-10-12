@@ -18,6 +18,8 @@ builder.AddWebServices();
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
+
 await app.InitialiseDatabaseAsync();
 
 if (!app.Environment.IsDevelopment()) app.UseHsts();
