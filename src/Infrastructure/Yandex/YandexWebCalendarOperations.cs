@@ -82,7 +82,7 @@ public sealed class YandexWebCalendarOperations(
             ["participantsCanInvite"] = true,
             ["isAllDay"] = eventInfo.IsAllDay,
             ["participantsCanEdit"] = false,
-            ["visibility"] = "participants",
+            ["visibility"] = "public",
             ["layerId"] = layerId,
             ["start"] = start.ToString(LocalFormat, CultureInfo.InvariantCulture),
             ["end"] = end.ToString(LocalFormat, CultureInfo.InvariantCulture),
