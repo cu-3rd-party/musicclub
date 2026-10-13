@@ -17,6 +17,8 @@ public class WebApiFactory : WebApplicationFactory<Program>
     public const string TestOidcProvider = "testidp";
     public const string TestOidcAuthorizationEndpoint = "https://idp.example.com/authorize";
 
+    public const string TestWebhookSecret = "test-webhook-secret";
+
     private readonly string _connectionString;
 
     public WebApiFactory(string connectionString)
@@ -30,6 +32,9 @@ public class WebApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Telegram:ChatId", TestChatId.ToString());
         builder.UseSetting("Telegram:BotUsername", TestBotUsername);
         builder.UseSetting("Metrics:Port", "0");
+        // Вебхук включён, но без BotToken TelegramBotHostedService не стартует: апдейты остаются в очереди
+        builder.UseSetting("Telegram:WebhookUrl", "https://musicclub.example.com/api/telegram/webhook");
+        builder.UseSetting("Telegram:WebhookSecret", TestWebhookSecret);
         builder.UseSetting("Security:Secret", "integration-tests-secret-that-is-long-enough-for-hs256");
 
         var oidc = $"Auth:Oidc:{TestOidcProvider}:";

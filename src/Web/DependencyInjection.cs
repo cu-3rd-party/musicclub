@@ -48,6 +48,7 @@ public static class DependencyInjection
         builder.Services.AddScoped<BotUpdateHandler>();
         builder.Services.AddScoped<BotRehearsalCommandsHandler>();
         builder.Services.AddScoped<BotScheduleCommandsHandler>();
+        builder.Services.AddSingleton<TelegramUpdateQueue>();
         builder.Services.AddHostedService<TelegramBotHostedService>();
         builder.Services.AddHttpClient();
         builder.Services.AddHostedService<ThumbnailBackfillHostedService>();

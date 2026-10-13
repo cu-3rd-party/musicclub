@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 
 namespace CuMusicClub.Web.Bot;
 
@@ -11,14 +12,17 @@ public class TelegramBotHostedService : BackgroundService
     private const string DisabledToken = "0000";
 
     private readonly BotOptions _options;
+    private readonly TelegramUpdateQueue _queue;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<TelegramBotHostedService> _logger;
 
     public TelegramBotHostedService(IOptions<BotOptions> options,
+        TelegramUpdateQueue queue,
         IServiceScopeFactory scopeFactory,
         ILogger<TelegramBotHostedService> logger)
     {
         _options = options.Value;
+        _queue = queue;
         _scopeFactory = scopeFactory;
         _logger = logger;
     }
@@ -45,6 +49,50 @@ public class TelegramBotHostedService : BackgroundService
             webAppUrl = _options.WebAppUrl;
         }
 
+        await RegisterCommandsAsync(bot, stoppingToken);
+
+        if (_options.IsEnabled())
+            await RunWebhookAsync(bot, webAppUrl, stoppingToken);
+        else
+            await RunPollingAsync(bot, webAppUrl, stoppingToken);
+    }
+
+    /// <summary>
+    /// Вебхук: Telegram шлёт апдейты на TelegramWebhook.Path, эндпоинт кладёт их в очередь, здесь — обработка.
+    /// Пока под перезапускается, Telegram копит апдейты у себя и доставит их новому экземпляру.
+    /// </summary>
+    private async Task RunWebhookAsync(TelegramBotClient bot, string webAppUrl, CancellationToken stoppingToken)
+    {
+        BotMetrics.TrackQueue(_queue);
+
+        try
+        {
+            await bot.SetWebhook(_options.WebhookUrl,
+                allowedUpdates: [UpdateType.Message, UpdateType.CallbackQuery],
+                secretToken: _options.ResolveSecret(),
+                cancellationToken: stoppingToken);
+            _logger.LogInformation("Telegram webhook set to {WebhookUrl}. WebApp URL: {WebAppUrl}",
+                _options.WebhookUrl, webAppUrl);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Остаётся прежний вебхук (если был) — апдейты продолжат приходить, если URL не менялся
+            _logger.LogError(ex, "Failed to set Telegram webhook to {WebhookUrl}", _options.WebhookUrl);
+            BotMetrics.PollingError("SetWebhook");
+        }
+
+        try
+        {
+            await foreach (var update in _queue.Reader.ReadAllAsync(stoppingToken))
+                await HandleUpdateAsync(bot, webAppUrl, update, stoppingToken);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+        }
+    }
+
+    private async Task RunPollingAsync(TelegramBotClient bot, string webAppUrl, CancellationToken stoppingToken)
+    {
         try
         {
             await bot.DeleteWebhook(cancellationToken: stoppingToken);
@@ -53,8 +101,6 @@ public class TelegramBotHostedService : BackgroundService
         {
             _logger.LogWarning(ex, "Failed to delete Telegram webhook (continuing with polling).");
         }
-
-        await RegisterCommandsAsync(bot, stoppingToken);
 
         TelegramBotClient.OnUpdateHandler onUpdate = (Update update) =>
             HandleUpdateAsync(bot, webAppUrl, update, stoppingToken);

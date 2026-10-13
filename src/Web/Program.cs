@@ -1,4 +1,5 @@
 using CuMusicClub.Infrastructure.Data;
+using CuMusicClub.Web.Bot;
 using CuMusicClub.Web.Middleware;
 using Microsoft.Extensions.Logging.Console;
 using Prometheus;
@@ -54,6 +55,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapEndpoints();
+app.MapTelegramWebhook();
 
 app.MapFallbackToFile("index.html");
 
