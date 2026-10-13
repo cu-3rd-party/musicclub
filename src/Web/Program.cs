@@ -1,6 +1,7 @@
 using CuMusicClub.Infrastructure.Data;
 using CuMusicClub.Web.Middleware;
 using Microsoft.Extensions.Logging.Console;
+using Prometheus;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -37,6 +38,7 @@ app.MapScalarApiReference();
 app.MapHealthChecks("/health");
 
 app.UseExceptionHandler(options => { });
+app.UseHttpMetrics();
 app.UseRequestLogging();
 
 app.UseAuthentication();

@@ -81,9 +81,11 @@ public class BotUpdateHandler(
         var command = match.Groups["command"].Value.ToLowerInvariant();
         var args = match.Groups["args"].Success ? match.Groups["args"].Value.Trim() : string.Empty;
         logger.LogDebug("Команда /{Command} от {UserId} в чате {ChatId}", command, user.Id, message.Chat.Id);
+        BotMetrics.CommandReceived(command);
 
         if (Cooldowns.TryGetValue(command, out var cooldown) && !TryUse(user.Id, command, cooldown, out var wait))
         {
+            BotMetrics.CommandCooldown(command);
             await ReplyAsync(bot, message, string.Format(BotTexts.Cooldown, (int) Math.Ceiling(wait.TotalSeconds)),
                 cancellationToken);
             return;

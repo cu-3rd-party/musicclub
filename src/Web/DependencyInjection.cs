@@ -4,6 +4,7 @@ using CuMusicClub.Web.Bot;
 using CuMusicClub.Web.Infrastructure.Oidc;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
+using Prometheus;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -26,6 +27,11 @@ public static class DependencyInjection
         builder.Services.AddCors();
 
         builder.Services.AddHealthChecks();
+
+        // /metrics на отдельном порту, чтобы не светить их через ingress; 0 — выключено (тесты)
+        var metricsPort = builder.Configuration.GetValue("Metrics:Port", 8082);
+        if (metricsPort > 0)
+            builder.Services.AddMetricServer(options => options.Port = (ushort) metricsPort);
 
         // Бэкенд доступен только через прокси (traefik): доверяем X-Forwarded-*, иначе redirect_uri для OIDC
         // соберётся с http:// вместо https://.

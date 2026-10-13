@@ -73,6 +73,8 @@ RUN mkdir -p /app/data/yandex
 
 # Expose the port the app runs on
 EXPOSE 8080
+# Prometheus /metrics
+EXPOSE 8082
 
 # Health check endpoint
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

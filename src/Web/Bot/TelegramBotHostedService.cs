@@ -61,6 +61,7 @@ public class TelegramBotHostedService : BackgroundService
         TelegramBotClient.OnErrorHandler onError = (Exception exception, HandleErrorSource source) =>
         {
             _logger.LogError(exception, "Telegram bot error (source: {Source})", source);
+            BotMetrics.PollingError(source.ToString());
             return Task.CompletedTask;
         };
 
@@ -88,14 +89,18 @@ public class TelegramBotHostedService : BackgroundService
         Update update,
         CancellationToken cancellationToken)
     {
+        var type = update.Type.ToString();
+        using var timer = BotMetrics.MeasureUpdate(type);
         try
         {
             await using var scope = _scopeFactory.CreateAsyncScope();
             var handler = scope.ServiceProvider.GetRequiredService<BotUpdateHandler>();
             await handler.HandleUpdateAsync(bot, update, webAppUrl, cancellationToken);
+            BotMetrics.UpdateHandled(type, success: true);
         }
         catch (Exception ex)
         {
+            BotMetrics.UpdateHandled(type, success: false);
             _logger.LogError(ex, "Failed to handle Telegram update {UpdateId}", update.Id);
         }
     }

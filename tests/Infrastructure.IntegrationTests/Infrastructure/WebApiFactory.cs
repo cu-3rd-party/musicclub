@@ -29,6 +29,7 @@ public class WebApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("ConnectionStrings:CuMusicClubDb", _connectionString);
         builder.UseSetting("Telegram:ChatId", TestChatId.ToString());
         builder.UseSetting("Telegram:BotUsername", TestBotUsername);
+        builder.UseSetting("Metrics:Port", "0");
         builder.UseSetting("Security:Secret", "integration-tests-secret-that-is-long-enough-for-hs256");
 
         var oidc = $"Auth:Oidc:{TestOidcProvider}:";
