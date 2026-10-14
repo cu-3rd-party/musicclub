@@ -1,9 +1,11 @@
 using CuMusicClub.Infrastructure.IntegrationTests.Bot;
+using CuMusicClub.Web.Bot;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Telegram.Bot;
 
 namespace CuMusicClub.Infrastructure.IntegrationTests.Infrastructure;
@@ -32,7 +34,7 @@ public class WebApiFactory : WebApplicationFactory<Program>
         builder.UseSetting("Telegram:ChatId", TestChatId.ToString());
         builder.UseSetting("Telegram:BotUsername", TestBotUsername);
         builder.UseSetting("Metrics:Port", "0");
-        // Вебхук включён, но без BotToken TelegramBotHostedService не стартует: апдейты остаются в очереди
+        // Вебхук включён; TelegramBotHostedService в тестах не запускается (см. ниже) — апдейты остаются в очереди
         builder.UseSetting("Telegram:WebhookUrl", "https://musicclub.example.com/api/telegram/webhook");
         builder.UseSetting("Telegram:WebhookSecret", TestWebhookSecret);
         builder.UseSetting("Security:Secret", "integration-tests-secret-that-is-long-enough-for-hs256");
@@ -52,6 +54,12 @@ public class WebApiFactory : WebApplicationFactory<Program>
         {
             services.RemoveAll<ITelegramBotClient>();
             services.AddSingleton<ITelegramBotClient, FakeTelegramBotClient>();
+
+            // В CI токен тестового бота приходит из user secrets: с ним сервис стартовал бы,
+            // звал SetWebhook на тестовом боте и забирал апдейты из очереди раньше тестов
+            foreach (var d in services.Where(d => d.ServiceType == typeof(IHostedService)
+                                                  && d.ImplementationType == typeof(TelegramBotHostedService)).ToList())
+                services.Remove(d);
         });
     }
 }
