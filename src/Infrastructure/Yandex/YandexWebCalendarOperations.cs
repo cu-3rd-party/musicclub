@@ -82,7 +82,9 @@ public sealed class YandexWebCalendarOperations(
             ["participantsCanInvite"] = true,
             ["isAllDay"] = eventInfo.IsAllDay,
             ["participantsCanEdit"] = false,
-            ["visibility"] = "public",
+            // 14.10.2026 Яндекс убрал значение "public" из EventVisibilityClass (create-event отвечает
+            // "unknown value of enum"); все события слоя, включая созданные с "public", теперь отдаются как "participants"
+            ["visibility"] = "participants",
             ["layerId"] = layerId,
             ["start"] = start.ToString(LocalFormat, CultureInfo.InvariantCulture),
             ["end"] = end.ToString(LocalFormat, CultureInfo.InvariantCulture),
