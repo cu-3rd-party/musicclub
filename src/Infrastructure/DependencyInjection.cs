@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Telegram.Bot;
@@ -154,12 +155,9 @@ public static class DependencyInjection
                 client.DefaultRequestHeaders.Add("Origin", "https://calendar.yandex.ru");
                 client.DefaultRequestHeaders.Referrer = new Uri("https://calendar.yandex.ru/");
             })
-            // Cookie шлём руками из файла, редирект на passport ловим как «сессия протухла»
-            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-            {
-                UseCookies = false,
-                AllowAutoRedirect = false
-            });
+            // Без cookies-контейнера и редиректов (см. YandexConnectRetry), с повтором TCP-подключения
+            .ConfigurePrimaryHttpMessageHandler(sp => YandexConnectRetry.CreateHandler(
+                sp.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(YandexConnectRetry))));
         builder.Services.AddSingleton<IYandexWebSession, YandexWebSession>();
         builder.Services.AddSingleton<IYandexMayaClient, YandexMayaClient>();
         builder.Services.AddSingleton<IYandexMailClient, YandexMailClient>();
