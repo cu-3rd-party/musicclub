@@ -45,23 +45,30 @@
 
     const LINEUP_SIMILARITY_THRESHOLD = 0.75;
 
-    // Доля общих участников (Жаккар): |A ∩ B| / |A ∪ B|
-    function lineupSimilarity(a: Set<string>, b: Set<string>): number {
-        if (a.size === 0 && b.size === 0) return 1;
+    const lineupOf = (a: SongRoleAssignment) => new Set<string>(a.participants.map((p) => p.id));
+
+    // Общие участники двух составов относительно большего из них, например 4 из 5
+    function lineupOverlapOf(a: Set<string>, b: Set<string>): {common: number; size: number} {
         let common = 0;
         for (const id of a) if (b.has(id)) common++;
-        return common / (a.size + b.size - common);
+        return {common, size: Math.max(a.size, b.size)};
     }
 
-    // Объединяет песни в группы, если составы похожи на ≥75% (транзитивно)
+    function isSimilar(a: Set<string>, b: Set<string>): boolean {
+        const {common, size} = lineupOverlapOf(a, b);
+        return size === 0 || common / size >= LINEUP_SIMILARITY_THRESHOLD;
+    }
+
+    // Объединяет песни в группы транзитивно: если А похожа на Б, а Б на В, то А, Б и В в одной группе,
+    // даже если А и В между собой непохожи
     function groupByLineup(items: SongRoleAssignment[]): SongRoleAssignment[][] {
-        const lineups = items.map((a) => new Set<string>(a.participants.map((p) => p.id)));
+        const lineups = items.map(lineupOf);
         const parent = items.map((_, i) => i);
         const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
 
         for (let i = 0; i < items.length; i++) {
             for (let j = i + 1; j < items.length; j++) {
-                if (lineupSimilarity(lineups[i], lineups[j]) >= LINEUP_SIMILARITY_THRESHOLD) {
+                if (isSimilar(lineups[i], lineups[j])) {
                     parent[find(i)] = find(j);
                 }
             }
@@ -74,12 +81,21 @@
         return Object.values(groups);
     }
 
-    // Сколько участников общие для всех песен группы из общего числа участников, например "4/5"
+    // Наименьшая похожесть в группе: у каждой песни берём самую похожую соседку, из них — худшую.
+    // "4/5" значит, что каждая песня делит минимум 4 из 5 участников с какой-то другой песней группы
     function lineupOverlap(group: SongRoleAssignment[]): string {
-        const lineups = group.map((a) => new Set<string>(a.participants.map((p) => p.id)));
-        const all = new Set<string>(lineups.flatMap((l) => [...l]));
-        const common = [...all].filter((id) => lineups.every((l) => l.has(id)));
-        return `${common.length}/${all.size}`;
+        const lineups = group.map(lineupOf);
+        let worst = {common: 1, size: 1};
+        lineups.forEach((l, i) => {
+            let best = {common: 0, size: 1};
+            lineups.forEach((other, j) => {
+                if (i === j) return;
+                const o = lineupOverlapOf(l, other);
+                if (o.common / o.size > best.common / best.size) best = o;
+            });
+            if (best.common / best.size < worst.common / worst.size) worst = best;
+        });
+        return `${worst.common}/${worst.size}`;
     }
     let permissionCategory = $derived($authState.user ? categorizePermissions($authState.user.permissions) : PermissionCategory.None);
     let hasRoadieManage = $derived(user?.permissions?.includes(Permission.RoadieManage) ?? false);
@@ -342,7 +358,7 @@
                     <div class={group.length > 1 ? "rounded-lg border bg-card px-3 py-2" : ""}>
                         {#if group.length > 1}
                             <p class="text-xs text-muted-foreground pb-1">
-                                Общий состав: {lineupOverlap(group)}
+                                Схожесть состава: {lineupOverlap(group)}
                             </p>
                         {/if}
                         <div class="flex flex-col">
