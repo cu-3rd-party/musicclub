@@ -37,6 +37,44 @@
     let yandexLoginError = $state<string | null>(null);
 
     let user = $derived($authState.user);
+    let assignmentGroups = $derived(groupByLineup(assignments));
+
+    const LINEUP_SIMILARITY_THRESHOLD = 0.75;
+
+    // Доля общих участников (Жаккар): |A ∩ B| / |A ∪ B|
+    function lineupSimilarity(a: Set<string>, b: Set<string>): number {
+        if (a.size === 0 && b.size === 0) return 1;
+        let common = 0;
+        for (const id of a) if (b.has(id)) common++;
+        return common / (a.size + b.size - common);
+    }
+
+    // Объединяет песни в группы, если составы похожи на ≥75% (транзитивно)
+    function groupByLineup(items: SongRoleAssignment[]): SongRoleAssignment[][] {
+        const lineups = items.map((a) => new Set<string>(a.participants.map((p) => p.id)));
+        const parent = items.map((_, i) => i);
+        const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+
+        for (let i = 0; i < items.length; i++) {
+            for (let j = i + 1; j < items.length; j++) {
+                if (lineupSimilarity(lineups[i], lineups[j]) >= LINEUP_SIMILARITY_THRESHOLD) {
+                    parent[find(i)] = find(j);
+                }
+            }
+        }
+
+        const groups: Record<number, SongRoleAssignment[]> = {};
+        items.forEach((a, i) => {
+            (groups[find(i)] ??= []).push(a);
+        });
+        return Object.values(groups);
+    }
+
+    function lineupNames(group: SongRoleAssignment[]): string {
+        const names: Record<string, string> = {};
+        for (const a of group) for (const p of a.participants) names[p.id] = p.displayName;
+        return Object.values(names).join(", ");
+    }
     let permissionCategory = $derived($authState.user ? categorizePermissions($authState.user.permissions) : PermissionCategory.None);
     let hasRoadieManage = $derived(user?.permissions?.includes(Permission.RoadieManage) ?? false);
 
@@ -293,15 +331,26 @@
         {:else if assignments.length === 0}
             <p class="text-sm text-muted-foreground py-2">Нет назначенных ролей</p>
         {:else}
-            <div class="flex flex-col">
-                {#each assignments as assignment (assignment.roleAssignmentId)}
-                    <SongRow
-                        songId={assignment.song.id}
-                        title={assignment.song.title}
-                        artist={assignment.song.artist}
-                        imageUrl={assignment.song.thumbnailUrl}
-                        roleTitle={assignment.title}
-                    />
+            <div class="flex flex-col gap-3">
+                {#each assignmentGroups as group (group[0].roleAssignmentId)}
+                    <div class={group.length > 1 ? "rounded-lg border bg-card px-3 py-2" : ""}>
+                        {#if group.length > 1}
+                            <p class="text-xs text-muted-foreground pb-1">
+                                Состав: {lineupNames(group)}
+                            </p>
+                        {/if}
+                        <div class="flex flex-col">
+                            {#each group as assignment (assignment.roleAssignmentId)}
+                                <SongRow
+                                    songId={assignment.song.id}
+                                    title={assignment.song.title}
+                                    artist={assignment.song.artist}
+                                    imageUrl={assignment.song.thumbnailUrl}
+                                    roleTitle={assignment.title}
+                                />
+                            {/each}
+                        </div>
+                    </div>
                 {/each}
             </div>
         {/if}

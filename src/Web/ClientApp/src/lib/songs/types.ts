@@ -85,4 +85,5 @@ export type SongRoleAssignment = {
     song: ShortSongDto;
     title: string;
     joinedAt: string;
+    participants: SongUser[];
 };

@@ -19,7 +19,7 @@ public static partial class Users
     {
         var user = await users.FindByIdAsync(claimsPrincipal.GetUserId()) ?? throw new UnauthorizedAccessException();
 
-        return await songRoleAssignmentRepository
+        var assignments = await songRoleAssignmentRepository
             .Query()
             .Where(a => a.UserId == user.Id)
             .Include(a => a.Song)
@@ -27,8 +27,16 @@ public static partial class Users
             .Select(a => new SongRoleAssignment(a.Id,
                 new ShortSongDto(a.Song.Id, a.Song.Title, a.Song.Artist, a.Song.ThumbnailUrl),
                 a.SongRole.RoleTitle,
-                a.JoinedAt))
+                a.JoinedAt,
+                a.Song.Assignments
+                    .Select(sa => new SongUserDto(sa.User.Id, sa.User.DisplayName, sa.User.UserName, sa.User.AvatarUrl, null))
+                    .ToList()))
             .ToListAsync(cancellationToken);
+
+        // один человек может занимать несколько ролей в песне — в составе он должен быть один раз
+        return assignments
+            .Select(a => a with { Participants = a.Participants.DistinctBy(p => p.Id).ToList() })
+            .ToList();
     }
 
     public static async Task<IReadOnlyList<ShortSongDto>> GetMyRoadieAssignments(
