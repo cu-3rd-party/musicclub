@@ -37,7 +37,11 @@
     let yandexLoginError = $state<string | null>(null);
 
     let user = $derived($authState.user);
-    let assignmentGroups = $derived(groupByLineup(assignments));
+    // Неукомплектованные песни показываются отдельно, в группы по составу не попадают
+    let assignmentGroups = $derived([
+        ...groupByLineup(assignments.filter((a) => a.isFull)),
+        ...assignments.filter((a) => !a.isFull).map((a) => [a]),
+    ]);
 
     const LINEUP_SIMILARITY_THRESHOLD = 0.75;
 
@@ -70,10 +74,12 @@
         return Object.values(groups);
     }
 
-    function lineupNames(group: SongRoleAssignment[]): string {
-        const names: Record<string, string> = {};
-        for (const a of group) for (const p of a.participants) names[p.id] = p.displayName;
-        return Object.values(names).join(", ");
+    // Сколько участников общие для всех песен группы из общего числа участников, например "4/5"
+    function lineupOverlap(group: SongRoleAssignment[]): string {
+        const lineups = group.map((a) => new Set<string>(a.participants.map((p) => p.id)));
+        const all = new Set<string>(lineups.flatMap((l) => [...l]));
+        const common = [...all].filter((id) => lineups.every((l) => l.has(id)));
+        return `${common.length}/${all.size}`;
     }
     let permissionCategory = $derived($authState.user ? categorizePermissions($authState.user.permissions) : PermissionCategory.None);
     let hasRoadieManage = $derived(user?.permissions?.includes(Permission.RoadieManage) ?? false);
@@ -336,7 +342,7 @@
                     <div class={group.length > 1 ? "rounded-lg border bg-card px-3 py-2" : ""}>
                         {#if group.length > 1}
                             <p class="text-xs text-muted-foreground pb-1">
-                                Состав: {lineupNames(group)}
+                                Общий состав: {lineupOverlap(group)}
                             </p>
                         {/if}
                         <div class="flex flex-col">

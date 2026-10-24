@@ -30,7 +30,8 @@ public static partial class Users
                 a.JoinedAt,
                 a.Song.Assignments
                     .Select(sa => new SongUserDto(sa.User.Id, sa.User.DisplayName, sa.User.UserName, sa.User.AvatarUrl, null))
-                    .ToList()))
+                    .ToList(),
+                a.Song.Roles.All(r => r.Assignment != null)))
             .ToListAsync(cancellationToken);
 
         // один человек может занимать несколько ролей в песне — в составе он должен быть один раз

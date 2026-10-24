@@ -36,8 +36,9 @@ public sealed record RoleAssignmentDto(Guid Id, SongUserDto User, DateTimeOffset
 /// <param name="Title"></param>
 /// <param name="JoinedAt"></param>
 /// <param name="Participants">Все участники песни (состав), нужен для группировки похожих составов в профиле</param>
+/// <param name="IsFull">Все роли песни заняты</param>
 public sealed record SongRoleAssignment(Guid RoleAssignmentId, ShortSongDto Song, string Title, DateTimeOffset JoinedAt,
-    IReadOnlyList<SongUserDto> Participants);
+    IReadOnlyList<SongUserDto> Participants, bool IsFull);
 
 /// <summary>
 /// тоже самое, используется по сути только в /users/me/assignments ибо там полная инфа о песне не нужна совсем

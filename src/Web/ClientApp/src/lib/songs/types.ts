@@ -86,4 +86,5 @@ export type SongRoleAssignment = {
     title: string;
     joinedAt: string;
     participants: SongUser[];
+    isFull: boolean;
 };
