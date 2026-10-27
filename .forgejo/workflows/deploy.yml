@@ -1,6 +1,6 @@
 name: Deploy
 
-# Деплой через GitOps: образы уже в GHCR, здесь только меняется тег в репозитории
+# Деплой через GitOps: образы уже в registry git.cu3rd.ru, здесь только меняется тег в репозитории
 # pxc1984/homelab (apps/musicclub-<env>-{backend,frontend}/values.yaml) — Argo CD сам
 # выкатывает его в k3s. Конфигурация и секреты окружения живут там же (Sealed Secrets).
 # Секрет окружения HOMELAB_DEPLOY_KEY — deploy key с правом записи в pxc1984/homelab.
@@ -27,6 +27,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: pxc1984/homelab
+          github-server-url: https://github.com
           ssh-key: ${{ secrets.HOMELAB_DEPLOY_KEY }}
 
       - name: Update image tags
@@ -41,11 +42,12 @@ jobs:
               echo "::error::$values не найден в homelab"
               exit 1
             fi
+            sed -i "s|^  repository: ghcr.io/cu-3rd-party/|  repository: git.cu3rd.ru/cu3rd/|" "$values"
             sed -i -E "s/^(  tag: )[^ ]+/\1${TAG}/" "$values"
           done
           git diff --exit-code && exit 0
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "forgejo-actions[bot]"
+          git config user.email "cu3rd-ci@noreply.git.cu3rd.ru"
           git commit -am "${stack}: deploy ${TAG::7}"
           # параллельный деплой другого приложения мог успеть запушить раньше
           for attempt in 1 2 3; do

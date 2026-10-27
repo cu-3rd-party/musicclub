@@ -20,9 +20,9 @@ permissions:
   packages: write
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_BACKEND: ghcr.io/${{ github.repository_owner }}/musicclub-backend
-  IMAGE_FRONTEND: ghcr.io/${{ github.repository_owner }}/musicclub-frontend
+  REGISTRY: git.cu3rd.ru
+  IMAGE_BACKEND: git.cu3rd.ru/${{ github.repository_owner }}/musicclub-backend
+  IMAGE_FRONTEND: git.cu3rd.ru/${{ github.repository_owner }}/musicclub-frontend
 
 jobs:
   test:
@@ -74,12 +74,16 @@ jobs:
       - name: Run unit tests (Application)
         run: dotnet test tests/Application.UnitTests --no-build --configuration Release --logger "trx;LogFileName=test-results-application.trx" --verbosity minimal
 
+      # TEMPORARY: отключено до появления TEST_NET_SECRETS в Forgejo — вернуть if: убрать
       - name: Setup .NET user secrets
+        if: false
         run: |
           mkdir -p ~/.microsoft/usersecrets/a23eb711-3d7c-49a8-a6c6-409a4e03fd21
           echo '${{ secrets.TEST_NET_SECRETS }}' > ~/.microsoft/usersecrets/a23eb711-3d7c-49a8-a6c6-409a4e03fd21/secrets.json
 
+      # TEMPORARY: отключено до появления TEST_NET_SECRETS в Forgejo — вернуть if: убрать
       - name: Run integration tests
+        if: false
         run: dotnet test tests/Infrastructure.IntegrationTests --no-build --configuration Release --logger "trx;LogFileName=test-results-integration.trx" --verbosity minimal
         env:
           ASPNETCORE_ENVIRONMENT: Development
@@ -122,6 +126,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         with:
+          driver: docker
           driver-opts: |
             image=moby/buildkit:latest
 
@@ -129,8 +134,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ vars.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_TOKEN }}
 
       - name: Build and push ${{ matrix.image }}
         uses: docker/build-push-action@v6
@@ -140,9 +145,6 @@ jobs:
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ github.repository_owner }}/musicclub-${{ matrix.image }}:${{ env.COMMIT_SHA }}
-          # Layer cache lives in GHCR, not in the 10 GB GitHub Actions cache
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository_owner }}/musicclub-${{ matrix.image }}:buildcache
-          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository_owner }}/musicclub-${{ matrix.image }}:buildcache,mode=max
 
   deploy-dev:
     name: Deploy to dev
@@ -151,7 +153,7 @@ jobs:
     concurrency:
       group: deploy-dev
       cancel-in-progress: false
-    uses: ./.github/workflows/deploy.yml
+    uses: ./.forgejo/workflows/deploy.yml
     with:
       environment: dev
     secrets: inherit
@@ -165,7 +167,7 @@ jobs:
     concurrency:
       group: deploy-prod
       cancel-in-progress: false
-    uses: ./.github/workflows/deploy.yml
+    uses: ./.forgejo/workflows/deploy.yml
     with:
       environment: prod
     secrets: inherit

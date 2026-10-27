@@ -46,7 +46,7 @@ src/
 - **База данных:** PostgreSQL 18 (в Docker), enum `song_link_type`
 - **Аутентификация:** самописная модель пользователя (`app_user` + `user_permissions`) + JWT + Telegram Bot
 - **Контейнеризация:** Docker, Docker Compose, Traefik (reverse-proxy)
-- **CI/CD:** GitHub Actions; деплой — GitOps в k3s ([pxc1984/homelab](https://github.com/pxc1984/homelab), Argo CD)
+- **CI/CD:** Forgejo Actions (`git.cu3rd.ru`); деплой — GitOps в k3s ([pxc1984/homelab](https://github.com/pxc1984/homelab), Argo CD)
 - **Тесты:** NUnit, Shouldly, Moq, Testcontainers (PostgreSQL), Respawn
 
 ### Ключевые пакеты (централизованное управление в `Directory.Packages.props`)
@@ -168,9 +168,9 @@ dotnet test tests/Infrastructure.IntegrationTests   # требует Docker (Tes
 
 ## CI/CD
 
-- [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml) — сборка образов `ghcr.io/cu-3rd-party/musicclub-{backend,frontend}:<sha>`
+- [`.forgejo/workflows/ci-cd.yml`](.forgejo/workflows/ci-cd.yml) — сборка образов `git.cu3rd.ru/cu3rd/musicclub-{backend,frontend}:<sha>`
   на push в `master`, затем деплой на dev и (после approve окружения `prod`) на prod.
-- [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) — деплой: меняет тег образов в
+- [`.forgejo/workflows/deploy.yml`](.forgejo/workflows/deploy.yml) — деплой: меняет тег образов в
   `pxc1984/homelab` (`apps/musicclub-<env>-{backend,frontend}/values.yaml`), дальше Argo CD выкатывает сам.
   Секрет окружений `dev`/`prod`: `HOMELAB_DEPLOY_KEY` (deploy key с записью в homelab).
 - Где живёт: k3s, узел grm, namespace `musicclub-dev` / `musicclub-prod`; база — `musicclub_dev` / `musicclub_prod`
