@@ -24,8 +24,6 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     timeout-minutes: 15
-    permissions:
-      contents: read
 
     steps:
       - name: Checkout homelab

@@ -17,8 +17,6 @@ concurrency:
   group: deploy-prod
   cancel-in-progress: false
 
-permissions:
-  contents: read
 
 jobs:
   check:
