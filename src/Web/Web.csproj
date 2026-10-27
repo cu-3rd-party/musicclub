@@ -6,8 +6,15 @@
         <SpaRoot>ClientApp\</SpaRoot>
         <OpenApiDocumentsDirectory>./wwwroot/openapi/</OpenApiDocumentsDirectory>
         <OpenApiGenerateDocumentsOptions>--file-name v1</OpenApiGenerateDocumentsOptions>
+        <!-- Server GC keeps a heap per core and rarely returns memory; one replica doesn't need it -->
+        <ServerGarbageCollection>false</ServerGarbageCollection>
+        <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
         <UserSecretsId>a23eb711-3d7c-49a8-a6c6-409a4e03fd21</UserSecretsId>
     </PropertyGroup>
+
+    <ItemGroup>
+        <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="7"/>
+    </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\Application\Application.csproj"/>
