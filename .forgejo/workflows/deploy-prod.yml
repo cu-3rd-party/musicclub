@@ -1,0 +1,64 @@
+name: Deploy to prod
+
+# Ручной деплой на prod: Actions -> "Deploy to prod" -> Run workflow (нужен доступ на запись).
+# Заменяет approve окружения: Forgejo не поддерживает required reviewers.
+# Образ должен быть уже собран ci-cd.yml (собирается на каждый push в master, тег = SHA).
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: 'Полный SHA коммита master для выкатки (пусто — текущий master)'
+        required: false
+        type: string
+        default: ''
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check commit
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.sha.outputs.tag }}
+    steps:
+      - name: Only from master
+        if: github.ref != 'refs/heads/master'
+        run: |
+          echo "::error::Запускайте с ветки master"
+          exit 1
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve SHA
+        id: sha
+        env:
+          INPUT_SHA: ${{ inputs.sha }}
+        run: |
+          sha="${INPUT_SHA:-$GITHUB_SHA}"
+          if ! echo "$sha" | grep -qE '^[0-9a-f]{40}$'; then
+            echo "::error::Нужен полный SHA из 40 символов: $sha"
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$sha" origin/master; then
+            echo "::error::$sha не в истории master"
+            exit 1
+          fi
+          echo "tag=$sha" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Deploy to prod
+    needs: check
+    uses: ./.forgejo/workflows/deploy.yml
+    with:
+      environment: prod
+      tag: ${{ needs.check.outputs.tag }}
+    secrets: inherit

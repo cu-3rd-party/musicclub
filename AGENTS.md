@@ -169,7 +169,8 @@ dotnet test tests/Infrastructure.IntegrationTests   # требует Docker (Tes
 ## CI/CD
 
 - [`.forgejo/workflows/ci-cd.yml`](.forgejo/workflows/ci-cd.yml) — сборка образов `git.cu3rd.ru/cu3rd/musicclub-{backend,frontend}:<sha>`
-  на push в `master`, затем деплой на dev и (после approve окружения `prod`) на prod.
+  на push в `master`, затем деплой на dev. На prod — вручную: [`.forgejo/workflows/deploy-prod.yml`](.forgejo/workflows/deploy-prod.yml)
+  (Actions → «Deploy to prod» → Run workflow с ветки master; опционально SHA для отката).
 - [`.forgejo/workflows/deploy.yml`](.forgejo/workflows/deploy.yml) — деплой: меняет тег образов в
   `pxc1984/homelab` (`apps/musicclub-<env>-{backend,frontend}/values.yaml`), дальше Argo CD выкатывает сам.
   Секрет окружений `dev`/`prod`: `HOMELAB_DEPLOY_KEY` (deploy key с записью в homelab).

@@ -12,6 +12,11 @@ on:
         required: true
         type: string
         description: 'Environment name (dev or prod)'
+      tag:
+        required: false
+        type: string
+        default: ''
+        description: 'Image tag (full commit SHA); defaults to the triggering commit'
 
 jobs:
   deploy:
@@ -33,7 +38,7 @@ jobs:
       - name: Update image tags
         env:
           ENVIRONMENT: ${{ inputs.environment }}
-          TAG: ${{ github.sha }}
+          TAG: ${{ inputs.tag || github.sha }}
         run: |
           stack="musicclub-${ENVIRONMENT}"
           for service in backend frontend; do

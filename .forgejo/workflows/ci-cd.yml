@@ -9,8 +9,8 @@ on:
       - master
   workflow_dispatch:
 
-# PRs: newer pushes cancel older runs. master: every run gets its own group, so a run
-# waiting for prod approval never blocks or gets cancelled by the next push.
+# PRs: newer pushes cancel older runs. master: every run gets its own group, so a
+# deploy in progress never gets cancelled by the next push.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: true
@@ -162,16 +162,4 @@ jobs:
       environment: dev
     secrets: inherit
 
-  # Waits on the "prod" environment's required reviewers: the run page shows
-  # "Review deployments" -> "Approve and deploy" once dev is deployed.
-  deploy-prod:
-    name: Deploy to prod
-    needs: deploy-dev
-    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
-    concurrency:
-      group: deploy-prod
-      cancel-in-progress: false
-    uses: ./.forgejo/workflows/deploy.yml
-    with:
-      environment: prod
-    secrets: inherit
+  # prod — вручную: .forgejo/workflows/deploy-prod.yml (Forgejo не умеет required reviewers)
