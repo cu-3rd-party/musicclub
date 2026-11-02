@@ -104,6 +104,7 @@ public static class DependencyInjection
         builder.Services.AddScoped<ICalendarFeedRepository, CalendarFeedRepository>();
         builder.Services.AddScoped<IRehearsalBookingRepository, RehearsalBookingRepository>();
         builder.Services.AddScoped<IYandexLoginGuessRepository, YandexLoginGuessRepository>();
+        builder.Services.AddScoped<IRehearsalReportRepository, RehearsalReportRepository>();
         builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         builder.Services.AddScoped<ApplicationDbContextInitialiser>();

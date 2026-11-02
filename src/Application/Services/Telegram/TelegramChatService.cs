@@ -171,6 +171,19 @@ public class TelegramChatService(
             cancellationToken: cancellationToken);
     }
 
+    public async Task SendDirectDocument(long tgUserId,
+        byte[] content,
+        string fileName,
+        string caption,
+        CancellationToken cancellationToken = default)
+    {
+        using var stream = new MemoryStream(content);
+        await bot.SendDocument(new ChatId(tgUserId),
+            InputFile.FromStream(stream, fileName),
+            caption: caption,
+            cancellationToken: cancellationToken);
+    }
+
     public string BuildUserMention(ApplicationUser user)
     {
         string userTag;

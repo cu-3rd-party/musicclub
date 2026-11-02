@@ -66,9 +66,39 @@ public sealed class YandexIcsRoomScheduleProvider(
                     : calendarEvent.Duration);
 
             if (start < to && end > from)
-                result.Add(new ExternalScheduleEvent(calendarEvent.Summary, start, end));
+                result.Add(new ExternalScheduleEvent(
+                    calendarEvent.Summary,
+                    start,
+                    end,
+                    GetLogin(calendarEvent.Organizer?.Value),
+                    GetAttendees(calendarEvent)));
         }
 
         return result.OrderBy(e => e.Start).ToList();
+    }
+
+    private static List<ExternalScheduleAttendee> GetAttendees(CalendarEvent calendarEvent)
+    {
+        return calendarEvent.Attendees
+            .Select(a => (Login: GetLogin(a.Value), Status: a.ParticipationStatus))
+            .Where(a => a.Login != null)
+            .Select(a => new ExternalScheduleAttendee(
+                a.Login!,
+                string.Equals(a.Status, "DECLINED", StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+    }
+
+    /// <summary>Логин — часть адреса до @ (mailto:i.ivanov@example.com → i.ivanov).</summary>
+    private static string? GetLogin(Uri? address)
+    {
+        if (address == null)
+            return null;
+
+        var value = address.ToString();
+        if (value.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase))
+            value = value["mailto:".Length..];
+
+        var at = value.IndexOf('@');
+        return at > 0 ? value[..at] : null;
     }
 }

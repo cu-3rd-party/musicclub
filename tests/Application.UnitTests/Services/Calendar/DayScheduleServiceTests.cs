@@ -143,4 +143,32 @@ public class DayScheduleServiceTests
         events[0].Start.ShouldBe(At(15));
         events[0].End.ShouldBe(At(16, 30));
     }
+
+    [Test]
+    public void ParseEvents_ReadsOrganizerAndAttendees()
+    {
+        const string ics = """
+            BEGIN:VCALENDAR
+            VERSION:2.0
+            BEGIN:VEVENT
+            UID:1
+            DTSTAMP:20261008T000000Z
+            DTSTART:20261008T120000Z
+            DTEND:20261008T133000Z
+            SUMMARY:Репетиция
+            ORGANIZER;CN=Bot:mailto:org.login@example.com
+            ATTENDEE;PARTSTAT=ACCEPTED;CN=A:mailto:a.login@example.com
+            ATTENDEE;PARTSTAT=DECLINED;CN=B:mailto:b.login@example.com
+            END:VEVENT
+            END:VCALENDAR
+            """;
+
+        var parsed = YandexIcsRoomScheduleProvider.ParseEvents(ics, At(0), At(0).AddDays(1)).ShouldHaveSingleItem();
+
+        parsed.OrganizerLogin.ShouldBe("org.login");
+        parsed.Attendees.ShouldBe([
+            new ExternalScheduleAttendee("a.login", false),
+            new ExternalScheduleAttendee("b.login", true)
+        ]);
+    }
 }

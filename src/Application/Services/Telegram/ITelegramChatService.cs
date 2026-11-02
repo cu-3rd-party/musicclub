@@ -60,6 +60,13 @@ public interface ITelegramChatService
     /// <summary>Личное сообщение пользователю по его Telegram id.</summary>
     Task SendDirectMessage(long tgUserId, string message, CancellationToken cancellationToken = default);
 
+    /// <summary>Файл в личные сообщения пользователю по его Telegram id.</summary>
+    Task SendDirectDocument(long tgUserId,
+        byte[] content,
+        string fileName,
+        string caption,
+        CancellationToken cancellationToken = default);
+
     string BuildUserMention(ApplicationUser user);
 
     string BuildSongSystemLink(Domain.Entities.Song song);

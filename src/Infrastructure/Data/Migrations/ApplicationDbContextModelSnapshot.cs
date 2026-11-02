@@ -610,6 +610,79 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                     b.ToTable("rehearsal_booking", (string)null);
                 });
 
+            modelBuilder.Entity("CuMusicClub.Domain.Entities.RehearsalReport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<byte[]>("Content")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("content");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("file_name");
+
+                    b.Property<DateOnly>("PeriodEnd")
+                        .HasColumnType("date")
+                        .HasColumnName("period_end");
+
+                    b.Property<DateOnly>("PeriodStart")
+                        .HasColumnType("date")
+                        .HasColumnName("period_start");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PeriodStart")
+                        .IsUnique()
+                        .HasDatabaseName("rehearsal_report_period_unique");
+
+                    b.ToTable("rehearsal_report", (string)null);
+                });
+
+            modelBuilder.Entity("CuMusicClub.Domain.Entities.RehearsalReportDelivery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Recipient")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("recipient");
+
+                    b.Property<Guid>("ReportId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("report_id");
+
+                    b.Property<DateTimeOffset>("SentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sent_at");
+
+                    b.Property<long>("TgUserId")
+                        .HasColumnType("bigint")
+                        .HasColumnName("tg_user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReportId", "Recipient")
+                        .IsUnique()
+                        .HasDatabaseName("rehearsal_report_delivery_unique");
+
+                    b.ToTable("rehearsal_report_delivery", (string)null);
+                });
+
             modelBuilder.Entity("CuMusicClub.Domain.Entities.RoadieTicket", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1207,6 +1280,17 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
                     b.Navigation("SubUser");
                 });
 
+            modelBuilder.Entity("CuMusicClub.Domain.Entities.RehearsalReportDelivery", b =>
+                {
+                    b.HasOne("CuMusicClub.Domain.Entities.RehearsalReport", "Report")
+                        .WithMany("Deliveries")
+                        .HasForeignKey("ReportId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Report");
+                });
+
             modelBuilder.Entity("CuMusicClub.Domain.Entities.RoadieTicket", b =>
                 {
                     b.HasOne("CuMusicClub.Domain.Entities.ApplicationUser", "AcceptedBy")
@@ -1429,6 +1513,11 @@ namespace CuMusicClub.Infrastructure.Data.Migrations
             modelBuilder.Entity("CuMusicClub.Domain.Entities.RefreshToken", b =>
                 {
                     b.Navigation("JtiSession");
+                });
+
+            modelBuilder.Entity("CuMusicClub.Domain.Entities.RehearsalReport", b =>
+                {
+                    b.Navigation("Deliveries");
                 });
 
             modelBuilder.Entity("CuMusicClub.Domain.Entities.Song", b =>

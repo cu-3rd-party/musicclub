@@ -45,6 +45,8 @@ public static class DependencyInjection
         builder.AddExternalAuth();
 
         builder.Services.Configure<BotOptions>(builder.Configuration.GetSection(BotOptions.SectionName));
+        builder.Services.Configure<RehearsalReportOptions>(
+            builder.Configuration.GetSection(RehearsalReportOptions.SectionName));
         builder.Services.AddScoped<BotUpdateHandler>();
         builder.Services.AddScoped<BotRehearsalCommandsHandler>();
         builder.Services.AddScoped<BotScheduleCommandsHandler>();
@@ -58,6 +60,7 @@ public static class DependencyInjection
         builder.Services.AddHostedService<TopicBackfillHostedService>();
         builder.Services.AddHostedService<CalendarSyncBackfillHostedService>();
         builder.Services.AddHostedService<YandexLoginBackfillHostedService>();
+        builder.Services.AddHostedService<RehearsalReportHostedService>();
     }
 
     /// <summary>

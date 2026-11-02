@@ -18,4 +18,14 @@ public interface IExternalScheduleProvider
 /// <summary>
 /// Событие из внешнего календаря. Title может быть пустым, если событие скрыто настройками приватности.
 /// </summary>
-public record ExternalScheduleEvent(string? Title, DateTimeOffset Start, DateTimeOffset End);
+public record ExternalScheduleEvent(
+    string? Title,
+    DateTimeOffset Start,
+    DateTimeOffset End,
+    string? OrganizerLogin = null,
+    IReadOnlyList<ExternalScheduleAttendee>? Attendees = null);
+
+/// <summary>
+/// Приглашённый на событие: логин Яндекса и отказался ли он.
+/// </summary>
+public record ExternalScheduleAttendee(string Login, bool Declined);
