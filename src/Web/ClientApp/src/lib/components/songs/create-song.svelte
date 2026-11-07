@@ -49,6 +49,7 @@
             availableRoles={["Гитара", "Барабаны", "Вокал", "Бас"]}
             submitLabel="Создать"
             submittingLabel="Создание..."
+            errorLabel="Не удалось создать песню"
             onsubmit={handleSubmit}
         />
     </Dialog.Content>

@@ -9,7 +9,7 @@ namespace CuMusicClub.Web.Endpoints.v1.Songs;
 public static partial class Songs
 {
     [EndpointSummary("Leave a song role")]
-    private static async Task<Results<Ok<SongDto>, BadRequest<string>>> Leave(ISongService service,
+    private static async Task<Results<Ok<SongDto>, ProblemHttpResult>> Leave(ISongService service,
         IApplicationUserRepository users,
         ClaimsPrincipal claimsPrincipal,
         Guid roleId,
@@ -18,7 +18,7 @@ public static partial class Songs
     {
         var target = await users.FindByIdAsync(claimsPrincipal.GetUserId());
         if (request != null) target = await users.FindByIdAsync(request.ActorUserId);
-        if (target == null) return TypedResults.BadRequest("no target user found");
+        if (target == null) return ApiProblems.BadRequest("Пользователь не найден.");
 
         var details = await service.LeaveRoleAsync(target, claimsPrincipal, roleId, cancellationToken);
 

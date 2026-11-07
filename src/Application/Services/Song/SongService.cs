@@ -80,7 +80,7 @@ public partial class SongService(
         await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
         if (request.ThumbnailDataEntryId.HasValue &&
             await dataEntries.ExistsByIdAsync(request.ThumbnailDataEntryId.Value, cancellationToken) == false)
-            throw new ValidationException([new ValidationFailure("thumbnailDataEntryId", "Referenced data entry not found")]);
+            throw new ValidationException([new ValidationFailure("thumbnailDataEntryId", "Обложка не найдена — загрузите её ещё раз.")]);
 
         var song = new Domain.Entities.Song
         {
@@ -137,7 +137,7 @@ public partial class SongService(
         await using var transaction = await unitOfWork.BeginTransactionAsync(cancellationToken);
         if (request.ThumbnailDataEntryId.HasValue &&
             await dataEntries.ExistsByIdAsync(request.ThumbnailDataEntryId.Value, cancellationToken) == false)
-            throw new ValidationException([new ValidationFailure("thumbnailDataEntryId", "Referenced data entry not found")]);
+            throw new ValidationException([new ValidationFailure("thumbnailDataEntryId", "Обложка не найдена — загрузите её ещё раз.")]);
 
         song.Title = request.Title;
         song.Artist = request.Artist;

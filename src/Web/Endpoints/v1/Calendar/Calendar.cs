@@ -79,7 +79,7 @@ public static partial class Calendar
     [EndpointDescription(
         "scope=mine — личные события, репетиции моих песен и мой Яндекс.Календарь; " +
         "scope=club — все репетиции и выступления музклуба. Интервал [from, to) не длиннее 42 дней.")]
-    private static async Task<Results<Ok<List<TimetableEventDto>>, BadRequest<string>>> GetTimetable(
+    private static async Task<Results<Ok<List<TimetableEventDto>>, ProblemHttpResult>> GetTimetable(
         ClaimsPrincipal claimsPrincipal,
         ITimetableService service,
         [FromQuery] DateTimeOffset from,
@@ -89,10 +89,10 @@ public static partial class Calendar
     {
         if (!Enum.TryParse<TimetableScope>(scope ?? nameof(TimetableScope.Mine), true, out var parsedScope)
             || !Enum.IsDefined(parsedScope))
-            return TypedResults.BadRequest("scope должен быть mine или club");
+            return ApiProblems.BadRequest("scope должен быть mine или club.");
 
         if (to <= from || to - from > TimeSpan.FromDays(42))
-            return TypedResults.BadRequest("Интервал должен быть положительным и не длиннее 42 дней");
+            return ApiProblems.BadRequest("Интервал должен быть положительным и не длиннее 42 дней.");
 
         var events = await service.GetTimetableAsync(
             claimsPrincipal.GetUserId(), parsedScope, from, to, cancellationToken);

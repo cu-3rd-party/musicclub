@@ -16,27 +16,38 @@ public class RequestLoggingMiddleware(
         var method = request.Method;
         var clientIp = GetClientIp(context);
 
+        var failed = false;
         try
         {
             await next(context);
         }
+        catch
+        {
+            // Сюда долетает только то, что не обработал UseExceptionHandler; Kestrel ответит 500
+            failed = true;
+            throw;
+        }
         finally
         {
             stopwatch.Stop();
-            var statusCode = context.Response.StatusCode;
+            var statusCode = failed && !context.Response.HasStarted
+                ? StatusCodes.Status500InternalServerError
+                : context.Response.StatusCode;
             var elapsedMs = stopwatch.ElapsedMilliseconds;
 
-            if (statusCode != 200)
+            if (statusCode >= StatusCodes.Status400BadRequest)
             {
-                var responseBody = await ReadResponseBodyAsync(context);
-                logger.LogWarning(
+                // Причину кладёт ApiProblems.Customize, когда ответ пишется как ProblemDetails
+                var error = context.Items[ApiProblems.ErrorSummaryKey] as string ?? "без тела ответа";
+                logger.Log(
+                    statusCode >= StatusCodes.Status500InternalServerError ? LogLevel.Error : LogLevel.Warning,
                     "{ClientIp} {Method} {Path} {StatusCode} {ElapsedMs}ms — {Error}",
                     clientIp,
                     method,
                     requestPath,
                     statusCode,
                     elapsedMs,
-                    responseBody);
+                    error);
             }
             else
             {
@@ -60,27 +71,6 @@ public class RequestLoggingMiddleware(
         }
 
         return context.Connection.RemoteIpAddress?.ToString() ?? "-";
-    }
-
-    private static async Task<string> ReadResponseBodyAsync(HttpContext context)
-    {
-        try
-        {
-            if (context.Response.Body.CanSeek)
-            {
-                context.Response.Body.Seek(0, SeekOrigin.Begin);
-                using var reader = new StreamReader(context.Response.Body, leaveOpen: true);
-                var body = await reader.ReadToEndAsync();
-                context.Response.Body.Seek(0, SeekOrigin.Begin);
-                return body.Length > 500 ? body[..500] + "..." : body;
-            }
-        }
-        catch
-        {
-            // Игнорируем ошибки чтения тела ответа
-        }
-
-        return string.Empty;
     }
 }
 

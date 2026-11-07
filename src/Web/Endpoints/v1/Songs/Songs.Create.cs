@@ -7,13 +7,14 @@ namespace CuMusicClub.Web.Endpoints.v1.Songs;
 public static partial class Songs
 {
     [EndpointSummary("Create a song")]
-    private static async Task<Results<Created<SongDto>, BadRequest>> Create(ISongService service,
+    private static async Task<Results<Created<SongDto>, ProblemHttpResult>> Create(ISongService service,
         ClaimsPrincipal user,
         CreateSongRequest? request,
         CancellationToken cancellationToken)
     {
-        if (request is null || string.IsNullOrWhiteSpace(request.Title) || string.IsNullOrWhiteSpace(request.Artist))
-            return TypedResults.BadRequest();
+        if (request is null) return ApiProblems.BadRequest("Не переданы данные песни.");
+        if (string.IsNullOrWhiteSpace(request.Title)) return ApiProblems.Validation("title", "Укажите название песни.");
+        if (string.IsNullOrWhiteSpace(request.Artist)) return ApiProblems.Validation("artist", "Укажите исполнителя.");
 
         var song = await service.CreateAsync(request, user, cancellationToken);
 

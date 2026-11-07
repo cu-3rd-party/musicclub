@@ -7,11 +7,11 @@ namespace CuMusicClub.Web.Endpoints.v1.Auth;
 public static partial class Auth
 {
     [EndpointSummary("Sign in with Telegram WebApp init data")]
-    private static async Task<Results<Ok<AuthSessionDto>, BadRequest>> TelegramInitData(ITelegramAuthService service,
+    private static async Task<Results<Ok<AuthSessionDto>, ProblemHttpResult>> TelegramInitData(ITelegramAuthService service,
         TelegramAuthRequest? request,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request?.InitData)) return TypedResults.BadRequest();
+        if (string.IsNullOrWhiteSpace(request?.InitData)) return ApiProblems.BadRequest("Не переданы данные входа Telegram.");
 
         var session = await service.AuthenticateAsync(request.InitData, cancellationToken);
 

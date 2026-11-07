@@ -10,8 +10,8 @@ public static partial class Data
         IFormFile file,
         CancellationToken cancellationToken)
     {
-        if (file.Length == 0) return TypedResults.BadRequest("File is empty.");
-        if (file.Length > MaxFileSizeBytes) return TypedResults.BadRequest($"File size exceeds maximum of {MaxFileSizeBytes / (1024 * 1024)}MB.");
+        if (file.Length == 0) return ApiProblems.BadRequest("Файл пустой.");
+        if (file.Length > MaxFileSizeBytes) return ApiProblems.BadRequest($"Файл больше {MaxFileSizeBytes / (1024 * 1024)} МБ — выберите поменьше.");
         await using var stream = new MemoryStream();
         await file.CopyToAsync(stream, cancellationToken);
 

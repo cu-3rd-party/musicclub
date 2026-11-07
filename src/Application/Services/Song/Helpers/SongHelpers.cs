@@ -25,7 +25,7 @@ public static class SongHelpers
     {
         if (string.IsNullOrWhiteSpace(url))
             throw new ValidationException([
-                new FluentValidation.Results.ValidationFailure("url", "Song URL is required"),
+                new FluentValidation.Results.ValidationFailure("url", "Укажите ссылку на трек."),
             ]);
 
         var trimmed = url.Trim();
@@ -37,7 +37,7 @@ public static class SongHelpers
         if (SoundcloudRegex.IsMatch(trimmed)) return SongLinkType.Soundcloud;
 
         throw new ValidationException([
-            new FluentValidation.Results.ValidationFailure("url", $"Unsupported song link URL: {url}"),
+            new FluentValidation.Results.ValidationFailure("url", $"Такие ссылки не поддерживаются: {trimmed}. Вставьте ссылку на YouTube, Яндекс Музыку или SoundCloud."),
         ]);
     }
 

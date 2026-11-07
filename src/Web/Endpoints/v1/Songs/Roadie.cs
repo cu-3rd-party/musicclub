@@ -11,7 +11,7 @@ namespace CuMusicClub.Web.Endpoints.v1.Songs;
 public static partial class Songs
 {
     [EndpointSummary("Call a roadie for help")]
-    private static async Task<Results<Created<RoadieTicketDto>, BadRequest>> CreateTicket(
+    private static async Task<Created<RoadieTicketDto>> CreateTicket(
         IRoadieService service,
         IApplicationUserRepository userRepository,
         ClaimsPrincipal claimsPrincipal,
@@ -29,7 +29,7 @@ public static partial class Songs
     /// Тело — { actorUserId }, где актор — целевой роуди (можно назначать себя).
     /// </summary>
     [EndpointSummary("Assign a roadie to a song")]
-    private static async Task<Results<Ok<SongDto>, BadRequest<string>>> AssignRoadie(
+    private static async Task<Results<Ok<SongDto>, ProblemHttpResult>> AssignRoadie(
         IRoadieService roadieService,
         ISongService songService,
         IApplicationUserRepository users,
@@ -43,7 +43,7 @@ public static partial class Songs
             ? actor
             : await users.FindByIdAsync(request.ActorUserId);
         if (actor == null || target == null)
-            return TypedResults.BadRequest("no target user found");
+            return ApiProblems.BadRequest("Пользователь не найден.");
 
         await roadieService.AssignRoadieAsync(songId, target, actor, cancellationToken);
 
@@ -52,7 +52,7 @@ public static partial class Songs
 
     /// <summary>Снимает роуди с песни. Доступно только роуди (право <c>roadie.manage</c>).</summary>
     [EndpointSummary("Remove the roadie from a song")]
-    private static async Task<Results<Ok<SongDto>, BadRequest<string>>> RemoveRoadie(
+    private static async Task<Results<Ok<SongDto>, ProblemHttpResult>> RemoveRoadie(
         IRoadieService roadieService,
         ISongService songService,
         IApplicationUserRepository users,
@@ -62,7 +62,7 @@ public static partial class Songs
     {
         var actor = await users.FindByIdAsync(claimsPrincipal.GetUserId());
         if (actor == null)
-            return TypedResults.BadRequest("no target user found");
+            return ApiProblems.BadRequest("Пользователь не найден.");
 
         await roadieService.RemoveRoadieAsync(songId, actor, cancellationToken);
 

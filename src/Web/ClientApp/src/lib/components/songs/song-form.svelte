@@ -11,6 +11,8 @@
     } from "@lucide/svelte";
     import {Button} from "$lib/components/ui/button";
     import {Badge} from "$lib/components/ui/badge";
+    import * as Alert from "$lib/components/ui/alert";
+    import {getApiErrorMessage} from "$lib/api/errors";
     import {fetchYouTubeThumbnail} from "$lib/songs/helpers";
     import {createData} from "$lib/api/data";
     import type {UUID} from "node:crypto";
@@ -67,6 +69,7 @@
         ],
         submitLabel = "Создать",
         submittingLabel = "Создание...",
+        errorLabel = "Не удалось сохранить песню",
         onsubmit,
     }: {
         title?: string;
@@ -79,6 +82,7 @@
         existingRoles?: string[];
         submitLabel?: string;
         submittingLabel?: string;
+        errorLabel?: string;
         onsubmit: (payload: {
             title: string;
             artist: string;
@@ -94,6 +98,7 @@
     let thumbnailFile = $state<File | null>(null);
     let thumbnailPreviewUrl = $state<string | null>(null);
     let submitting = $state(false);
+    let submitError = $state<string | null>(null);
     let roleInputFocused = $state(false);
     let highlightedIndex = $state(-1);
 
@@ -240,6 +245,7 @@
         }
 
         submitting = true;
+        submitError = null;
 
         try {
             const roles = availableRoles
@@ -259,6 +265,9 @@
             });
 
             clearThumbnail();
+        } catch (err) {
+            console.error(err);
+            submitError = getApiErrorMessage(err, errorLabel);
         } finally {
             submitting = false;
         }
@@ -450,6 +459,12 @@
             onchange={handleThumbnailFile}
         />
     </label>
+
+    {#if submitError}
+        <Alert.Root variant="destructive">
+            <Alert.Description>{submitError}</Alert.Description>
+        </Alert.Root>
+    {/if}
 
     <Button
         type="submit"

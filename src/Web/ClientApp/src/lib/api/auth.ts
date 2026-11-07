@@ -9,12 +9,6 @@ import type {
 } from "$lib/auth/types";
 import { API_URL } from "$lib/config";
 
-type ApiErrorPayload = {
-    message?: string;
-    // ValidationProblemDetails: { errors: { field: ["сообщение"] } }
-    errors?: Record<string, string[]>;
-};
-
 export async function telegramAuth(
     payload: TelegramInitDataPayload,
 ): Promise<AuthSession> {
@@ -79,25 +73,6 @@ export async function logoutCurrentSession(
 
 export async function logoutAllSessions(): Promise<void> {
     await api.post("/api/v1/auth/logout-all");
-}
-
-export function getApiErrorMessage(
-    error: unknown,
-    fallbackMessage: string,
-): string {
-    if (axios.isAxiosError<ApiErrorPayload>(error)) {
-        const data = error.response?.data;
-        const validationMessage = data?.errors
-            ? Object.values(data.errors).flat()[0]
-            : undefined;
-        return data?.message ?? validationMessage ?? fallbackMessage;
-    }
-
-    if (error instanceof Error && error.message) {
-        return error.message;
-    }
-
-    return fallbackMessage;
 }
 
 export function isUnauthorizedError(error: unknown): boolean {

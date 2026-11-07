@@ -1,3 +1,5 @@
+using System.Text.Encodings.Web;
+using System.Text.Json;
 using CuMusicClub.Infrastructure.Data;
 using CuMusicClub.Web.Bot;
 using CuMusicClub.Web.Middleware;
@@ -15,6 +17,8 @@ if (builder.Environment.IsProduction())
         options.IncludeScopes = true;
         options.TimestampFormat = "yyyy-MM-ddTHH:mm:ss.fffZ";
         options.UseUtcTimestamp = true;
+        // Без этого кириллица уходит как \u041A… и в kubectl logs нечитаема
+        options.JsonWriterOptions = new JsonWriterOptions { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
     });
 else
     builder.Logging.AddSimpleConsole(options =>
@@ -47,9 +51,10 @@ app.MapOpenApi();
 app.MapScalarApiReference();
 app.MapHealthChecks("/health");
 
-app.UseExceptionHandler(options => { });
-app.UseHttpMetrics();
+// Логирование и метрики — снаружи обработчика исключений, иначе они видят 200 вместо итогового 4xx/5xx
 app.UseRequestLogging();
+app.UseHttpMetrics();
+app.UseExceptionHandler(options => { });
 
 app.UseAuthentication();
 app.UseAuthorization();

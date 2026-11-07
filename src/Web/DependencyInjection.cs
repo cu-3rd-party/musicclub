@@ -16,6 +16,7 @@ public static class DependencyInjection
 
         builder.Services.AddHttpContextAccessor();
 
+        builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = ApiProblems.Customize);
         builder.Services.AddExceptionHandler<ProblemDetailsExceptionHandler>();
 
         builder.Services.Configure<ApiBehaviorOptions>(options => options.SuppressModelStateInvalidFilter = true);

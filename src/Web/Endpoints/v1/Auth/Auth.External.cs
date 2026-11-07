@@ -61,14 +61,14 @@ public static partial class Auth
     }
 
     [EndpointSummary("Exchange a one-time external login code for an auth session")]
-    private static async Task<Results<Ok<AuthSessionDto>, BadRequest>> ExternalExchange(IExternalLoginService service,
+    private static async Task<Results<Ok<AuthSessionDto>, ProblemHttpResult>> ExternalExchange(IExternalLoginService service,
         ExternalLoginExchangeRequest? request,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request?.Code)) return TypedResults.BadRequest();
+        if (string.IsNullOrWhiteSpace(request?.Code)) return ApiProblems.BadRequest("Не передан код входа.");
 
         var session = await service.RedeemLoginCodeAsync(request.Code, cancellationToken);
-        if (session == null) return TypedResults.BadRequest();
+        if (session == null) return ApiProblems.BadRequest("Код входа недействителен или уже использован — войдите ещё раз.");
         return TypedResults.Ok(session);
     }
 }

@@ -16,7 +16,7 @@
     import {Input} from "$lib/components/ui/input";
     import {Label} from "$lib/components/ui/label";
     import {getYandexLogin, updateYandexLogin, type YandexLoginDto} from "$lib/api/yandex-login";
-    import {getApiErrorMessage} from "$lib/api/auth";
+    import {getApiErrorMessage} from "$lib/api/errors";
     import {Check, X} from "@lucide/svelte";
 
     let error = $state<string | null>(null);

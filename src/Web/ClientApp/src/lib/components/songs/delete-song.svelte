@@ -2,9 +2,10 @@
     import {goto} from "$app/navigation";
     import {resolve} from "$app/paths";
     import {Trash2} from "@lucide/svelte";
-    import {Button, buttonVariants} from "$lib/components/ui/button";
+    import {buttonVariants} from "$lib/components/ui/button";
     import * as AlertDialog from "$lib/components/ui/alert-dialog";
     import {deleteSong} from "$lib/api/songs";
+    import {getApiErrorMessage} from "$lib/api/errors";
     import type {Song} from "$lib/songs/types";
     import {Permission} from "$lib/permissions/resolve";
     import {cn} from "$lib/utils";
@@ -35,7 +36,7 @@
             await goto(resolve("/app/songs"));
         } catch (err) {
             console.error(err);
-            error = "Не удалось удалить песню";
+            error = getApiErrorMessage(err, "Не удалось удалить песню");
         } finally {
             deleting = false;
         }
