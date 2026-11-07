@@ -168,12 +168,14 @@ dotnet test tests/Infrastructure.IntegrationTests   # требует Docker (Tes
 
 ## CI/CD
 
-- [`.forgejo/workflows/ci-cd.yml`](.forgejo/workflows/ci-cd.yml) — сборка образов `git.cu3rd.ru/cu3rd/musicclub-{backend,frontend}:<sha>`
-  на push в `master`, затем деплой на dev. На prod — вручную: [`.forgejo/workflows/deploy-prod.yml`](.forgejo/workflows/deploy-prod.yml)
-  (Actions → «Deploy to prod» → Run workflow с ветки master; опционально SHA для отката).
-- [`.forgejo/workflows/deploy.yml`](.forgejo/workflows/deploy.yml) — деплой: меняет тег образов в
+- [`.forgejo/workflows/ci-cd.yml`](.forgejo/workflows/ci-cd.yml) — единственный воркфлоу (раннеры `homelab-docker`):
+  PR — тесты; push в `master` — тесты, образы `git.cu3rd.ru/cu3rd/musicclub-{backend,frontend}:<sha>`, деплой на dev.
+  На prod — вручную: Actions → «CI/CD» → Run workflow с ветки `master` и галочкой `deploy_prod`
+  (прогон выкатывает текущий master на dev, затем на prod). Откат — revert в master и такой же запуск.
+- [`scripts/deploy-images.sh`](scripts/deploy-images.sh) — деплой: меняет тег образов в
   `pxc1984/homelab` (`apps/musicclub-<env>-{backend,frontend}/values.yaml`), дальше Argo CD выкатывает сам.
-  Секрет окружений `dev`/`prod`: `HOMELAB_DEPLOY_KEY` (deploy key с записью в homelab).
+  Секрет репозитория `HOMELAB_DEPLOY_KEY` (deploy key с записью в homelab, один на оба окружения);
+  `REGISTRY_USER`/`REGISTRY_TOKEN` — переменная и секрет организации cu3rd.
 - Где живёт: k3s, узел grm, namespace `musicclub-dev` / `musicclub-prod`; база — `musicclub_dev` / `musicclub_prod`
   в CloudNativePG-кластере `pg-grm`; cookies и профиль Chromium Яндекса — на PVC бэкенда.
   Переменные окружения — в values.yaml приложений в homelab (секретные — Sealed Secrets), не в `.env`.

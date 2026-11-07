@@ -1,16 +1,31 @@
 name: CI/CD
 
-on:
-  push:
-    branches:
-      - master
-  pull_request:
-    branches:
-      - master
-  workflow_dispatch:
+# Forgejo Actions (git.cu3rd.ru, раннеры организации cu3rd).
+# pull_request: тесты.
+# push в master: тесты, образы, деплой на dev.
+# Prod — вручную: Actions → CI/CD → Run workflow (ветка master) с галочкой deploy_prod;
+# прогон собирает и выкатывает текущий master сначала на dev, затем на prod.
+# Деплой = смена тега образа в pxc1984/homelab (apps/musicclub-<env>-{backend,frontend}/values.yaml),
+# дальше Argo CD выкатывает сам. Конфигурация и секреты окружений живут там же (Sealed Secrets).
+#
+# Образы — в реестре Forgejo: git.cu3rd.ru/cu3rd/musicclub-{backend,frontend}:<sha>.
+# Пушит служебный пользователь cu3rd-ci: переменная организации REGISTRY_USER, секрет организации REGISTRY_TOKEN.
+# Секрет репозитория HOMELAB_DEPLOY_KEY — deploy key с записью в pxc1984/homelab
+# (один на dev и prod: окружений с отдельными секретами в Forgejo Actions нет).
 
-# PRs: newer pushes cancel older runs. master: every run gets its own group, so a
-# deploy in progress never gets cancelled by the next push.
+on:
+  pull_request:
+    branches: [ master ]
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+    inputs:
+      deploy_prod:
+        description: 'Deploy to prod (after dev)'
+        type: boolean
+        default: false
+
+# PR: новый пуш отменяет старый прогон. master: у каждого прогона своя группа, деплой не обрывается.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: true
@@ -21,7 +36,10 @@ env:
 jobs:
   test:
     name: Run tests
-    runs-on: ubuntu-latest
+    # Метка раннеров с dockerd; полный образ catthehacker — на «голых» ubuntu-latest может не оказаться dotnet-зависимостей
+    runs-on: homelab-docker
+    container:
+      image: ghcr.io/catthehacker/ubuntu@sha256:62d572b92f9f32d3427b6d220ad1f9dca9c7b6ffad37d295425037dbff78abaf
     timeout-minutes: 25
 
     services:
@@ -36,15 +54,15 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-        ports:
-          - 5432:5432
+
+    env:
+      # Джоба в контейнере: сервис доступен по имени
+      ConnectionStrings__CuMusicClubDb: "Server=postgres;Port=5432;Database=db;Username=admin;Password=password"
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.x
 
@@ -62,10 +80,8 @@ jobs:
         run: dotnet restore
 
       - name: Build
-        # Build запускает приложение (генерация OpenAPI) и инициализирует БД; в Forgejo сервис доступен по имени
+        # Build запускает приложение (генерация OpenAPI) и инициализирует БД
         run: dotnet build --no-restore --configuration Release
-        env:
-          ConnectionStrings__CuMusicClubDb: "Server=postgres;Port=5432;Database=db;Username=admin;Password=password"
 
       - name: Save NuGet cache
         if: steps.nuget-cache.outputs.cache-hit != 'true' && github.event_name == 'push'
@@ -93,7 +109,6 @@ jobs:
         run: dotnet test tests/Infrastructure.IntegrationTests --no-build --configuration Release --logger "trx;LogFileName=test-results-integration.trx" --verbosity minimal
         env:
           ASPNETCORE_ENVIRONMENT: Development
-          ConnectionStrings__CuMusicClubDb: "Server=localhost;Port=5432;Database=db;Username=admin;Password=password"
 
       - name: Upload test results
         if: always()
@@ -106,55 +121,96 @@ jobs:
           retention-days: 30
 
   build:
-    name: Build and push images
+    name: Build and push ${{ matrix.image }} image
     needs: test
-    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    runs-on: homelab-docker
+    container:
+      image: ghcr.io/catthehacker/ubuntu@sha256:62d572b92f9f32d3427b6d220ad1f9dca9c7b6ffad37d295425037dbff78abaf
+    timeout-minutes: 30
     strategy:
       matrix:
-        include:
-          - image: backend
-            dockerfile: docker/backend/Dockerfile
-            context: .
-          - image: frontend
-            dockerfile: docker/frontend/Dockerfile
-            context: .
+        image: [ backend, frontend ]
+    env:
+      IMAGE: git.cu3rd.ru/${{ github.repository_owner }}/musicclub-${{ matrix.image }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      # Драйвер docker: сборка идёт в dockerd раннера, слои кэшируются на его томе между запусками
+      - uses: docker/setup-buildx-action@v3
         with:
           driver: docker
 
-      - name: Log in to Forgejo registry
-        uses: docker/login-action@v3
+      - uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ vars.REGISTRY_USER }}
           password: ${{ secrets.REGISTRY_TOKEN }}
 
-      - name: Build and push ${{ matrix.image }}
-        uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.context }}
-          file: ${{ matrix.dockerfile }}
+          context: .
+          file: docker/${{ matrix.image }}/Dockerfile
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/musicclub-${{ matrix.image }}:${{ github.sha }}
+          tags: ${{ env.IMAGE }}:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
 
   deploy-dev:
     name: Deploy to dev
     needs: build
-    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    runs-on: homelab-docker
+    container:
+      image: ghcr.io/catthehacker/ubuntu@sha256:62d572b92f9f32d3427b6d220ad1f9dca9c7b6ffad37d295425037dbff78abaf
+    timeout-minutes: 15
     concurrency:
       group: deploy-dev
       cancel-in-progress: false
-    uses: ./.forgejo/workflows/deploy.yml
-    with:
-      environment: dev
-    secrets: inherit
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          path: source
+          persist-credentials: false
 
-  # prod — вручную: .forgejo/workflows/deploy-prod.yml (Forgejo не умеет required reviewers)
+      - name: Checkout homelab
+        uses: actions/checkout@v4
+        with:
+          github-server-url: https://github.com
+          repository: pxc1984/homelab
+          ssh-key: ${{ secrets.HOMELAB_DEPLOY_KEY }}
+          path: homelab
+
+      - name: Publish dev image tags to GitOps
+        run: source/scripts/deploy-images.sh homelab dev "${{ github.sha }}"
+
+  deploy-prod:
+    name: Deploy to prod
+    needs: deploy-dev
+    if: github.event_name == 'workflow_dispatch' && (inputs.deploy_prod == true || inputs.deploy_prod == 'true')
+    runs-on: homelab-docker
+    container:
+      image: ghcr.io/catthehacker/ubuntu@sha256:62d572b92f9f32d3427b6d220ad1f9dca9c7b6ffad37d295425037dbff78abaf
+    timeout-minutes: 15
+    concurrency:
+      group: deploy-prod
+      cancel-in-progress: false
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          path: source
+          persist-credentials: false
+
+      - name: Checkout homelab
+        uses: actions/checkout@v4
+        with:
+          github-server-url: https://github.com
+          repository: pxc1984/homelab
+          ssh-key: ${{ secrets.HOMELAB_DEPLOY_KEY }}
+          path: homelab
+
+      - name: Publish prod image tags to GitOps
+        run: source/scripts/deploy-images.sh homelab prod "${{ github.sha }}"
