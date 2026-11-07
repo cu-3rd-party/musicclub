@@ -17,7 +17,7 @@ public interface IRehearsalBookingService
     /// Создаёт бронирование репетиции (confirmed, без запроса к Илье).
     /// </summary>
     /// <exception cref="BookingRuleException">
-    /// Пользователь не участник песни, время прошло, слишком далеко или зал уже забронирован.
+    /// Пользователь не знаком боту, время прошло, слишком далеко или зал уже забронирован.
     /// </exception>
     Task<RehearsalBooking> CreateBookingAsync(
         long requesterTgUserId,
@@ -60,8 +60,8 @@ public interface IRehearsalBookingService
     Task<bool> CanApproveAsync(long tgUserId, CancellationToken ct = default);
 
     /// <summary>
-    /// Отменяет подтверждённое или ожидающее бронирование. Отменить может инициатор,
-    /// любой участник песни, под которую взята бронь, или организатор (<see cref="Domain.Constants.Permission.EventsEdit"/>).
+    /// Отменяет подтверждённое или ожидающее бронирование. Бронь под песню может отменить любой знакомый боту пользователь,
+    /// бронь без песни — инициатор или организатор (<see cref="Domain.Constants.Permission.EventsEdit"/>).
     /// </summary>
     Task<RehearsalBooking> CancelBookingAsync(
         long requesterTgUserId,
@@ -97,7 +97,6 @@ public class RehearsalBookingService(
     IRehearsalBookingRepository bookingRepository,
     ICalendarSyncService calendarSyncService,
     ISongRoleAssignmentRepository songRoleAssignmentRepository,
-    ISongRoadieRepository songRoadieRepository,
     IApplicationUserRepository userRepository,
     IUnitOfWork unitOfWork,
     ILogger<RehearsalBookingService> logger) : IRehearsalBookingService
@@ -340,58 +339,41 @@ public class RehearsalBookingService(
     }
 
     /// <summary>
-    /// Бронировать зал под песню могут её участники, её роуди и организаторы.
+    /// Бронировать зал под любую песню может любой знакомый боту пользователь, не только её участники:
+    /// клуб доверительный, так проще договариваться. Бронь без песни — только организаторы.
     /// </summary>
     private async Task EnsureCanBookAsync(long tgUserId, Guid? songId, CancellationToken ct)
     {
-        var user = await userRepository.FindByTgUserIdAsync(tgUserId, ct)
-                   ?? throw new BookingRuleException(
-                       "Сначала откройте приложение Music Club через /start — я вас пока не знаю.");
-
-        var permissions = await userRepository.GetPermissionsAsync(user.Id, ct);
-        if (permissions.Contains(Domain.Constants.Permission.EventsEdit))
-            return;
-
-        if (songId is not { } id)
+        var user = await FindKnownUserAsync(tgUserId, ct);
+        if (songId is null && !await IsOrganizerAsync(user, ct))
             throw new ForbiddenAccessException();
-
-        if (!await IsSongMemberOrRoadieAsync(user.Id, id, ct))
-            throw new BookingRuleException("Бронировать зал под песню могут только её участники и роуди.");
     }
 
     /// <summary>
-    /// Управлять бронью могут её инициатор, участники и роуди песни, роуди брони и организаторы.
+    /// Отменить бронь под песню может любой знакомый боту пользователь; бронь без песни — её инициатор и организаторы.
     /// </summary>
     private async Task EnsureCanManageAsync(long tgUserId, RehearsalBooking booking, CancellationToken ct)
     {
         if (booking.RequesterTgUserId == tgUserId)
             return;
 
-        var user = await userRepository.FindByTgUserIdAsync(tgUserId, ct)
-                   ?? throw new BookingRuleException(
-                       "Сначала откройте приложение Music Club через /start — я вас пока не знаю.");
-
-        var permissions = await userRepository.GetPermissionsAsync(user.Id, ct);
-        if (permissions.Contains(Domain.Constants.Permission.EventsEdit))
-            return;
-
-        if (booking.RoadieUserId == user.Id)
-            return;
-
-        if (booking.SongId is { } songId && await IsSongMemberOrRoadieAsync(user.Id, songId, ct))
-            return;
-
-        throw new BookingRuleException("Отменить бронь могут только участники и роуди песни и организаторы.");
+        var user = await FindKnownUserAsync(tgUserId, ct);
+        if (booking.SongId is null && !await IsOrganizerAsync(user, ct))
+            throw new BookingRuleException("Отменить бронь без песни могут только её автор и организаторы.");
     }
 
-    private async Task<bool> IsSongMemberOrRoadieAsync(Guid userId, Guid songId, CancellationToken ct)
+    // Автор брони нужен календарю и отчёту о репетициях, поэтому незнакомых боту не пускаем
+    private async Task<ApplicationUser> FindKnownUserAsync(long tgUserId, CancellationToken ct)
     {
-        var members = await songRoleAssignmentRepository.GetMemberUserIdsBySongIdAsync(songId, ct);
-        if (members.Contains(userId))
-            return true;
+        return await userRepository.FindByTgUserIdAsync(tgUserId, ct)
+               ?? throw new BookingRuleException(
+                   "Сначала откройте приложение Music Club через /start — я вас пока не знаю.");
+    }
 
-        var roadie = await songRoadieRepository.FindBySongIdAsync(songId, ct);
-        return roadie?.RoadieId == userId;
+    private async Task<bool> IsOrganizerAsync(ApplicationUser user, CancellationToken ct)
+    {
+        var permissions = await userRepository.GetPermissionsAsync(user.Id, ct);
+        return permissions.Contains(Domain.Constants.Permission.EventsEdit);
     }
 
     private async Task EnsureCanApproveAsync(long tgUserId, CancellationToken ct)
