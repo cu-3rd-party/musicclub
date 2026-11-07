@@ -65,6 +65,32 @@ public class BotDateParserTests
         value.ShouldBe(new DateTime(2026, 10, 19, 18, 30, 0));
     }
 
+    [TestCase("пт 19", 19, 0, null, null)]
+    [TestCase("пт 19:30", 19, 30, null, null)]
+    [TestCase("пт 19-22", 19, 0, 22, 0)]
+    [TestCase("пт 19:00–20:30", 19, 0, 20, 30)]
+    [TestCase("пт 19:00 - 20:30", 19, 0, 20, 30)]
+    [TestCase("пт 19 22", 19, 0, 22, 0)]
+    [TestCase("пт 1900-2130", 19, 0, 21, 30)]
+    public void TryParseSlot_Valid(string input, int startHour, int startMinute, int? endHour, int? endMinute)
+    {
+        BotDateParser.TryParseSlot(input, Today, out var start, out var end).ShouldBeTrue();
+
+        start.ShouldBe(new DateTime(2026, 10, 9, startHour, startMinute, 0));
+        end.ShouldBe(endHour is { } h ? new DateTime(2026, 10, 9, h, endMinute!.Value, 0) : null);
+    }
+
+    [TestCase("пт")]
+    [TestCase("пт 22-19")]
+    [TestCase("пт 19-19")]
+    [TestCase("пт 19-25")]
+    [TestCase("пт вечером")]
+    [TestCase("19-22")]
+    public void TryParseSlot_Invalid(string input)
+    {
+        BotDateParser.TryParseSlot(input, Today, out _, out _).ShouldBeFalse();
+    }
+
     [Test]
     public void FormatDayHeader_IsRussian()
     {

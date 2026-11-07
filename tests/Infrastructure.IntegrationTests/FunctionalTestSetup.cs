@@ -20,7 +20,9 @@ public class FunctionalTestSetup
     [OneTimeSetUp]
     public async Task OneTimeSetUp()
     {
-        _container = new PostgreSqlBuilder("postgres:16-alpine")
+        // Как в проде (CNPG pg-grm): PostgreSQL 18, initdb с locale C
+        _container = new PostgreSqlBuilder("postgres:18-alpine")
+            .WithEnvironment("POSTGRES_INITDB_ARGS", "--locale=C --encoding=UTF8")
             .WithDatabase("musicclub_test")
             .WithUsername("postgres")
             .WithPassword("postgres")

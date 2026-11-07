@@ -6,6 +6,8 @@ namespace CuMusicClub.Infrastructure.Data.Repositories;
 
 public sealed class SongRepository(DbContext dbContext) : Repository<Song>(dbContext), ISongRepository
 {
+    private const string CaseInsensitiveCollation = "und-x-icu";
+
     public async Task<Song?> FindByIdWithDetailsAsync(Guid songId, CancellationToken cancellationToken = default)
     {
         return await DbSet
@@ -54,8 +56,11 @@ public sealed class SongRepository(DbContext dbContext) : Repository<Song>(dbCon
         if (!string.IsNullOrWhiteSpace(query))
         {
             var pattern = $"%{query}%";
+            // pg-grm (CNPG) создан с locale C: там ILIKE складывает регистр только у латиницы.
+            // ICU-коллация даёт регистронезависимый поиск и по кириллице независимо от локали базы.
             songsQuery = songsQuery.Where(s =>
-                EF.Functions.ILike(s.Title, pattern) || EF.Functions.ILike(s.Artist, pattern));
+                EF.Functions.ILike(EF.Functions.Collate(s.Title, CaseInsensitiveCollation), pattern) ||
+                EF.Functions.ILike(EF.Functions.Collate(s.Artist, CaseInsensitiveCollation), pattern));
         }
 
         return await songsQuery

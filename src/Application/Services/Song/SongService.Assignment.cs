@@ -63,6 +63,7 @@ public partial class SongService
             await new SongServiceTopics(telegramChatService).AnnounceParticipantJoinAsync(existing.TopicId,
                 user,
                 role.RoleTitle,
+                requester,
                 cancellationToken);
 
         return await GetAsync(song.Id, cancellationToken);
@@ -100,6 +101,7 @@ public partial class SongService
             await new SongServiceTopics(telegramChatService).AnnounceParticipantLeaveAsync(topic.TopicId,
                 user,
                 role.RoleTitle,
+                requester,
                 cancellationToken);
 
         await songRoleAssignments.RemoveByIdAsync(role.Assignment.Id, cancellationToken);

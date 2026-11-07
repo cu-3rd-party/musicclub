@@ -42,6 +42,22 @@ public partial class SongServiceTests
     }
 
     [Test]
+    public async Task List_Query_Cyrillic_CaseInsensitive()
+    {
+        var (_, principal) = await CreateUserAsync("reader");
+        var byTitle = await SeedSongAsync("Группа крови", "Кино");
+        var byArtist = await SeedSongAsync("Звезда по имени Солнце", "КИНО");
+        await SeedSongAsync("Батарейка", "Жуки");
+
+        using var scope = new SongScope();
+        var lower = await scope.Songs.ListAsync("кино", 20, null, principal, CancellationToken.None);
+        var upper = await scope.Songs.ListAsync("ГРУППА", 20, null, principal, CancellationToken.None);
+
+        lower.Songs.Select(s => s.Id).ShouldBe([byTitle, byArtist], ignoreOrder: true);
+        upper.Songs.Select(s => s.Id).ShouldBe([byTitle]);
+    }
+
+    [Test]
     public async Task List_Query_MatchesTitleOrArtist_CaseInsensitive()
     {
         var (_, principal) = await CreateUserAsync("reader");

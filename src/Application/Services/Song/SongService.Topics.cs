@@ -81,30 +81,45 @@ public class SongServiceTopics(
     /// <summary>
     /// Sends a notification to an existing topic when a participant joins.
     /// </summary>
+    /// <param name="actor">Кто изменил состав; если это не сам участник, сообщение говорит, кто кого добавил.</param>
     public async Task AnnounceParticipantJoinAsync(
         long topicId,
         ApplicationUser user,
         string roleTitle,
+        ApplicationUser? actor = null,
         CancellationToken cancellationToken = default)
     {
         var participantUser = new SongUserDto(user.Id, user.DisplayName, user.UserName, user.AvatarUrl, user.TgUserId);
         var mention = SongServiceFormatter.BuildParticipantMention(participantUser);
+        var role = WebUtility.HtmlEncode(roleTitle.Trim());
 
-        await telegramChatService.SendTopicMessage(topicId, $"{mention} присоединился к песне как {WebUtility.HtmlEncode(roleTitle.Trim())}", cancellationToken);
+        var text = actor is not null && actor.Id != user.Id
+            ? $"{ActorName(actor)} добавил(а) {mention} в песню как {role}"
+            : $"{mention} присоединился к песне как {role}";
+        await telegramChatService.SendTopicMessage(topicId, text, cancellationToken);
     }
 
     /// <summary>
     /// Sends a notification to an existing topic when a participant leaves.
     /// </summary>
+    /// <param name="actor">Кто изменил состав; если это не сам участник, сообщение говорит, кто кого убрал.</param>
     public async Task AnnounceParticipantLeaveAsync(
         long topicId,
         ApplicationUser user,
         string roleTitle,
+        ApplicationUser? actor = null,
         CancellationToken cancellationToken = default)
     {
         var participantUser = new SongUserDto(user.Id, user.DisplayName, user.UserName, user.AvatarUrl, user.TgUserId);
         var mention = SongServiceFormatter.BuildParticipantMention(participantUser);
+        var role = WebUtility.HtmlEncode(roleTitle.Trim());
 
-        await telegramChatService.SendTopicMessage(topicId, $"{mention} покинул песню как {WebUtility.HtmlEncode(roleTitle.Trim())}", cancellationToken);
+        var text = actor is not null && actor.Id != user.Id
+            ? $"{ActorName(actor)} убрал(а) {mention} с роли {role}"
+            : $"{mention} покинул песню как {role}";
+        await telegramChatService.SendTopicMessage(topicId, text, cancellationToken);
     }
+
+    // Имя без tg-ссылки: автор изменения и так знает, что сделал, пинговать его незачем
+    private static string ActorName(ApplicationUser actor) => WebUtility.HtmlEncode(actor.DisplayName.Trim());
 }

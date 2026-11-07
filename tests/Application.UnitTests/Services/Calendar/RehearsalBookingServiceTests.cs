@@ -17,12 +17,14 @@ public class RehearsalBookingServiceTests
     private const long RequesterTgId = 1;
     private const long BandmateTgId = 2;
     private const long StrangerTgId = 3;
+    private const long RoadieTgId = 4;
 
     private static readonly DateTime ScheduledMsk = new(2026, 10, 5, 18, 0, 0);
 
     private readonly Guid _songId = Guid.NewGuid();
     private readonly ApplicationUser _bandmate = new() { Id = Guid.NewGuid(), TgUserId = BandmateTgId, DisplayName = "Петя" };
     private readonly ApplicationUser _stranger = new() { Id = Guid.NewGuid(), TgUserId = StrangerTgId, DisplayName = "Вася" };
+    private readonly ApplicationUser _roadie = new() { Id = Guid.NewGuid(), TgUserId = RoadieTgId, DisplayName = "Роуди" };
 
     private RehearsalBooking _booking = null!;
     private RehearsalBookingService _service = null!;
@@ -47,17 +49,24 @@ public class RehearsalBookingServiceTests
         assignments.Setup(r => r.GetMemberUserIdsBySongIdAsync(_songId, It.IsAny<CancellationToken>()))
             .ReturnsAsync([_bandmate.Id]);
 
+        var roadies = new Mock<ISongRoadieRepository>();
+        roadies.Setup(r => r.FindBySongIdAsync(_songId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SongRoadie { SongId = _songId, RoadieId = _roadie.Id });
+
         var users = new Mock<IApplicationUserRepository>();
         users.Setup(r => r.FindByTgUserIdAsync(BandmateTgId, It.IsAny<CancellationToken>())).ReturnsAsync(_bandmate);
         users.Setup(r => r.FindByTgUserIdAsync(StrangerTgId, It.IsAny<CancellationToken>())).ReturnsAsync(_stranger);
+        users.Setup(r => r.FindByTgUserIdAsync(RoadieTgId, It.IsAny<CancellationToken>())).ReturnsAsync(_roadie);
         users.Setup(r => r.GetPermissionsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
 
         _service = new RehearsalBookingService(bookings.Object, Mock.Of<ICalendarSyncService>(), assignments.Object,
-            users.Object, Mock.Of<IUnitOfWork>(), NullLogger<RehearsalBookingService>.Instance);
+            roadies.Object, users.Object, new Mock<IUnitOfWork> { DefaultValue = DefaultValue.Mock }.Object,
+            NullLogger<RehearsalBookingService>.Instance);
     }
 
     [TestCase(RequesterTgId)]
     [TestCase(BandmateTgId)]
+    [TestCase(RoadieTgId)]
     public async Task CancelBookingAsync_RequesterOrSongMember_Cancels(long tgUserId)
     {
         var result = await _service.CancelBookingAsync(tgUserId, ScheduledMsk);
@@ -70,5 +79,24 @@ public class RehearsalBookingServiceTests
     {
         await Should.ThrowAsync<BookingRuleException>(() => _service.CancelBookingAsync(StrangerTgId, ScheduledMsk));
         _booking.Status.ShouldBe(BookingStatus.Confirmed);
+    }
+
+    [Test]
+    public async Task CreateBookingAsync_SongRoadie_Books()
+    {
+        var at = DateTime.UtcNow.AddHours(3).Date.AddDays(2).AddHours(19);
+
+        var booking = await _service.CreateBookingAsync(RoadieTgId, at, _songId, 180);
+
+        booking.Status.ShouldBe(BookingStatus.Confirmed);
+        booking.DurationMinutes.ShouldBe(180);
+    }
+
+    [Test]
+    public async Task CreateBookingAsync_Stranger_Throws()
+    {
+        var at = DateTime.UtcNow.AddHours(3).Date.AddDays(2).AddHours(19);
+
+        await Should.ThrowAsync<BookingRuleException>(() => _service.CreateBookingAsync(StrangerTgId, at, _songId));
     }
 }

@@ -18,6 +18,11 @@ public static class BotDateParser
 
     private static readonly Regex TimeRegex = new(@"^(\d{1,2})(?:[:.]?(\d{2}))?$", RegexOptions.Compiled);
 
+    // «19», «19-22», «19:00 – 20:30», «19 22»: начало и необязательный конец слота
+    private static readonly Regex SlotRegex = new(
+        @"^(?<start>\d{1,2}(?:[:.]?\d{2})?)(?:\s*[-–—]\s*(?<end>\d{1,2}(?:[:.]?\d{2})?)|\s+(?<end>\d{1,2}(?:[:.]?\d{2})?))?(?=\s|$)",
+        RegexOptions.Compiled);
+
     private static readonly Dictionary<string, DayOfWeek> DayAliases = new(StringComparer.OrdinalIgnoreCase)
     {
         ["пн"] = DayOfWeek.Monday, ["пон"] = DayOfWeek.Monday, ["понедельник"] = DayOfWeek.Monday,
@@ -133,6 +138,31 @@ public static class BotDateParser
             return false;
 
         dateTime = date.Add(time.ToTimeSpan());
+        return true;
+    }
+
+    /// <summary>
+    /// «ДАТА НАЧАЛО[-КОНЕЦ]» из аргументов команды: <c>19.02 19</c>, <c>пт 19-22</c>, <c>пт 19:00 – 20:30</c>, <c>пт 19 22</c>.
+    /// Без конца <paramref name="end"/> = null (длительность по умолчанию). Конец должен быть позже начала в тот же день.
+    /// </summary>
+    public static bool TryParseSlot(string? args, DateTime today, out DateTime start, out DateTime? end)
+    {
+        start = default;
+        end = null;
+        if (string.IsNullOrWhiteSpace(args)) return false;
+
+        var parts = args.Trim().Split((char[]?) null, 2, StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2 || !TryParseDate(parts[0], today, out var date)) return false;
+
+        var match = SlotRegex.Match(parts[1].Trim());
+        if (!match.Success || !TryParseTime(match.Groups["start"].Value, out var startTime)) return false;
+
+        start = date.Add(startTime.ToTimeSpan());
+        if (!match.Groups["end"].Success) return true;
+
+        if (!TryParseTime(match.Groups["end"].Value, out var endTime) || endTime <= startTime) return false;
+
+        end = date.Add(endTime.ToTimeSpan());
         return true;
     }
 

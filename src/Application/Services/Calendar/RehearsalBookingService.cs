@@ -97,6 +97,7 @@ public class RehearsalBookingService(
     IRehearsalBookingRepository bookingRepository,
     ICalendarSyncService calendarSyncService,
     ISongRoleAssignmentRepository songRoleAssignmentRepository,
+    ISongRoadieRepository songRoadieRepository,
     IApplicationUserRepository userRepository,
     IUnitOfWork unitOfWork,
     ILogger<RehearsalBookingService> logger) : IRehearsalBookingService
@@ -339,7 +340,7 @@ public class RehearsalBookingService(
     }
 
     /// <summary>
-    /// Бронировать зал под песню могут её участники и организаторы.
+    /// Бронировать зал под песню могут её участники, её роуди и организаторы.
     /// </summary>
     private async Task EnsureCanBookAsync(long tgUserId, Guid? songId, CancellationToken ct)
     {
@@ -354,13 +355,12 @@ public class RehearsalBookingService(
         if (songId is not { } id)
             throw new ForbiddenAccessException();
 
-        var members = await songRoleAssignmentRepository.GetMemberUserIdsBySongIdAsync(id, ct);
-        if (!members.Contains(user.Id))
-            throw new BookingRuleException("Бронировать зал под песню могут только её участники.");
+        if (!await IsSongMemberOrRoadieAsync(user.Id, id, ct))
+            throw new BookingRuleException("Бронировать зал под песню могут только её участники и роуди.");
     }
 
     /// <summary>
-    /// Управлять бронью могут её инициатор, участники песни и организаторы.
+    /// Управлять бронью могут её инициатор, участники и роуди песни, роуди брони и организаторы.
     /// </summary>
     private async Task EnsureCanManageAsync(long tgUserId, RehearsalBooking booking, CancellationToken ct)
     {
@@ -375,14 +375,23 @@ public class RehearsalBookingService(
         if (permissions.Contains(Domain.Constants.Permission.EventsEdit))
             return;
 
-        if (booking.SongId is { } songId)
-        {
-            var members = await songRoleAssignmentRepository.GetMemberUserIdsBySongIdAsync(songId, ct);
-            if (members.Contains(user.Id))
-                return;
-        }
+        if (booking.RoadieUserId == user.Id)
+            return;
 
-        throw new BookingRuleException("Отменить бронь могут только участники песни и организаторы.");
+        if (booking.SongId is { } songId && await IsSongMemberOrRoadieAsync(user.Id, songId, ct))
+            return;
+
+        throw new BookingRuleException("Отменить бронь могут только участники и роуди песни и организаторы.");
+    }
+
+    private async Task<bool> IsSongMemberOrRoadieAsync(Guid userId, Guid songId, CancellationToken ct)
+    {
+        var members = await songRoleAssignmentRepository.GetMemberUserIdsBySongIdAsync(songId, ct);
+        if (members.Contains(userId))
+            return true;
+
+        var roadie = await songRoadieRepository.FindBySongIdAsync(songId, ct);
+        return roadie?.RoadieId == userId;
     }
 
     private async Task EnsureCanApproveAsync(long tgUserId, CancellationToken ct)

@@ -88,17 +88,18 @@ public class BotRehearsalCommandsHandler(
         var song = await ResolveSongAsync(message, "/check", ct);
         if (song == null) return;
 
-        if (!BotDateParser.TryParseDateTime(args, BotDateParser.NowMsk(), out var start))
+        if (!BotDateParser.TryParseSlot(args, BotDateParser.NowMsk(), out var start, out var end))
         {
             await SendTextAsync(message,
-                "📋 Формат: <code>/check ДАТА ВРЕМЯ</code>\n" +
-                $"Дата — {BotDateParser.DateHint}.\n" +
-                "Примеры: <code>/check 19.02 18:00</code>, <code>/check пт 17</code>");
+                "📋 Формат: <code>/check ДАТА НАЧАЛО[-КОНЕЦ]</code>\n" +
+                $"Дата — {BotDateParser.DateHint}. Без конца — {DefaultDurationMinutes} минут.\n" +
+                "Примеры: <code>/check 19.02 18:00</code>, <code>/check пт 17-19</code>");
             return;
         }
 
+        var durationMinutes = DurationMinutes(start, end);
         var startUtc = ToUtcOffset(start);
-        var endUtc = startUtc.AddMinutes(DefaultDurationMinutes);
+        var endUtc = startUtc.AddMinutes(durationMinutes);
         var schedule = await dayScheduleService.GetDayAsync(DateOnly.FromDateTime(start), song.Id, [], ct);
 
         var sb = new StringBuilder();
@@ -115,7 +116,7 @@ public class BotRehearsalCommandsHandler(
         }
 
         if (start.Hour < DayScheduleService.WorkStartHour ||
-            start.AddMinutes(DefaultDurationMinutes) >
+            start.AddMinutes(durationMinutes) >
             start.Date.AddHours(DayScheduleService.WorkEndHour))
         {
             sb.AppendLine(
@@ -164,7 +165,7 @@ public class BotRehearsalCommandsHandler(
 
         sb.AppendLine();
         sb.AppendLine(problems == 0
-            ? $"👍 Можно бронировать: <code>/take {start:dd.MM HH:mm}</code>"
+            ? $"👍 Можно бронировать: <code>/take {start:dd.MM HH:mm}{(end is { } e ? $"-{e:HH:mm}" : "")}</code>"
             : "👎 Лучше выбрать другое время — см. /slots");
 
         await SendTextAsync(message, sb.ToString());
@@ -261,16 +262,17 @@ public class BotRehearsalCommandsHandler(
         var song = await ResolveSongAsync(message, "/take", ct);
         if (song == null) return;
 
-        if (!BotDateParser.TryParseDateTime(args, BotDateParser.NowMsk(), out var scheduledAt))
+        if (!BotDateParser.TryParseSlot(args, BotDateParser.NowMsk(), out var scheduledAt, out var end))
         {
-            await SendUsageAsync(message, "/take");
+            await SendSlotUsageAsync(message, "/take");
             return;
         }
 
         RehearsalBooking booking;
         try
         {
-            booking = await bookingService.CreateBookingAsync(user.Id, scheduledAt, song.Id, ct: ct);
+            booking = await bookingService.CreateBookingAsync(user.Id, scheduledAt, song.Id,
+                DurationMinutes(scheduledAt, end), ct);
         }
         catch (BookingRuleException ex)
         {
@@ -305,16 +307,17 @@ public class BotRehearsalCommandsHandler(
             return;
         }
 
-        if (!BotDateParser.TryParseDateTime(args, BotDateParser.NowMsk(), out var scheduledAt))
+        if (!BotDateParser.TryParseSlot(args, BotDateParser.NowMsk(), out var scheduledAt, out var end))
         {
-            await SendUsageAsync(message, "/take_with");
+            await SendSlotUsageAsync(message, "/take_with");
             return;
         }
 
         RehearsalBooking booking;
         try
         {
-            booking = await bookingService.CreateBookingWithRoadieAsync(user.Id, scheduledAt, song.Id, ct: ct);
+            booking = await bookingService.CreateBookingWithRoadieAsync(user.Id, scheduledAt, song.Id,
+                DurationMinutes(scheduledAt, end), ct);
         }
         catch (BookingRuleException ex)
         {
@@ -509,6 +512,20 @@ public class BotRehearsalCommandsHandler(
             await SendTextAsync(message, "❌ Песня для этого топика не найдена.");
 
         return song;
+    }
+
+    private Task SendSlotUsageAsync(Message message, string command)
+    {
+        return SendTextAsync(message,
+            $"📋 Формат: <code>{command} ДАТА НАЧАЛО[-КОНЕЦ]</code>\n" +
+            $"Дата — {BotDateParser.DateHint}. Без конца — {DefaultDurationMinutes} минут.\n" +
+            $"Примеры: <code>{command} 19.02 18:00</code>, <code>{command} пт 19-22</code>");
+    }
+
+    /// <summary>Длительность слота: до конца, если он задан, иначе по умолчанию.</summary>
+    private static int DurationMinutes(DateTime start, DateTime? end)
+    {
+        return end is { } e ? (int) (e - start).TotalMinutes : DefaultDurationMinutes;
     }
 
     private Task SendUsageAsync(Message message, string command)
